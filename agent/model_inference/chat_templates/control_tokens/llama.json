@@ -1,0 +1,15 @@
+{
+    "template_type": "llama",
+    "eos_token": "<|eot_id|>",
+    "eom_token": "<|eom_id|>",
+    "tool_use_token_start": "```json",
+    "tool_use_token_end": "```",
+    "start_header_token": "<|start_header_id|>",
+    "end_header_token": "<|end_header_id|>\n",
+    "roles": {
+        "system": "system",
+        "assistant": "assistant",
+        "user": "user",
+        "tool": "ipython"
+    }
+}

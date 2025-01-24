@@ -1,0 +1,17 @@
+{
+    "template_type": "chatml",
+    "eos_token": "<|im_end|>",
+    "eom_token": "",
+    "tool_use_token_start": "<tool_call>",
+    "tool_use_token_end": "</tool_call>",
+    "start_header_token": "<|im_start|>",
+    "end_header_token": "",
+    "tool_result_token_start": "<tool_response>",
+    "tool_result_token_end": "</tool_response>",
+    "roles": {
+        "system": "system",
+        "assistant": "assistant",
+        "user": "user",
+        "tool": "tool"
+    }
+}

@@ -1,0 +1,34 @@
+[project]
+name = "agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "discord>=2.3.2",
+    "docstring-parser>=0.16",
+    "fal-client>=0.5.7",
+    "mlx-lm>=0.21.1",
+    "mlx>=0.22.0",
+    "neo4j>=5.27.0",
+    "pse",
+    "pydantic>=2.10.5",
+    "python-dotenv>=1.0.1",
+    "questionary>=2.1.0",
+    "rich>=13.9.4",
+    "ruff>=0.9.3",
+    "imgcat>=0.6.0",
+    "pillow>=11.1.0",
+]
+
+[tool.ruff.lint]
+extend-select = [
+  "B",    # flake8-bugbear
+  "I",    # isort
+  "PGH",  # pygrep-hooks
+  "RUF",  # Ruff-specific
+  "UP",   # pyupgrade
+]
+
+[tool.uv.sources]
+pse = { path = "../proxy-structuring-engine" }
