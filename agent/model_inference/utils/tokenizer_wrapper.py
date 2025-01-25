@@ -8,8 +8,9 @@ from mlx_lm.tokenizer_utils import (
     NaiveStreamingDetokenizer,
     SPMStreamingDetokenizer,
 )
-from model_inference.chat_templates.control_tokens import ControlTokens
 from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast
+
+from agent.model_inference.chat_templates.control_tokens import ControlTokens
 
 DetokenizerType = (
     type[NaiveStreamingDetokenizer]
@@ -79,6 +80,13 @@ class TokenizerWrapper(Generic[T]):
         eom_token = self._control_tokens.eom_token if self._control_tokens else None
         return self._tokenizer.encode(eom_token)[0] if eom_token else 0
 
+    @property
+    def end_token_ids(self) -> list[int]:
+        """
+        Get the end token IDs of the tokenizer.
+        """
+        return [self.eos_token_id, self.eom_token_id]
+
     def decode(self, tokens: list[int]) -> str:
         """
         Decode the tokens, applying the detokenizer template first if the tokens
@@ -86,9 +94,7 @@ class TokenizerWrapper(Generic[T]):
         """
         return self._tokenizer.decode(tokens)
 
-    def encode(
-        self, prompt: str | list[dict[str, str]], **kwargs
-    ) -> str | list[int]:
+    def encode(self, prompt: str | list[dict[str, str]], **kwargs) -> str | list[int]:
         """
         Encode the prompt, applying the tokenizer template first if the prompt
         is a series of messages instead of a straight string.

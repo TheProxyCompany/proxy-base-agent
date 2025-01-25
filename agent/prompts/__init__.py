@@ -1,12 +1,13 @@
 import os
-from collections.abc import Iterator
 
 
-def get_available_prompts() -> Iterator[str]:
+def get_available_prompts() -> list[str]:
     """Get a list of available prompts."""
+    prompt_file_names = []
     for file in os.scandir(os.path.dirname(__file__)):
         if file.is_file() and file.name.endswith(".txt"):
-            yield file.name
+            prompt_file_names.append(file.name)
+    return sorted(prompt_file_names)
 
 
 def load_prompt_template(filepath: str | None = None) -> str:

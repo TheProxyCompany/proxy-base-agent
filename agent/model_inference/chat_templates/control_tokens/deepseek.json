@@ -1,0 +1,16 @@
+{
+    "template_type": "deepseek",
+    "bos_token": "<｜begin▁of▁sentence｜>",
+    "eos_token": "<｜end▁of▁sentence｜>",
+    "eom_token": "<｜end▁of▁sentence｜>",
+    "tool_use_token_start": "<｜tool▁call▁begin｜>",
+    "tool_use_token_end": "<｜tool▁call▁end｜>",
+    "start_header_token": "<|start_header_id|>",
+    "end_header_token": "<|end_header_id|>\n",
+    "roles": {
+        "system": "system",
+        "assistant": "assistant",
+        "user": "user",
+        "tool": "ipython"
+    }
+}

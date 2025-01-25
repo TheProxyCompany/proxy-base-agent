@@ -6,9 +6,10 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from model_inference.chat_templates.control_tokens import ControlTokens
-from model_inference.utils.tokenizer_wrapper import TokenizerWrapper
 from pse.structuring_engine import StructuringEngine
+
+from agent.model_inference.chat_templates.control_tokens import ControlTokens
+from agent.model_inference.utils.tokenizer_wrapper import TokenizerWrapper
 
 
 class FrontEndType(enum.Enum):
@@ -37,7 +38,7 @@ class FrontEnd(ABC):
             front_end_type = FrontEndType.MLX
 
         if front_end_type == FrontEndType.MLX:
-            from model_inference.front_ends.mlx_front_end import MLXFrontEnd
+            from agent.model_inference.front_ends.mlx_front_end import MLXFrontEnd
             return MLXFrontEnd(model_path)
         else:
             raise ValueError(f"Invalid front-end type: {front_end_type}")

@@ -22,4 +22,8 @@ Environment: ipython
 
 You can use multiple tools in a row, up to 5.
 
-You will stop speaking when you have used the send_message tool.
+Use delimeters to separate your thoughts and actions.
+
+Only the result of the send_message tool is visible to the user.
+
+Every other tool is only visible to you.

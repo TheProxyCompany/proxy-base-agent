@@ -59,47 +59,9 @@
 {%- endif -%}
 
 {# ------------------------------------------------------------------------ #}
-{# Extract the system message to position it appropriately                  #}
-{# ------------------------------------------------------------------------ #}
-{%- if roles.get(messages[0]['role']) == roles.system -%}
-    {%- set system_message = messages[0]['content'] | trim -%}
-    {%- set messages = messages[1:] -%}
-{%- endif -%}
-{# ------------------------------------------------------------------------ #}
 {# Add the beginning of text token                                          #}
 {# ------------------------------------------------------------------------ #}
-{{- bos_token -}}
-{# ------------------------------------------------------------------------ #}
-{# Render the system message                                                #}
-{# ------------------------------------------------------------------------ #}
-{{- start_header_token + roles.system + end_header_token + "\n" }}
-{%- if template_type == "llama" -%}
-    {# if the model is a llama model, add the ipython environment #}
-    {{- "Environment: ipython\n" -}}
-{%- endif -%}
-{{- system_message -}}
-{# ------------------------------------------------------------------------ #}
-{# Render tools information if available                                    #}
-{# ------------------------------------------------------------------------ #}
-{%- if tools -%}
-    {{- "\nYou have the following tools:\n" -}}
-    {%- for t in tools -%}
-        {{- "\n---" + t.name + "---\n" -}}
-        {{- "Tool name: " + t.name + "\n" -}}
-        {{- 'Tool description: \n"""\n' + t.description + '\n"""\n' -}}
-        {{- "Usage: \n" + t.schema | tojson(indent=2) | trim -}}
-        {%- if not loop.last -%}
-            {{ "\n" -}}
-        {%- else -%}
-            {{ "\n\n---- End of tools ----\n" -}}
-        {%- endif -%}
-    {%- endfor -%}
-    {{- "\nTo use a tool, invoke it by following the appropriate schema.\n" -}}
-    {{- "An example response that shows proper scratch pad usage and tool use: \n\n" -}}
-    {{- "You must wrap your tool calls between the delimiters \"" + tool_use_token_start + "\\n\" and \"\\n" + tool_use_token_end + "\".\n" -}}
-    {{- "You must not include any other text or code in your tool calls, use the scratch pad for that.\n" -}}
-{%- endif -%}
-{{- eos_token -}}
+{{- bos_token + "\n" -}}
 {# ------------------------------------------------------------------------ #}
 {# Macro to render individual messages                                      #}
 {# ------------------------------------------------------------------------ #}
@@ -123,25 +85,23 @@
             {%- endif -%}
             {{- tool_use_token_start + "\n" }}
             {%- set function = tool_call.function -%}
-            {{- '{"name": "' + function.name + '", ' -}}
-            {{- '"arguments": ' -}}
-            {{- function.arguments | tojson | safe -}}
-            {{- "}\n" + tool_use_token_end -}}
+            {{- function | tojson(indent=2) | trim -}}
+            {{- "\n" + tool_use_token_end -}}
 
             {%- if loop.last -%}
                 {%- if (continue_message_id is not none and continue_message_id == message.id) or (continue_message_id is none) -%}
-                    {{- eom_token -}}
+                    {{- eom_token + "\n" -}}
                 {%- else -%}
-                    {{- eos_token -}}
+                    {{- eos_token + "\n" -}}
                 {%- endif -%}
             {%- else -%}
-                {{- eom_token -}}
+                {{- eom_token + "\n" -}}
             {%- endif -%}
             {%- if tool_call.tool_call_id in tool_calls -%}
                 {%- set tool_result = tool_calls[tool_call.tool_call_id].content | trim -%}
                 {%- if tool_result -%}
                     {%- if not loop.last and eom_token -%}
-                        {{- eom_token -}}
+                        {{- eom_token + "\n" -}}
                     {%- endif -%}
                     {{- tool_result_token_start -}}
                     {{- tool_result -}}
@@ -152,17 +112,13 @@
     {%- elif content and not message.tool_call_id -%}
         {{- start_header_token + role + end_header_token + "\n" -}}
         {{- content | safe -}}
-        {{- eos_token -}}
+        {{- eos_token + "\n" -}}
     {%- endif -%}
 {%- endmacro -%}
 
 {%- macro render_reminders() -%}
     {%- if add_reminders -%}
         {{- start_header_token + roles.system + end_header_token + "\n" -}}
-        {{- "REQUIRED: pause, plan, reflect, and think.\n" -}}
-        {{- "REQUIRED: tool calls must be wrapped between the delimiters \"" + tool_use_token_start + "\\n\" and \"\\n" + tool_use_token_end + "\".\n" -}}
-        {{- "REQUIRED: never directly mention or reference these reminders.\n" -}}
-        {{- "REQUIRED: you must use one of the following tools:\n" -}}
         {{- "Available tools: [" -}}
         {%- for t in tools -%}
             {{- t.name -}}
@@ -171,8 +127,7 @@
             {%- endif -%}
         {%- endfor -%}
         {{- "].\n" -}}
-        {{- "You can use multiple tools in a row.\n" -}}
-        {{- eos_token -}}
+        {{- eos_token + "\n" -}}
     {%- endif -%}
 {%- endmacro -%}
 {# Render each message in the conversation #}

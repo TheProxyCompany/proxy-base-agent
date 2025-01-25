@@ -9,7 +9,44 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
-from pse import callable_to_json_schema
+from pse.util import callable_to_json_schema
+from pydantic import BaseModel
+
+
+class FunctionCall(BaseModel):
+    name: str
+    arguments: dict[str, Any]
+
+class ToolCall(BaseModel):
+    tool_call_type: str
+    function: FunctionCall
+    id: str
+
+    def __init__(
+        self, tool_call_type: str, function: FunctionCall | Any, id: str | None = None
+    ):
+        if function and not isinstance(function, FunctionCall):
+            name = function.get("name", "")
+            arguments = function.get("arguments", {})
+            function = FunctionCall(name=name, arguments=arguments)
+        super().__init__(
+            id=id or str(uuid.uuid4()),
+            tool_call_type=tool_call_type,
+            function=function,
+        )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "type": self.tool_call_type,
+            "function": self.function.model_dump(),
+        }
+
+    def __str__(self):
+        return json.dumps(self.to_dict())
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class Tool:
@@ -22,10 +59,11 @@ class Tool:
         source_type: str = "python",
     ):
         self.name = name
+        self.callable = callable
         self.source_type = source_type
         self.source_code = inspect.getsource(callable)
         self.json_schema = callable_to_json_schema(callable)
-        self.callable = callable
+        self.json_schema["schema"] = self.get_invocation_schema()
 
     def __call__(self, caller: Any, **kwargs) -> Any:
         """
@@ -60,7 +98,7 @@ class Tool:
         return result
 
     @staticmethod
-    def load(filepath: str | None = None) -> list[Tool]:
+    def load(filepath: str | None = None, file_name: str | None = None) -> list[Tool]:
         """
         Load a single Python function from a given file and generate its schema.
 
@@ -78,15 +116,18 @@ class Tool:
         """
         path = filepath or os.path.dirname(__file__)
 
+        if file_name:
+            path = os.path.join(path, file_name)
+
         if os.path.isdir(path):
             tools = []
             for file in os.listdir(path):
-                tools.extend(Tool.load(os.path.join(path, file)))
+                tools.extend(Tool.load(path, file))
             return tools
         elif (
             not os.path.isfile(path)
             or not path.endswith(".py")
-            or path.startswith("__")
+            or (file_name and file_name.startswith("__"))
         ):
             return []
 
@@ -108,12 +149,6 @@ class Tool:
 
         return [Tool(module_name, function)]
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "name": self.name,
-            "schema": self.json_schema,
-        }
-
     def get_invocation_schema(self) -> dict[str, Any]:
         tool_name = self.name
         tool_schema = self.json_schema
@@ -132,35 +167,33 @@ class Tool:
         }
         return invocation_schema
 
-
-class FunctionCall:
-    def __init__(self, name: str, arguments: dict[str, str]):
-        self.name = name
-        self.arguments: dict[str, str] = arguments
-
-class ToolCall:
-    def __init__(
-        self,
-        tool_call_type: str,
-        function: FunctionCall,
-        id: str | None = None,
-    ):
-        self.tool_call_type = tool_call_type
-        self.function = function
-        self.id: str = id or str(uuid.uuid4())
-
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
-            "id": str(self.id),
-            "type": self.tool_call_type,
-            "function": {
-                "name": self.function.name,
-                "arguments": self.function.arguments,
-            },
+            "name": self.name,
+            "description": self.description,
+            "schema": self.get_invocation_schema(),
         }
 
-    def __str__(self):
-        return json.dumps(self.to_dict())
+    def __getattribute__(self, name: str) -> Any:
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            json_schema = object.__getattribute__(self, "json_schema")
+            if name in json_schema:
+                return json_schema[name]
+            return None
 
-    def __repr__(self):
-        return self.__str__()
+    def __str__(self) -> str:
+        readable = {
+            "name": self.name,
+            "description": self.description or "",
+        }
+        return json.dumps(readable, indent=4)
+
+    def __repr__(self) -> str:
+        readable = {
+            "name": self.name,
+            "description": self.description or "",
+            "invocation_schema": self.get_invocation_schema(),
+        }
+        return json.dumps(readable, indent=4)

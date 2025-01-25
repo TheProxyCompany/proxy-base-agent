@@ -8,11 +8,12 @@ import mlx.nn as nn
 from mlx_lm.models.cache import RotatingKVCache
 from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
 from mlx_lm.utils import _get_classes, get_model_path, load_config
-from model_inference.chat_templates import get_control_tokens, load_chat_template
-from model_inference.front_ends import FrontEnd
-from model_inference.utils.reuseable_cache import ReusableKVCache
-from model_inference.utils.tokenizer_wrapper import load_tokenizer
 from pse.structuring_engine import StructuringEngine
+
+from agent.model_inference.chat_templates import get_control_tokens, load_chat_template
+from agent.model_inference.front_ends import FrontEnd
+from agent.model_inference.utils.reuseable_cache import ReusableKVCache
+from agent.model_inference.utils.tokenizer_wrapper import load_tokenizer
 
 logger = logging.getLogger(__name__)
 

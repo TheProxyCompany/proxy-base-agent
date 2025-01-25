@@ -1,12 +1,12 @@
 from agent.agent import Agent
-from agent.message import Message, MessageState
+from agent.event import Event, State
 
 
 def metacognition(
     self: Agent,
     chain_of_thought: list[str] | str | dict,
     feelings: str | None = None,
-) -> Message:
+) -> Event:
     """
     Engage in metacognition, articulating thoughts and emotions.
     This represents internal cognitive processes, allowing analysis of reasoning
@@ -35,10 +35,17 @@ def metacognition(
             and emotional insights.
     """
 
-    return Message(
+    if isinstance(chain_of_thought, list):
+        chain_of_thought = "\n".join(chain_of_thought)
+    elif isinstance(chain_of_thought, dict):
+        import json
+        chain_of_thought = json.dumps(chain_of_thought)
+
+
+    return Event(
         role="ipython",
-        state=MessageState.METACOGNITION,
-        name=self.state.name,
-        content="\n".join(chain_of_thought),
+        state=State.METACOGNITION,
+        name=self.state.name + " thought",
+        content=chain_of_thought,
         feelings=feelings,
     )

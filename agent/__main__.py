@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from agent import Agent
+from agent.agent import Agent
 from agent.interface.cli_interface import CLIInterface
 
 # Set up logging
@@ -15,7 +15,11 @@ logging.basicConfig(
 
 async def main():
     interface = CLIInterface()
-    agent = await Agent.create(interface)
-    await agent()
+    try:
+        agent = await Agent.create(interface)
+        await agent()
+    except Exception as error:
+        breakpoint()
+        await interface.exit_program(error)
 
 asyncio.run(main())

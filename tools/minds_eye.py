@@ -2,10 +2,10 @@ import dotenv
 import fal_client
 
 from agent.agent import Agent
-from agent.message import Message, MessageState
+from agent.event import Event, State
 
 
-def minds_eye(self: Agent, inner_thoughts: str, scene_description: str) -> Message:
+def minds_eye(self: Agent, inner_thoughts: str, scene_description: str) -> Event:
     """
     Visualize a scene or object by generating a detailed mental image to enhance creativity and imagination.
 
@@ -36,37 +36,44 @@ def minds_eye(self: Agent, inner_thoughts: str, scene_description: str) -> Messa
         handler = fal_client.submit(
             "fal-ai/flux/dev",
             arguments={
-                "prompt": scene_description + " pixelated, low resolution, 8-bit, 16x16, retro style.",
+                "prompt": scene_description
+                + " pixelated, low resolution, 8-bit, 16x16, retro style.",
                 "has_nsfw_concepts": True,
                 "image_size": "square",
                 "seed": self.state.seed,
-                "guidance_scale": 11.0
+                "guidance_scale": 11.0,
             },
         )
         visualization = handler.get()
 
-        if not visualization or "images" not in visualization or not visualization["images"]:
+        if (
+            not visualization
+            or "images" not in visualization
+            or not visualization["images"]
+        ):
             raise ValueError("No valid images in visualization response")
 
         image_url = visualization["images"][0].get("url")
         if not image_url:
-            raise ValueError("No URL found in the first image of visualization response")
+            raise ValueError(
+                "No URL found in the first image of visualization response"
+            )
 
-        return Message(
+        return Event(
             role="ipython",
             content=scene_description,
-            state=MessageState.TOOL_RESULT,
+            state=State.TOOL_RESULT,
             name=self.state.name + "'s imagination",
             inner_thoughts=inner_thoughts,
             feelings=scene_description,
-            image_path=image_url
+            image_path=image_url,
         )
     except Exception as e:
         error_message = f"Failed to generate visualization: {e}"
-        return Message(
+        return Event(
             role="ipython",
             content=error_message,
-            state=MessageState.TOOL_ERROR,
+            state=State.TOOL_ERROR,
             name=self.state.name + "'s imagination",
-            inner_thoughts=inner_thoughts
+            inner_thoughts=inner_thoughts,
         )

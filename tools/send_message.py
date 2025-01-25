@@ -1,8 +1,8 @@
 from agent.agent import Agent
-from agent.message import Message, MessageState
+from agent.event import Event, State
 
 
-def send_message(self: Agent, message: str) -> Message:
+def send_message(self: Agent, message: str) -> Event:
     """
     Conclude the sequence of tool usage by communicating the final, packaged result to the recipient.
 
@@ -27,11 +27,9 @@ def send_message(self: Agent, message: str) -> Message:
             The message that was sent, containing the final, formatted result.
     """
 
-    self.should_handle_tool_result = False
-
-    return Message(
+    return Event(
         role="assistant",
         content=message,
-        state=MessageState.ASSISTANT_RESPONSE,
+        state=State.ASSISTANT_RESPONSE,
         name=self.state.name + " sent a message",
     )
