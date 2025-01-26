@@ -13,42 +13,6 @@ from pse.util import callable_to_json_schema
 from pydantic import BaseModel
 
 
-class FunctionCall(BaseModel):
-    name: str
-    arguments: dict[str, Any]
-
-class ToolCall(BaseModel):
-    tool_call_type: str
-    function: FunctionCall
-    id: str
-
-    def __init__(
-        self, tool_call_type: str, function: FunctionCall | Any, id: str | None = None
-    ):
-        if function and not isinstance(function, FunctionCall):
-            name = function.get("name", "")
-            arguments = function.get("arguments", {})
-            function = FunctionCall(name=name, arguments=arguments)
-        super().__init__(
-            id=id or str(uuid.uuid4()),
-            tool_call_type=tool_call_type,
-            function=function,
-        )
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "type": self.tool_call_type,
-            "function": self.function.model_dump(),
-        }
-
-    def __str__(self):
-        return json.dumps(self.to_dict())
-
-    def __repr__(self):
-        return self.__str__()
-
-
 class Tool:
     """A tool is a piece of code that can be invoked by an agent."""
 
@@ -77,8 +41,8 @@ class Tool:
             Any: The result of the tool call.
         """
         arguments = {
-            **kwargs,
             "self": caller,
+            **kwargs,
         }
         spec = inspect.getfullargspec(self.callable)
         annotations = spec.annotations
@@ -122,7 +86,8 @@ class Tool:
         if os.path.isdir(path):
             tools = []
             for file in os.listdir(path):
-                tools.extend(Tool.load(path, file))
+                new_tools = Tool.load(path, file)
+                tools.extend(new_tools)
             return tools
         elif (
             not os.path.isfile(path)
@@ -184,16 +149,44 @@ class Tool:
             return None
 
     def __str__(self) -> str:
-        readable = {
-            "name": self.name,
-            "description": self.description or "",
-        }
-        return json.dumps(readable, indent=4)
+        return f"{self.name}:\n{self.description}"
 
     def __repr__(self) -> str:
-        readable = {
-            "name": self.name,
-            "description": self.description or "",
-            "invocation_schema": self.get_invocation_schema(),
-        }
-        return json.dumps(readable, indent=4)
+        return json.dumps(self.to_dict(), indent=4)
+
+
+
+class ToolUse(BaseModel):
+    tool_id: str
+    tool_type: str
+    function: FunctionCall
+
+    def __init__(
+        self,
+        tool_type: str,
+        function: FunctionCall | Any,
+        tool_id: str | None = None,
+    ):
+        if function and not isinstance(function, FunctionCall):
+            name = function.get("name", "")
+            arguments = function.get("arguments", {})
+            function = FunctionCall(name=name, arguments=arguments)
+        super().__init__(
+            tool_id=tool_id or str(uuid.uuid4()),
+            tool_type=tool_type,
+            function=function,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump()
+
+    def __str__(self) -> str:
+        return json.dumps(self.to_dict())
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+class FunctionCall(BaseModel):
+    name: str
+    arguments: dict[str, Any]

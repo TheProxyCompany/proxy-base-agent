@@ -173,3 +173,6 @@ cython_debug/
 .memories/
 
 .language_models/
+
+.DS_Store
+uv.lock

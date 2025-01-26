@@ -25,8 +25,10 @@ class ControlTokens(BaseModel):
     def end_tokens(self) -> list[str]:
         return [self.eos_token, self.eom_token]
 
-    def tool_use_delimiters(self) -> tuple[str, str]:
-        return self.tool_use_token_start, self.tool_use_token_end
+    def tool_use_delimiters(self) -> tuple[str, str] | None:
+        if self.tool_use_token_start and self.tool_use_token_end:
+            return self.tool_use_token_start, self.tool_use_token_end
+        return None
 
 
 def get_control_tokens(model_type: str) -> ControlTokens:

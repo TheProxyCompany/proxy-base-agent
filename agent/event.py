@@ -8,7 +8,7 @@ from typing import Any
 
 import pytz
 
-from tools import ToolCall
+from tools import ToolUse
 
 EST = pytz.timezone("US/Eastern")
 
@@ -66,7 +66,7 @@ class Event:
         name: str | None = None,
         role: str | None = None,
         state: State = State.SYSTEM_MESSAGE,
-        tool_calls: list[ToolCall] | None = None,
+        tool_calls: list[ToolUse] | None = None,
         **kwargs,
     ) -> None:
         self.content = content
@@ -77,6 +77,7 @@ class Event:
         self.role = role
         self.state = state
         self.tool_calls = tool_calls or []
+        self.tool_results: dict[str, Event] = {}
 
     def append_content(self, content: str | list[str]):
         if isinstance(self.content, list) and isinstance(content, list):
@@ -122,10 +123,37 @@ class Event:
         try:
             return object.__getattribute__(self, name)
         except AttributeError:
-            metadata = object.__getattribute__(self, 'metadata')
+            metadata = object.__getattribute__(self, "metadata")
             if name in metadata:
                 return metadata[name]
             return None
+
+    @staticmethod
+    def create(
+        scratch_pad: str,
+        tool_calls: list[ToolUse] | ToolUse | None = None,
+        continue_message_id: str | None = None,
+        usage: dict[str, Any] | None = None,
+    ) -> Event:
+        """Create a Message object based on the presence of tool calls."""
+        if tool_calls:
+            return Event(
+                event_id=continue_message_id,
+                role="assistant",
+                content=scratch_pad,
+                tool_calls=tool_calls if isinstance(tool_calls, list) else [tool_calls],
+                name="scratch pad",
+                state=State.TOOL_CALL,
+                metadata=usage,
+            )
+        return Event(
+            event_id=continue_message_id,
+            role="assistant",
+            content=scratch_pad,
+            state=State.ASSISTANT_RESPONSE,
+            name="response",
+            metadata=usage,
+        )
 
 
 State = Event.State

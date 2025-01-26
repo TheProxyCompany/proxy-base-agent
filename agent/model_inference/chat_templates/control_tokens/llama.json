@@ -6,7 +6,7 @@
     "tool_use_token_start": "```json",
     "tool_use_token_end": "```",
     "start_header_token": "<|start_header_id|>",
-    "end_header_token": "<|end_header_id|>\n",
+    "end_header_token": "<|end_header_id|>",
     "roles": {
         "system": "system",
         "assistant": "assistant",

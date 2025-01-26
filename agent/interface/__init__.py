@@ -52,12 +52,12 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    async def render_image(self, image: object) -> None:
+    async def render_image(self, image_url: str) -> None:
         """
         Display an image with optional caption and inner thoughts.
 
         Args:
-            image (object): The image to be displayed.
+            image_url (str): The URL of the image to be displayed.
         """
         pass
 

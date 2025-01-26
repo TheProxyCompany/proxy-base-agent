@@ -8,16 +8,15 @@ def metacognition(
     feelings: str | None = None,
 ) -> Event:
     """
-    Engage in metacognition, articulating thoughts and emotions.
-    This represents internal cognitive processes, allowing analysis of reasoning
-    and emotional state. Use this to facilitate high-level abstract thinking,
-    strategic planning, and self-awareness.
+    Think about thinking - analyze your own thoughts and feelings.
+    This tool helps you understand your own reasoning process and emotional state.
+    Use it when you need to think deeply, plan ahead, or check in with yourself.
 
-    Psychological Frameworks Integrated:
-    1. Metacognitive Thinking: Encourages awareness and regulation of one's thoughts.
-    2. Conceptual Thinking: Focuses on the formation and manipulation of abstract concepts.
-    3. Top-Down Processing: Applies general principles to specific situations.
-    4. Self-Determination Theory: Considers intrinsic motivations and emotional states.
+    Key aspects:
+    1. Awareness: Notice and manage your own thoughts
+    2. Reasoning: Apply your knowledge to specific problems
+    3. Motivation: Understand what drives your choices and feelings
+    4. Emotions: Express your emotions and feelings
 
     Arguments:
         chain_of_thought (List[str] | str | dict):
@@ -26,13 +25,7 @@ def metacognition(
             Supports all Unicode characters, including emojis.
 
         feelings (Optional[str]):
-            A reflection of the agent's emotional state.
-            Supports all Unicode characters, including emojis.
-
-    Returns:
-        Message:
-            The result of the reflective conceptual monologue, containing synthesized thoughts
-            and emotional insights.
+            The agent's emotional state. Supports all Unicode characters, including emojis.
     """
 
     if isinstance(chain_of_thought, list):
@@ -41,11 +34,10 @@ def metacognition(
         import json
         chain_of_thought = json.dumps(chain_of_thought)
 
-
     return Event(
         role="ipython",
         state=State.METACOGNITION,
-        name=self.state.name + " thought",
+        name=self.state.name + " thoughts",
         content=chain_of_thought,
         feelings=feelings,
     )

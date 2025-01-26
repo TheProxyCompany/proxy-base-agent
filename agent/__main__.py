@@ -19,7 +19,9 @@ async def main():
         agent = await Agent.create(interface)
         await agent()
     except Exception as error:
-        breakpoint()
         await interface.exit_program(error)
+        import traceback
+        traceback.print_exc()
+        breakpoint()
 
 asyncio.run(main())

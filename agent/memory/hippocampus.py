@@ -2,7 +2,7 @@ from typing import Any
 
 from agent.agent import AgentState
 from agent.event import Event, State
-from tools import FunctionCall, ToolCall
+from tools import FunctionCall, ToolUse
 
 
 class Hippocampus:
@@ -17,7 +17,7 @@ class Hippocampus:
             agent_seed (int): Seed value for the agent.
         """
         self.agent_state = agent_state
-        self.messages: list[Event] = []
+        self.events: list[Event] = []
 
     def _construct_message(self, message_data: dict[str, Any]) -> Event | None:
         """
@@ -58,7 +58,7 @@ class Hippocampus:
                         name=tool_call_data.get("name", ""),
                         arguments=tool_call_data.get("arguments", {}),
                     )
-                    tool_calls.append(ToolCall("function", function_call, tool_call_id))
+                    tool_calls.append(ToolUse("function", function_call, tool_call_id))
 
             # Construct Message object
             message = Event(
@@ -96,35 +96,33 @@ class Hippocampus:
                     self.append_to_history(msg)
             return
 
-        if (
-            current_message_id := self.agent_state.continue_message_id
-        ) and input.id == current_message_id:
-            continue_message = self.get_message_by_id(current_message_id)
-            if continue_message:
-                continue_message.append_content(input.content)
-                continue_message.tool_calls.extend(input.tool_calls)
+        if input.id == self.agent_state.current_event_id:
+            current_event = self.get_event_by_id(input.id)
+            if current_event:
+                current_event.append_content(input.content)
+                current_event.tool_calls.extend(input.tool_calls)
         else:
-            self.messages.append(input)
+            self.events.append(input)
 
-    def get_message_by_id(self, message_id: str | None) -> Event | None:
+    def get_event_by_id(self, event_id: str | None) -> Event | None:
         """
         Get a message by its ID.
 
         Args:
-            message_id (str): The ID of the message to retrieve.
+            event_id (str): The ID of the event to retrieve.
 
         Returns:
             Optional[Message]: The message with the specified ID or None if not found.
         """
-        if not message_id:
+        if not event_id:
             return None
-        for message in self.messages:
-            if message.id == message_id:
-                return message
+        for event in self.events:
+            if event.id == event_id:
+                return event
         return None
 
     def clear_messages(self):
         """
         Clear all messages from the current message list.
         """
-        self.messages = []
+        self.events = []

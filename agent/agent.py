@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
 from random import randint
-from typing import Any
 
 import questionary
 
@@ -14,11 +14,12 @@ from agent.event import Event, State
 from agent.interface import Interface
 from agent.model_inference.local_inference import LocalInference
 from agent.prompts import get_available_prompts, load_prompt_template
-from tools import Tool, ToolCall
+from tools import FunctionCall, Tool, ToolUse
 
 logger = logging.getLogger(__name__)
 
 MAX_SUB_STEPS: int = 10
+
 
 class AgentState:
     """Represents the state of an agent.
@@ -43,7 +44,7 @@ class AgentState:
         seed: int | None = None,
         tools: list[Tool] | None = None,
     ):
-        self.continue_message_id: str | None = None
+        self.current_event_id: str | None = None
         self.interface = interface
         self.name = name
         self.seed = seed or randint(0, 1000000)
@@ -55,57 +56,24 @@ class AgentState:
         readable = {
             "name": self.name,
             "step_number": self.step_number,
-            "continue_message_id": self.continue_message_id,
+            "current_event_id": self.current_event_id,
         }
         return str(readable)
 
+
 class Agent:
+
     def __init__(self, interface: Interface, inference: LocalInference, **kwargs):
         """Initialize an agent."""
         from agent.memory.hippocampus import Hippocampus
 
         self.inference = inference
-        self.state = AgentState(interface=interface, **kwargs)
+        self.state = AgentState(interface, **kwargs)
         self.hippocampus = Hippocampus(self.state)
-        self.set_system_prompt()
-
-    def set_system_prompt(self):
-        prompt = self.state.system_prompt
-        prompt += "\n\n---- Tools ----\n"
-        for tool in self.state.tools_map.values():
-            prompt += f"\n---{tool.name}---\n"
-            prompt += f"Tool name: {tool.name}\n"
-            prompt += f'Tool description: \n"""\n{tool.description}\n"""\n'
-            prompt += f"Tool schema: \n{json.dumps(tool.schema, indent=2)}\n"
-        prompt += "\n---- End of tools ----\n"
-
-        tool_use_token_start = self.inference.front_end.control_tokens.tool_use_token_start
-        tool_use_token_end = self.inference.front_end.control_tokens.tool_use_token_end
-        prompt += f'Starting delimiter: "{tool_use_token_start}\\n"\n'
-        prompt += f'Ending delimiter: "{tool_use_token_end}".\n'
-        prompt += f'Wrap tool calls between the delimiters "{tool_use_token_start}\\n" and "\\n{tool_use_token_end}".\n'
-        prompt += "Any other text is yours to use as you see fit and is not shown to the user.\n"
-        system_message = Event(role="system", content=prompt)
-        self.hippocampus.append_to_history(system_message)
-
-    @property
-    def should_act(self) -> bool:
-        """
-        Whether the agent should act.
-
-        The agent should act if the current step number is less than or equal to the
-        maximum number of sub-steps.
-
-        Step count is incremented by 1 after each action, and is reset to 0 when the
-        agent returns to human control.
-        """
-        return self.state.step_number <= MAX_SUB_STEPS
+        self.hippocampus.append_to_history(self.system_prompt)
 
     async def __call__(self) -> None:
-        try:
-            await self.loop()
-        except Exception as e:
-            await self.state.interface.exit_program(e)
+        await self.loop()
 
     async def loop(self) -> None:
         """
@@ -113,31 +81,27 @@ class Agent:
 
         The agent will take action until it reaches the maximum number of sub-steps.
         """
-        while self.should_act:
+        while self.can_act:
             if self.state.step_number == 0:
                 message = await self.state.interface.get_input()
-                if isinstance(message, Event):
+                if message is not None and isinstance(message, Event):
                     self.hippocampus.append_to_history(message)
                     await self.state.interface.show_output(message)
                 elif message:
-                    message = Event(role="user", content=str(message))
-                    self.hippocampus.append_to_history(message)
-                    await self.state.interface.show_output(message)
-                elif message is None:
                     break
 
             await self.run()
 
-        if not self.should_act:
+        if not self.can_act:
             message = Event(role="system", content="Returning to human control.")
             await self.state.interface.show_output(message)
             self.state.step_number = 0
-            self.state.continue_message_id = None
+            self.state.current_event_id = None
             await self.loop()
         else:
             await self.state.interface.exit_program()
 
-    async def run(self):
+    async def run(self) -> Event | None:
         """
         Run the agent.
 
@@ -146,44 +110,60 @@ class Agent:
         - Return a message to the user
         - Call a tool
         """
-        prompt = [m.to_dict() for m in self.hippocampus.messages]
-        tools = [tool for tool in self.state.tools_map.values()]
-        tool_calls: dict[str, list[dict[str, Any]]] = {}
-        for m in self.hippocampus.messages:
-            if m.state == State.TOOL_RESULT or m.state == State.TOOL_ERROR:
-                if m.id not in tool_calls:
-                    tool_calls[m.id] = [m.to_dict()]
-                else:
-                    tool_calls[m.id].append(m.to_dict())
-
         inference_config = {
-            "prompt": prompt,
-            "tools": tools,
-            "tool_calls": tool_calls,
+            "prompt": self.hippocampus.events,
+            "structure": self.tool_schemas,
+            "tool_names": list(self.state.tools_map.keys()),
+            "output_type": FunctionCall,
             "add_reminders": False,
             "add_generation_prompt": True,
-            "continue_message_id": self.state.continue_message_id,
             "prefill": None,
+            "event_id": self.state.current_event_id,
+            "temperature": 1.1,
+            "min_p": 0.05,
+            "min_tokens_to_keep": 10,
         }
-        model_output = await self.inference(**inference_config)
-        for new_message in model_output:
-            self.hippocampus.append_to_history(new_message)
-            for tool_called in new_message.tool_calls:
-                tool_result = self.use_tool(tool_called)
-                self.hippocampus.append_to_history(tool_result)
-                await self.state.interface.show_output(tool_result)
+        buffer = ""
+        structured_output = ""
+        # render live updates off main thread so llm can output faster
+        render_tasks = set()
+        for output in self.inference(**inference_config):
+            decoded_output = self.inference.front_end.tokenizer.decode(output.token_ids)
+            if self.inference.engine.is_within_value:
+                structured_output += decoded_output
+            else:
+                buffer += decoded_output
 
-                if tool_result.state == State.ASSISTANT_RESPONSE:
-                    self.state.step_number = 0
-                    self.state.continue_message_id = None
-                else:
-                    self.state.step_number += 1
-                    self.state.continue_message_id = new_message.id
+            task = asyncio.create_task(self.state.interface.show_live_output(decoded_output))
+            render_tasks.add(task)
+            task.add_done_callback(lambda t: render_tasks.remove(t))
+
+        if self.inference.engine.has_reached_accept_state:
+            engine_output = list(self.inference.engine.read_output(FunctionCall))
+            self.inference.engine.reset()
+            for output in engine_output:
+                self.buffer = output.buffer
+                tool_call = ToolUse("function", output.value)
+                return Event(role="assistant", content=self.buffer, tool_calls=[tool_call])
+        else:
+            return Event(role="assistant", content=self.buffer)
+
+    async def process(self, event: Event) -> None:
+        await self.state.interface.show_output(event)
+        self.hippocampus.append_to_history(event)
+        self.state.step_number += 1
+        self.state.current_event_id = event.id
+        for tool_called in event.tool_calls:
+            tool_result = self.use_tool(tool_called)
+            self.hippocampus.append_to_history(tool_result)
+            await self.state.interface.show_output(tool_result)
 
     @staticmethod
     async def create(
-        interface: Interface, inference: LocalInference | None = None
+        interface: Interface,
+        inference: LocalInference | None = None
     ) -> Agent:
+
         await interface.clear()
         agent_name = await Agent.get_agent_name()
         system_prompt = await Agent.get_agent_prompt()
@@ -202,7 +182,8 @@ class Agent:
             str: The chosen agent name or a generated UUID if left blank.
         """
         agent_name: str = await questionary.text(
-            "Enter a name (hit enter for Cerebra):", default="Cerebra"
+            "Enter a name (hit enter for Cerebra):",
+            default="Cerebra"
         ).ask_async()
         final_name = agent_name.strip() if agent_name else f"agent_{uuid.uuid4()}"
         return final_name
@@ -237,7 +218,42 @@ class Agent:
         ).ask_async()
         return model_path
 
-    def use_tool(self, tool_call: ToolCall) -> Event:
+    @property
+    def tool_schemas(self) -> list[dict]:
+        return [tool.get_invocation_schema() for tool in self.state.tools_map.values()]
+
+    @property
+    def system_prompt(self) -> Event:
+        prompt = self.state.system_prompt
+        prompt += "\n\n---- Tools ----\n"
+        for tool in self.state.tools_map.values():
+            prompt += f"\n---{tool.name}---\n"
+            prompt += f"Tool name: {tool.name}\n"
+            prompt += f'Tool description: \n"""\n{tool.description}\n"""\n'
+            prompt += f"Tool schema: \n{json.dumps(tool.schema, indent=2)}\n"
+        prompt += "\n---- End of tools ----\n"
+        control_tokens = self.inference.front_end.tokenizer.control_tokens
+        tool_use_token_start = control_tokens.tool_use_token_start
+        tool_use_token_end = control_tokens.tool_use_token_end
+        prompt += f'Starting delimiter: "{tool_use_token_start}\\n"\n'
+        prompt += f'Ending delimiter: "{tool_use_token_end}".\n'
+        prompt += f'Wrap tool calls between the delimiters "{tool_use_token_start}\\n" and "\\n{tool_use_token_end}".\n'
+
+        prompt += "Any other text is yours to use as you see fit and is not shown to the user.\n"
+        prompt += "Only you can see the tool calls and their results (unless specified otherwise).\n"
+        return Event(role="system", content=prompt)
+
+    @property
+    def can_act(self) -> bool:
+        """
+        The agent can act if the current step number is less than or equal to the
+        maximum number of sub-steps.
+
+        Step count is reset to 0 when the agent returns to human control.
+        """
+        return self.state.step_number <= MAX_SUB_STEPS
+
+    def use_tool(self, tool_use: ToolUse) -> Event:
         """Handle a single function call, execute the function, and return results.
 
         Args:
@@ -250,25 +266,27 @@ class Agent:
         """
 
         try:
-            tool = self.state.tools_map[tool_call.function.name]
-            with self.state.interface.console.status(f"[bold yellow]Calling {tool.name}..."):
-                result = tool(self, **tool_call.function.arguments)
+            tool = self.state.tools_map[tool_use.function.name]
+            with self.state.interface.console.status(
+                f"[bold yellow]Calling {tool.name}..."
+            ):
+                result = tool(self, **tool_use.function.arguments)
             if isinstance(result, Event):
-                result.id = tool_call.id
+                result.id = tool_use.tool_id
                 return result
             return Event(
                 role="ipython",
                 content=str(result),
-                name=tool_call.function.name,
-                event_id=tool_call.id,
+                name=tool_use.function.name,
+                event_id=tool_use.tool_id,
                 state=State.TOOL_RESULT,
             )
         except Exception as e:
             return Event(
                 role="ipython",
                 content=str(e),
-                name=tool_call.function.name,
-                event_id=tool_call.id,
+                name=tool_use.function.name,
+                event_id=tool_use.tool_id,
                 state=State.TOOL_ERROR,
             )
 

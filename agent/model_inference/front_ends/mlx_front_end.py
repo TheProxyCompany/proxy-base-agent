@@ -8,12 +8,10 @@ import mlx.nn as nn
 from mlx_lm.models.cache import RotatingKVCache
 from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
 from mlx_lm.utils import _get_classes, get_model_path, load_config
-from pse.structuring_engine import StructuringEngine
 
-from agent.model_inference.chat_templates import get_control_tokens, load_chat_template
 from agent.model_inference.front_ends import FrontEnd
+from agent.model_inference.tokenizer_wrapper import TokenizerWrapper
 from agent.model_inference.utils.reuseable_cache import ReusableKVCache
-from agent.model_inference.utils.tokenizer_wrapper import load_tokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -30,29 +28,28 @@ class MLXFrontEnd(FrontEnd):
         Args:
             model_path (str): The path to the model.
         """
+        self.computed_prompt_tokens = []
         self.load_model(model_path)
         self.initialize_cache(self.model)
-        self.control_tokens = get_control_tokens(self.model_type)
-        self.tokenizer = load_tokenizer(model_path, self.control_tokens)
-        self.tokenizer._tokenizer.chat_template = load_chat_template()
-        self.engine = StructuringEngine(self.tokenizer._tokenizer)
+        self.tokenizer = TokenizerWrapper.load(model_path, self.model_type)
 
-    def __call__(self, prompt: list[int], **kwargs) -> Iterator[FrontEnd.Result]:
-        return self.generate(prompt, **kwargs)
+    def inference(self, prompt: list[int], **kwargs) -> Iterator[FrontEnd.ModelOutput]:
+        """
+        A generator producing token ids based on the given prompt from the model.
 
-    def generate(
-        self,
-        prompt: list[int],
-        temp: float = 1.0,
-        min_p: float = 0.0,
-        min_tokens_to_keep: int = 1,
-        previous_prompt_tokens: list[int] | None = None,
-    ) -> Iterator[FrontEnd.Result]:
+        Args:
+            prompt (list[int]): The input prompt.
+            **kwargs: Keyword arguments for the sampler.
+        """
         mlx_prompt = mx.array(prompt)
-        if isinstance(self.cache[0], ReusableKVCache) and previous_prompt_tokens:
+
+        if not self.computed_prompt_tokens:
+            self.computed_prompt_tokens = prompt
+
+        if isinstance(self.cache[0], ReusableKVCache) and self.computed_prompt_tokens:
             tic = time.perf_counter()
             i = 0
-            for i, t in enumerate(previous_prompt_tokens):
+            for i, t in enumerate(self.computed_prompt_tokens):
                 if i >= len(mlx_prompt) - 1 or mlx_prompt[i] != t:
                     break
             for layer_cache in self.cache:
@@ -67,38 +64,28 @@ class MLXFrontEnd(FrontEnd):
         else:
             y = mlx_prompt
 
-        sampler_kwargs = {
-            "temperature": temp,
-            "min_p": min_p,
-            "min_tokens_to_keep": min_tokens_to_keep,
-        }
-
-        result = self.sample(y, **sampler_kwargs)
-        y, logprobs = result.tokens, result.logprobs
-        mx.async_eval(result.tokens, logprobs)
+        model_output = self.inference_step(y, **kwargs)
+        y, logprobs = model_output.tokens, model_output.logprobs
+        mx.async_eval(model_output.tokens, logprobs)
         mx.eval(y)
 
         while True:
-            yield result
-            next_result = self.sample(y, **sampler_kwargs)
-            next_y, next_logprobs = next_result.tokens, next_result.logprobs
-            mx.async_eval(next_y, next_logprobs)
+            yield model_output
+            new_model_output = self.inference_step(y, **kwargs)
+            new_y, new_logprobs = new_model_output.tokens, new_model_output.logprobs
+            mx.async_eval(new_y, new_logprobs)
 
-            result = next_result
-            y, logprobs = next_y, next_logprobs
+            model_output = new_model_output
+            y, logprobs = new_y, new_logprobs
 
-    def sample(
-        self,
-        prompt: mx.array,
-        **sampler_kwargs,
-    ) -> FrontEnd.Result:
+    def inference_step(
+        self, prompt: mx.array, **sampler_kwargs
+    ) -> FrontEnd.ModelOutput:
         """
-        A generator producing token ids based on the given prompt from the model.
+        A single step of inference on the given prompt from the model.
 
         Args:
             prompt (mx.array): The input prompt.
-            model (nn.Module): The model to use for generation.
-            engine (StructuringEngine): The engine to use for generation.
             **sampler_kwargs: Keyword arguments for the sampler.
         returns:
             Result: The result of the generation step.
@@ -107,7 +94,6 @@ class MLXFrontEnd(FrontEnd):
         logits = self.model(prompt[None], cache=self.cache)
         logits = logits[:, -1, :]
         assert isinstance(logits, mx.array)
-
         toc = time.perf_counter()
         inference_time = toc - tic
         logger.debug(f"Model inference time: {inference_time:.4f}s")
@@ -120,45 +106,58 @@ class MLXFrontEnd(FrontEnd):
             engine_time = toc - tic
             logger.debug(f"Engine time: {engine_time:.4f}s")
 
-        logprobs = logits - mx.logsumexp(logits, keepdims=True)
-
-        def __sampler(logprobs: mx.array, **kwargs) -> mx.array:
-            temp = float(kwargs.get("temperature", 1.0))
-            min_p = float(kwargs.get("min_p", 0.0))
-            min_tokens_to_keep = int(kwargs.get("min_tokens_to_keep", 1))
-
-            token: mx.array
-            if min_p > 0.0:
-                token = min_p_sampling(logprobs[None], min_p, min_tokens_to_keep, temp)
-            elif temp > 0.0:
-                token = categorical_sampling(logprobs, temp)
-            else:
-                token = mx.argmax(logprobs, axis=-1)
-
-            return token
-
         tic = time.perf_counter()
-        if self.engine:
-            token_ids = self.engine.sample(logprobs, __sampler, **sampler_kwargs)
-        else:
-            token_ids = __sampler(logprobs, **sampler_kwargs).tolist()
-            assert isinstance(token_ids, list)
-
+        logprobs = logits - mx.logsumexp(logits, keepdims=True)
+        token_ids = (
+            self.engine.sample(logprobs, self.sample_tokens, **sampler_kwargs)
+            if self.engine
+            else self.sample_tokens(logprobs, **sampler_kwargs).tolist()
+        )
+        assert isinstance(token_ids, list)
+        self.computed_prompt_tokens.extend(token_ids)
         toc = time.perf_counter()
         sampling_time = toc - tic
         logger.debug(f"Sampling time: {sampling_time:.4f}s")
 
-        return FrontEnd.Result(
+        return FrontEnd.ModelOutput(
             mx.array(token_ids, dtype=prompt.dtype),
             token_ids,
             logprobs,
-            self.engine.has_reached_accept_state if self.engine else False,
             inference_time,
             engine_time,
             sampling_time,
         )
 
-    def initialize_cache(self, model: nn.Module, max_kv_size: int | None = None) -> None:
+    @staticmethod
+    def sample_tokens(logprobs: mx.array, **kwargs) -> mx.array:
+        """
+        Sample tokens from the given logprobs.
+        This function is used by the structuring engine.
+        Easily extendable.
+
+        Args:
+            logprobs (mx.array): The logprobs to sample from.
+            **kwargs: Keyword arguments for the sampler.
+        Returns:
+            mx.array: The sampled tokens.
+        """
+        temp = float(kwargs.get("temperature", 1.0))
+        min_p = float(kwargs.get("min_p", 0.0))
+        min_tokens_to_keep = int(kwargs.get("min_tokens_to_keep", 1))
+
+        token: mx.array
+        if min_p > 0.0:
+            token = min_p_sampling(logprobs[None], min_p, min_tokens_to_keep, temp)
+        elif temp > 0.0:
+            token = categorical_sampling(logprobs, temp)
+        else:
+            token = mx.argmax(logprobs, axis=-1)
+
+        return token
+
+    def initialize_cache(
+        self, model: nn.Module, max_kv_size: int | None = None
+    ) -> None:
         """
         Initialize the cache for the model.
 
@@ -185,7 +184,8 @@ class MLXFrontEnd(FrontEnd):
             )
             if max_kv_size is not None:
                 self.cache = [
-                    RotatingKVCache(max_kv_size, n) for n in range(len(model.layers or []))
+                    RotatingKVCache(max_kv_size, n)
+                    for n in range(len(model.layers or []))
                 ]
             else:
                 self.cache = [ReusableKVCache(head_dim, n) for n in kv_heads or []]
