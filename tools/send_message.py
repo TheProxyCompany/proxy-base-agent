@@ -1,5 +1,5 @@
-from agent.agent import Agent
-from agent.event import Event, State
+from agent.agent import Agent, AgentStatus
+from agent.event import Event, EventState
 
 
 def send_message(self: Agent, message: str, recipient: str = "user") -> Event:
@@ -17,11 +17,10 @@ def send_message(self: Agent, message: str, recipient: str = "user") -> Event:
     """
 
     self.state.step_number = 0
-    self.state.current_event_id = None
+    self.status = AgentStatus.AWAITING_INPUT
 
     return Event(
-        role="assistant",
+        state=EventState.ASSISTANT,
         content=message,
-        state=State.ASSISTANT_RESPONSE,
-        name=self.state.name + " sent a message",
+        name=self.state.name + " sent a message to " + recipient,
     )

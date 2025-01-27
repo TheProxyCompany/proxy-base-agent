@@ -6,71 +6,32 @@ import asyncio
 import json
 import logging
 import uuid
+from enum import Enum
 from random import randint
 
 import questionary
 
-from agent.event import Event, State
-from agent.interface import Interface
-from agent.model_inference.local_inference import LocalInference
+from agent.event import Event, EventState
+from agent.model_inference.inference.local import LocalInference
 from agent.prompts import get_available_prompts, load_prompt_template
+from interface import Interface
 from tools import FunctionCall, Tool, ToolUse
 
 logger = logging.getLogger(__name__)
 
 MAX_SUB_STEPS: int = 10
 
-
-class AgentState:
-    """Represents the state of an agent.
-
-    Maintains the agent's core attributes and state information during execution.
-
-    Attributes:
-        interface: Interface for I/O operations
-        name: Agent's identifier
-        system_prompt: Base prompt that defines agent behavior
-        seed: Random seed for reproducibility
-        step_number: Current step in execution
-        continue_message_id: ID of message to continue from, if any
-        tools_map: Dictionary mapping tool names to Tool instances
-    """
-
-    def __init__(
-        self,
-        interface: Interface,
-        name: str,
-        system_prompt: str,
-        seed: int | None = None,
-        tools: list[Tool] | None = None,
-    ):
-        self.current_event_id: str | None = None
-        self.interface = interface
-        self.name = name
-        self.seed = seed or randint(0, 1000000)
-        self.step_number = 0
-        self.system_prompt = system_prompt
-        self.tools_map = {tool.name: tool for tool in tools or Tool.load()}
-
-    def __repr__(self) -> str:
-        readable = {
-            "name": self.name,
-            "step_number": self.step_number,
-            "current_event_id": self.current_event_id,
-        }
-        return str(readable)
-
-
 class Agent:
 
     def __init__(self, interface: Interface, inference: LocalInference, **kwargs):
         """Initialize an agent."""
-        from agent.memory.hippocampus import Hippocampus
+        from memory.hippocampus import Hippocampus
 
         self.inference = inference
         self.state = AgentState(interface, **kwargs)
         self.hippocampus = Hippocampus(self.state)
         self.hippocampus.append_to_history(self.system_prompt)
+        self.status = AgentStatus.AWAITING_INPUT
 
     async def __call__(self) -> None:
         await self.loop()
@@ -81,27 +42,34 @@ class Agent:
 
         The agent will take action until it reaches the maximum number of sub-steps.
         """
-        while self.can_act:
-            if self.state.step_number == 0:
-                message = await self.state.interface.get_input()
-                if message is not None and isinstance(message, Event):
-                    self.hippocampus.append_to_history(message)
-                    await self.state.interface.show_output(message)
-                elif message:
-                    break
 
-            await self.run()
+        async def _loop(agent: Agent):
+            if agent.status == AgentStatus.AWAITING_INPUT:
+                message = await agent.state.interface.get_input()
+                if message is not None and isinstance(message, Event):
+                    agent.hippocampus.append_to_history(message)
+                    await agent.state.interface.show_output(message)
+                else:
+                    agent.status = AgentStatus.STANDBY
+                    return
+
+            new_event = await agent.run()
+            await agent.process(new_event)
+
+        while self.can_act:
+            await _loop(self)
 
         if not self.can_act:
             message = Event(role="system", content="Returning to human control.")
             await self.state.interface.show_output(message)
+            self.status = AgentStatus.AWAITING_INPUT
             self.state.step_number = 0
-            self.state.current_event_id = None
             await self.loop()
         else:
+            self.status = AgentStatus.STANDBY
             await self.state.interface.exit_program()
 
-    async def run(self) -> Event | None:
+    async def run(self) -> Event:
         """
         Run the agent.
 
@@ -110,6 +78,7 @@ class Agent:
         - Return a message to the user
         - Call a tool
         """
+        self.status = AgentStatus.PROCESSING
         inference_config = {
             "prompt": self.hippocampus.events,
             "structure": self.tool_schemas,
@@ -118,7 +87,6 @@ class Agent:
             "add_reminders": False,
             "add_generation_prompt": True,
             "prefill": None,
-            "event_id": self.state.current_event_id,
             "temperature": 1.1,
             "min_p": 0.05,
             "min_tokens_to_keep": 10,
@@ -126,44 +94,80 @@ class Agent:
         buffer = ""
         structured_output = ""
         # render live updates off main thread so llm can output faster
-        render_tasks = set()
         for output in self.inference(**inference_config):
             decoded_output = self.inference.front_end.tokenizer.decode(output.token_ids)
             if self.inference.engine.is_within_value:
                 structured_output += decoded_output
             else:
                 buffer += decoded_output
+            self.state.live_render((buffer, structured_output))
 
-            task = asyncio.create_task(self.state.interface.show_live_output(decoded_output))
-            render_tasks.add(task)
-            task.add_done_callback(lambda t: render_tasks.remove(t))
-
+        await self.state.interface.end_live_output()
+        tool_calls = []
         if self.inference.engine.has_reached_accept_state:
             engine_output = list(self.inference.engine.read_output(FunctionCall))
             self.inference.engine.reset()
             for output in engine_output:
-                self.buffer = output.buffer
-                tool_call = ToolUse("function", output.value)
-                return Event(role="assistant", content=self.buffer, tool_calls=[tool_call])
-        else:
-            return Event(role="assistant", content=self.buffer)
+                buffer = output.buffer
+                tool_use = ToolUse("function", output.value)
+                tool_calls.append(tool_use)
+                break
+
+        self.status = AgentStatus.SUCCESS
+        return Event(
+            state=EventState.ASSISTANT,
+            content=buffer,
+            tool_calls=tool_calls,
+        )
 
     async def process(self, event: Event) -> None:
+        """
+        Process an event.
+
+        This method handles the event, appends it to the history, and processes
+        any tool calls.
+        """
         await self.state.interface.show_output(event)
         self.hippocampus.append_to_history(event)
         self.state.step_number += 1
-        self.state.current_event_id = event.id
         for tool_called in event.tool_calls:
-            tool_result = self.use_tool(tool_called)
+            with self.state.interface.console.status(f"[bold yellow]Using {tool_called.function.name} tool"):
+                tool_result = self.use_tool(tool_called)
             self.hippocampus.append_to_history(tool_result)
             await self.state.interface.show_output(tool_result)
 
-    @staticmethod
-    async def create(
-        interface: Interface,
-        inference: LocalInference | None = None
-    ) -> Agent:
+    def use_tool(self, tool_use: ToolUse) -> Event:
+        """Use a tool and return results.
 
+        Args:
+            tool_use: The tool call to use.
+        """
+
+        content = ""
+        try:
+            tool = self.state.tools_map[tool_use.function.name]
+            result = tool(self, **tool_use.function.arguments)
+            if isinstance(result, Event):
+                result.event_id = tool_use.tool_use_id
+                return result
+
+            content = str(result)
+        except Exception as e:
+            content = str(e)
+            self.status = AgentStatus.FAILED
+
+        return Event(
+            event_id=tool_use.tool_use_id,
+            state=EventState.TOOL,
+            content=content,
+            name=tool_use.function.name,
+        )
+
+    @staticmethod
+    async def create(interface: Interface, inference: LocalInference | None = None) -> Agent:
+        """
+        Create an agent.
+        """
         await interface.clear()
         agent_name = await Agent.get_agent_name()
         system_prompt = await Agent.get_agent_prompt()
@@ -182,8 +186,7 @@ class Agent:
             str: The chosen agent name or a generated UUID if left blank.
         """
         agent_name: str = await questionary.text(
-            "Enter a name (hit enter for Cerebra):",
-            default="Cerebra"
+            "Enter a name (hit enter for Cerebra):", default="Cerebra"
         ).ask_async()
         final_name = agent_name.strip() if agent_name else f"agent_{uuid.uuid4()}"
         return final_name
@@ -220,6 +223,9 @@ class Agent:
 
     @property
     def tool_schemas(self) -> list[dict]:
+        """
+        Get the tool schemas.
+        """
         return [tool.get_invocation_schema() for tool in self.state.tools_map.values()]
 
     @property
@@ -227,20 +233,19 @@ class Agent:
         prompt = self.state.system_prompt
         prompt += "\n\n---- Tools ----\n"
         for tool in self.state.tools_map.values():
-            prompt += f"\n---{tool.name}---\n"
+            schema = tool.json_schema.get('function', tool.json_schema.get('schema', {}))
             prompt += f"Tool name: {tool.name}\n"
-            prompt += f'Tool description: \n"""\n{tool.description}\n"""\n'
-            prompt += f"Tool schema: \n{json.dumps(tool.schema, indent=2)}\n"
+            prompt += f'Tool description: \n"""\n{tool.description or "name indicates function."}\n"""\n'
+            prompt += f"Tool schema: \n{json.dumps(schema, indent=2)}\n"
         prompt += "\n---- End of tools ----\n"
         control_tokens = self.inference.front_end.tokenizer.control_tokens
         tool_use_token_start = control_tokens.tool_use_token_start
         tool_use_token_end = control_tokens.tool_use_token_end
-        prompt += f'Starting delimiter: "{tool_use_token_start}\\n"\n'
+        prompt += f'Starting delimiter: "{tool_use_token_start}"\n'
         prompt += f'Ending delimiter: "{tool_use_token_end}".\n'
-        prompt += f'Wrap tool calls between the delimiters "{tool_use_token_start}\\n" and "\\n{tool_use_token_end}".\n'
-
+        prompt += f'Wrap tool calls between the delimiters "{tool_use_token_start}" and "{tool_use_token_end}".\n'
         prompt += "Any other text is yours to use as you see fit and is not shown to the user.\n"
-        prompt += "Only you can see the tool calls and their results (unless specified otherwise).\n"
+        prompt += "Your tools give you agency.\n"
         return Event(role="system", content=prompt)
 
     @property
@@ -251,44 +256,74 @@ class Agent:
 
         Step count is reset to 0 when the agent returns to human control.
         """
-        return self.state.step_number <= MAX_SUB_STEPS
-
-    def use_tool(self, tool_use: ToolUse) -> Event:
-        """Handle a single function call, execute the function, and return results.
-
-        Args:
-            function_call: The function call to handle.
-
-        Returns:
-            A tuple containing:
-            - The message with the function call result.
-            - A boolean indicating if the function call failed.
-        """
-
-        try:
-            tool = self.state.tools_map[tool_use.function.name]
-            with self.state.interface.console.status(
-                f"[bold yellow]Calling {tool.name}..."
-            ):
-                result = tool(self, **tool_use.function.arguments)
-            if isinstance(result, Event):
-                result.id = tool_use.tool_id
-                return result
-            return Event(
-                role="ipython",
-                content=str(result),
-                name=tool_use.function.name,
-                event_id=tool_use.tool_id,
-                state=State.TOOL_RESULT,
-            )
-        except Exception as e:
-            return Event(
-                role="ipython",
-                content=str(e),
-                name=tool_use.function.name,
-                event_id=tool_use.tool_id,
-                state=State.TOOL_ERROR,
-            )
+        return (
+            self.state.step_number <= MAX_SUB_STEPS
+            and self.status not in [AgentStatus.STANDBY, AgentStatus.FAILED]
+        )
 
     def __repr__(self) -> str:
         return f"Agent({self.state})"
+
+
+class AgentState:
+    """Represents the state of an agent.
+
+    Maintains the agent's core attributes and state information during execution.
+
+    Attributes:
+        interface: Interface for I/O operations
+        name: Agent's identifier
+        system_prompt: Base prompt that defines agent behavior
+        seed: Random seed for reproducibility
+        step_number: Current step in execution
+        tools_map: Dictionary mapping tool names to Tool instances
+    """
+
+    def __init__(
+        self,
+        interface: Interface,
+        name: str,
+        system_prompt: str,
+        seed: int | None = None,
+        tools: list[Tool] | None = None,
+    ):
+        self.interface = interface
+        self.name = name
+        self.seed = seed or randint(0, 1000000)
+        self.step_number = 0
+        self.system_prompt = system_prompt
+        self.tools_map = {tool.name: tool for tool in tools or Tool.load()}
+        self.render_tasks: set[asyncio.Task] = set()
+
+    def live_render(self, output: tuple[str, str]):
+        """
+        Render live output, semantically a tuple of (buffer, structured_output)
+        """
+        task = asyncio.create_task(self.interface.show_live_output(output))
+        self.render_tasks.add(task)
+        task.add_done_callback(lambda t: self.render_tasks.remove(t))
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f"{self.name} (seed: {self.seed})"
+
+class AgentStatus(Enum):
+    # Core System States
+    PROCESSING = "processing"
+    STANDBY = "standby"
+    AWAITING_INPUT = "awaiting_input"
+
+    # Error and Recovery States
+    SUCCESS = "success"
+    FAILED = "failed"
+    RETRYING = "retrying"
+    BLOCKED = "blocked"
+
+    def __str__(self):
+        return self.value
+
+    @classmethod
+    def from_string(cls, state_string: str):
+        return cls(state_string)

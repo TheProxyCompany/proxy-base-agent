@@ -10,71 +10,39 @@ import pytz
 
 from tools import ToolUse
 
-EST = pytz.timezone("US/Eastern")
 
+class EventState(Enum):
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+    TOOL = "tool"
+    USER = "user"
+
+    def __str__(self):
+        return self.value
+
+    @classmethod
+    def from_string(cls, state_string: str):
+        return cls(state_string)
 
 class Event:
     """
     Represents an event in the agent's context.
     """
 
-    class State(Enum):
-        USER_INPUT = "user_input"
-        ASSISTANT_RESPONSE = "assistant_response"
-        TOOL_CALL = "tool_call"
-        TOOL_RESULT = "tool_result"
-        TOOL_ERROR = "tool_error"
-        SYSTEM_MESSAGE = "system_message"
-        METACOGNITION = "metacognition"
-        ERROR = "error"
-        SCRATCHPAD = "scratchpad"
-
-        def __str__(self):
-            return self.value
-
-        @classmethod
-        def from_string(cls, state_string: str):
-            return cls(state_string)
-
-        def get_value(self) -> int:
-            """
-            Returns an integer score representing the importance of the message state.
-            This score can be used with a predefined threshold to determine whether
-            to display the message to the user.
-
-            Returns:
-                int: The score associated with the current MessageState.
-            """
-            score_mapping = {
-                Event.State.SYSTEM_MESSAGE: 12,
-                Event.State.USER_INPUT: 10,
-                Event.State.ASSISTANT_RESPONSE: 9,
-                Event.State.ERROR: 8,
-                Event.State.TOOL_RESULT: 7,
-                Event.State.METACOGNITION: 6,
-                Event.State.SCRATCHPAD: 5,
-                Event.State.TOOL_CALL: 4,
-                Event.State.TOOL_ERROR: 3,
-            }
-            return score_mapping.get(self, 0)
-
     def __init__(
         self,
         event_id: str | None = None,
         content: str | list[str] = "",
-        created_at: datetime | None = None,
         name: str | None = None,
-        role: str | None = None,
-        state: State = State.SYSTEM_MESSAGE,
+        state: EventState = EventState.SYSTEM,
         tool_calls: list[ToolUse] | None = None,
         **kwargs,
     ) -> None:
         self.content = content
-        self.created_at = created_at or datetime.now().astimezone(EST)
-        self.id = event_id or str(uuid.uuid4())
+        self.created_at = datetime.now().astimezone(pytz.timezone("US/Eastern"))
+        self.event_id = event_id or str(uuid.uuid4())
         self.metadata = kwargs
         self.name = name
-        self.role = role
         self.state = state
         self.tool_calls = tool_calls or []
         self.tool_results: dict[str, Event] = {}
@@ -89,19 +57,20 @@ class Event:
 
     def to_dict(self) -> dict:
         dict = {
-            "id": self.id,
-            "role": self.role,
-            "content": self.content,
-            "tool_calls": [tc.to_dict() for tc in self.tool_calls],
+            "event_id": self.event_id,
             "state": self.state.value,
+            "content": self.content,
+            ""
+            "tool_calls": [tc.to_dict() for tc in self.tool_calls],
+            "metadata": self.metadata,
         }
 
         if len(self.tool_calls) == 0:
             dict.pop("tool_calls")
 
-        if self.role == "tool" or self.role == "ipython":
-            dict["tool_call_id"] = str(self.id)  # openai
-            dict["tool_used_id"] = str(self.id)  # anthropic
+        if self.state == EventState.TOOL:
+            dict["tool_call_id"] = str(self.event_id)  # openai
+            dict["tool_used_id"] = str(self.event_id)  # anthropic
 
         return dict
 
@@ -114,10 +83,10 @@ class Event:
     def __eq__(self, other):
         if not isinstance(other, Event):
             return False
-        return self.id == other.id
+        return self.event_id == other.event_id
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.event_id)
 
     def __getattribute__(self, name: str) -> Any:
         try:
@@ -127,33 +96,3 @@ class Event:
             if name in metadata:
                 return metadata[name]
             return None
-
-    @staticmethod
-    def create(
-        scratch_pad: str,
-        tool_calls: list[ToolUse] | ToolUse | None = None,
-        continue_message_id: str | None = None,
-        usage: dict[str, Any] | None = None,
-    ) -> Event:
-        """Create a Message object based on the presence of tool calls."""
-        if tool_calls:
-            return Event(
-                event_id=continue_message_id,
-                role="assistant",
-                content=scratch_pad,
-                tool_calls=tool_calls if isinstance(tool_calls, list) else [tool_calls],
-                name="scratch pad",
-                state=State.TOOL_CALL,
-                metadata=usage,
-            )
-        return Event(
-            event_id=continue_message_id,
-            role="assistant",
-            content=scratch_pad,
-            state=State.ASSISTANT_RESPONSE,
-            name="response",
-            metadata=usage,
-        )
-
-
-State = Event.State

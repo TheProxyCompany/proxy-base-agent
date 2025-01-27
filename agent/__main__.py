@@ -4,7 +4,7 @@ import os
 import sys
 
 from agent.agent import Agent
-from agent.interface.cli_interface import CLIInterface
+from interface.cli_interface import CLIInterface
 
 # Set up logging
 logging.basicConfig(
@@ -22,6 +22,5 @@ async def main():
         await interface.exit_program(error)
         import traceback
         traceback.print_exc()
-        breakpoint()
 
 asyncio.run(main())

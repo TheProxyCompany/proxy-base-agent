@@ -1,8 +1,8 @@
 import enum
 import math
 
-from agent.agent import Agent
-from agent.event import Event, State
+from agent.agent import Agent, AgentStatus
+from agent.event import Event, EventState
 
 
 class MathOperation(enum.Enum):
@@ -75,7 +75,8 @@ def calculator(
     Returns:
         Event: The result of the operation.
     """
-
+    self.status = AgentStatus.PROCESSING
+    
     match operation:
         case MathOperation.ADDITION:
             result = variable_a + variable_b
@@ -108,13 +109,13 @@ def calculator(
         case MathOperation.FACTORIAL:
             result = math.factorial(int(variable_a))
         case _:
+            self.status = AgentStatus.FAILED
             raise ValueError(f"Invalid operation: {operation}")
 
     content = f"{variable_a} {operation} {variable_b} = {result}"
-
+    self.status = AgentStatus.SUCCESS
     return Event(
-        role="ipython",
-        state=State.TOOL_RESULT,
+        state=EventState.TOOL,
         name=self.state.name + "'s calculator tool",
         content=content,
     )

@@ -1,5 +1,6 @@
 {# Default role mappings #}
 {%- set roles = roles | default({
+    "user": "user",
     "system": "system",
     "assistant": "assistant",
     "tool": "tool"
@@ -11,19 +12,19 @@
 {%- set eom_token = eom_token | default(eos_token) if eom_token | default("") == "" -%}
 
 {# Tool-related tokens #}
-{%- set tool_use_token_start = tool_use_token_start | default("```json\n") -%}
-{%- set tool_use_token_end = tool_use_token_end | default("\n```") -%}
-{%- set tool_result_token_start = tool_result_token_start | default(start_header_token + roles.tool + end_header_token + "\n\n") -%}
-{%- set tool_result_token_end = tool_result_token_end | default(eos_token) -%}
+{%- set tool_use_start = tool_use_start | default("```json\n") -%}
+{%- set tool_use_end = tool_use_end | default("\n```") -%}
+{%- set tool_result_start = tool_result_start | default(start_header_token + roles.tool + end_header_token + "\n\n") -%}
+{%- set tool_result_end = tool_result_end | default(eos_token) -%}
 
 {# Control flags #}
 {%- set add_generation_prompt = add_generation_prompt | default(true) -%}
 {%- set add_reminders = add_reminders | default(false) -%}
 {%- set continue_message_id = continue_message_id | default(none) -%}
 
-{# Optional inputs #}
 {%- set tool_names = tool_names | default(none) -%}
 {%- set prefill = prefill | default(none) -%}
+
 {# Event/message handling #}
 {%- if events is not defined -%}
     {%- if messages is defined -%}
@@ -32,62 +33,31 @@
         {%- set events = prompt -%}
     {%- endif -%}
 {%- endif -%}
-
-
 {# ------------------------------------------------------------------------ #}
 {# Macro to render individual events                                        #}
 {# ------------------------------------------------------------------------ #}
 {%- macro render_event(event) -%}
-    {%- set role = roles.get(event['role'], event['role']) -%}
-    {%- set content = event['content'] -%}
-
-    {%- if continue_message_id == event.id -%}
-        {{- render_tool_reminders() -}}
-    {%- endif -%}
-
+    {%- set role = roles.get(event['state'], event['state']) -%}
     {{- start_header_token + role + end_header_token + "\n\n" -}}
+    {{- event['content'] | safe -}}
 
-    {%- if role == roles.assistant and message.tool_calls -%}
-        {%- if content is string -%}
-            {%- set content = [content] -%}
+    {%- for tool_call in event.tool_calls -%}
+        {{- tool_use_start + "\n" }}
+        {%- set function = tool_call.function -%}
+        {{- function | tojson(indent=2) | trim -}}
+        {{- "\n" + tool_use_end -}}
+
+        {%- if tool_call.tool_use_id in events -%}
+            {{- eom_token -}}
+            {{- tool_result_start -}}
+            {{- events[tool_call.tool_use_id].content | safe -}}
+            {{- tool_result_end -}}
+            {%- if not loop.last -%}
+                {{- start_header_token + role + end_header_token + "\n\n" -}}
+            {%- endif -%}
         {%- endif -%}
-        {%- for tool_call in message.tool_calls -%}
-            {%- set index = loop.index0 -%}
-            {{ start_header_token + roles.assistant + end_header_token + "\n\n" }}
-            {%- if content is sequence and (index < content | length) and content[index] -%}
-                {{ content[index] | trim + "\n" }}
-            {%- endif -%}
-            {{- tool_use_token_start + "\n" }}
-            {%- set function = tool_call.function -%}
-            {{- function | tojson(indent=2) | trim -}}
-            {{- "\n" + tool_use_token_end -}}
-
-            {%- if loop.last -%}
-                {%- if (continue_message_id == message.id) or (continue_message_id is none) -%}
-                    {{- eom_token -}}
-                {%- else -%}
-                    {{- eos_token -}}
-                {%- endif -%}
-            {%- else -%}
-                {{- eom_token -}}
-            {%- endif -%}
-            {%- if tool_call.tool_call_id in tool_calls -%}
-                {%- set tool_result = tool_calls[tool_call.tool_call_id].content | trim -%}
-                {%- if tool_result -%}
-                    {%- if not loop.last and eom_token -%}
-                        {{- eom_token -}}
-                    {%- endif -%}
-                    {{- tool_result_token_start -}}
-                    {{- tool_result -}}
-                    {{- tool_result_token_end -}}
-                {%- endif -%}
-            {%- endif -%}
-        {%- endfor -%}
-    {%- elif content and not message.tool_call_id -%}
-        {{- start_header_token + role + end_header_token + "\n\n" -}}
-        {{- content | safe -}}
-        {{- eos_token -}}
-    {%- endif -%}
+    {%- endfor -%}
+    {{- eos_token -}}
 {%- endmacro -%}
 
 {# ------------------------------------------------------------------------ #}
@@ -99,8 +69,8 @@
         {%- if tool_names -%}
             {{- "Available tools: " + tool_names | join(", ") + "\n" -}}
         {%- endif -%}
-        {%- "Text generated before using a tool is considered your scratch pad / working memory.\n" -%}
-        {%- "Take action by using a tool." -%}
+        {{- "Text generated before using a tool is considered your scratch pad / working memory.\n" -}}
+        {{- "Take action by using a tool." -}}
         {{- eos_token -}}
     {%- endif -%}
 {%- endmacro -%}

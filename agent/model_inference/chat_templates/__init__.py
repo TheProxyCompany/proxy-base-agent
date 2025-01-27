@@ -1,6 +1,6 @@
 import os
 
-from .control_tokens import get_control_tokens
+from agent.model_inference.control_tokens import get_control_tokens
 
 
 def load_chat_template(name: str = "chat_template.jinja") -> str:

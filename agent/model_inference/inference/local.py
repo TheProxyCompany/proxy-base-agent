@@ -6,14 +6,14 @@ from typing import Any, TypeVar
 from pse.structuring_engine import StructuringEngine
 
 from agent.event import Event
-from agent.model_inference.front_ends import FrontEnd, FrontEndType
+from agent.model_inference.inference import FrontEnd, FrontEndType
 
 logger = logging.getLogger(__name__)
 
 OutputType = TypeVar("OutputType", bound=type)
 
-class LocalInference:
 
+class LocalInference:
     def __init__(
         self,
         model_path: str,
@@ -43,7 +43,6 @@ class LocalInference:
         structure: StructuringEngine.StructureType | None = None,
         tool_names: list[str] | None = None,
         prefill: str | None = None,
-        current_id: str | None = None,
         add_generation_prompt: bool = True,
         add_reminders: bool = True,
         buffer_length: int = -1,
@@ -56,14 +55,13 @@ class LocalInference:
             prompt (str | list[dict[str, Any]] | list[Event]): The input prompt for completion.
             structure (StructuringEngine.StructureType | None): schema to constrain the output.
             prefill (str | None): Prefill text to add to the prompt.
-            current_id (str | None): The ID of the message to continue from.
             add_generation_prompt (bool): Whether to add the generation prompt.
             add_reminders (bool): Whether to add reminders.
             buffer_length (int): The length of the buffer to use for inference.
             **inference_kwargs: Additional keyword arguments to use for inference.
 
         Returns:
-            list[Event]: The generated events.
+            Iterable[FrontEnd.ModelOutput]: The output of the model, each element are sampled tokens & logprobs
         """
         tic = time.perf_counter()
         delimiters = self.front_end.tokenizer.control_tokens.tool_use_delimiters()
@@ -78,12 +76,12 @@ class LocalInference:
             "tool_names": tool_names,
             "add_generation_prompt": add_generation_prompt,
             "add_reminders": add_reminders,
-            "current_id": current_id,
             "model_type": self.front_end.model_type,
             **self.front_end.tokenizer.control_tokens.model_dump(),
         }
         max_tokens = inference_kwargs.get("max_tokens", 1000)
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
+        breakpoint()
         assert isinstance(encoded_prompt, list)
 
         for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):

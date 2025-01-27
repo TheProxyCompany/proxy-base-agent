@@ -8,8 +8,8 @@ from rich.emoji import Emoji
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from agent.event import Event, State
-from agent.interface import Interface
+from agent.event import Event, EventState
+from interface import Interface
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,8 @@ class CLIInterface(Interface):
             return user_input
 
         return Event(
-            role="user",
             content=user_input.strip(),
-            state=State.USER_INPUT,
+            state=EventState.USER,
             name="User",
         )
 

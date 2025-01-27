@@ -155,9 +155,8 @@ class Tool:
         return json.dumps(self.to_dict(), indent=4)
 
 
-
 class ToolUse(BaseModel):
-    tool_id: str
+    tool_use_id: str
     tool_type: str
     function: FunctionCall
 
@@ -165,14 +164,14 @@ class ToolUse(BaseModel):
         self,
         tool_type: str,
         function: FunctionCall | Any,
-        tool_id: str | None = None,
+        tool_use_id: str | None = None,
     ):
         if function and not isinstance(function, FunctionCall):
             name = function.get("name", "")
             arguments = function.get("arguments", {})
             function = FunctionCall(name=name, arguments=arguments)
         super().__init__(
-            tool_id=tool_id or str(uuid.uuid4()),
+            tool_use_id=tool_use_id or str(uuid.uuid4()),
             tool_type=tool_type,
             function=function,
         )

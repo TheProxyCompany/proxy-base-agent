@@ -8,8 +8,8 @@ from typing import Any
 
 from pse.structuring_engine import StructuringEngine
 
-from agent.model_inference.chat_templates.control_tokens import ControlTokens
-from agent.model_inference.tokenizer_wrapper import TokenizerWrapper
+from agent.model_inference.control_tokens import ControlTokens
+from agent.model_inference.utils.tokenizer_wrapper import TokenizerWrapper
 
 
 class FrontEndType(enum.Enum):
@@ -40,7 +40,7 @@ class FrontEnd(ABC):
             front_end_type = FrontEndType.MLX
 
         if front_end_type == FrontEndType.MLX:
-            from agent.model_inference.front_ends.mlx_front_end import MLXFrontEnd
+            from agent.model_inference.inference.frontend_mlx import MLXFrontEnd
 
             return MLXFrontEnd(model_path)
         else:

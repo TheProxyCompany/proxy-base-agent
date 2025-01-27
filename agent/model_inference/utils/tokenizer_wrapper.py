@@ -7,10 +7,7 @@ from typing import Any
 from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from agent.model_inference.chat_templates import load_chat_template
-from agent.model_inference.chat_templates.control_tokens import (
-    ControlTokens,
-    get_control_tokens,
-)
+from agent.model_inference.control_tokens import ControlTokens, get_control_tokens
 
 logger = logging.getLogger(__name__)
 class TokenizerWrapper:
@@ -61,30 +58,6 @@ class TokenizerWrapper:
         # Flatten and deduplicate token IDs into a set
         return {id for ids in token_ids for id in ids}
 
-    @property
-    def eos_token(self) -> str | int:
-        """Get the end-of-sequence token.
-
-        Returns:
-            Token ID for EOS token, or 0 if not set
-        """
-        if not self._control_tokens:
-            return 0
-        eos_token = self._control_tokens.eos_token
-        return self._tokenizer.encode(eos_token)[0] if eos_token else 0
-
-    @property
-    def eom_token(self) -> str | int:
-        """Get the end-of-message token ID.
-
-        Returns:
-            Token ID for EOM token, or 0 if not set
-        """
-        if not self._control_tokens:
-            return 0
-        eom_token = self._control_tokens.eom_token
-        return self._tokenizer.encode(eom_token)[0] if eom_token else 0
-
     def decode(self, tokens: list[int], **kwargs) -> str:
         """Decode token IDs back to text.
 
@@ -96,7 +69,7 @@ class TokenizerWrapper:
         """
         return self._tokenizer.decode(tokens, **kwargs)
 
-    def encode(self, prompt: str | list[dict[str, str]], **kwargs) -> str | list[int]:
+    def encode(self, prompt: str | list[dict[str, str]] | dict[str, Any], **kwargs) -> str | list[int]:
         """Encode text or chat messages into tokens.
 
         Handles both raw text and chat message formats. For raw text, supports
@@ -112,6 +85,7 @@ class TokenizerWrapper:
         Raises:
             ValueError: If chat template produces unsupported format
         """
+        breakpoint()
         if isinstance(prompt, str):
             tools = kwargs.pop("tools", None)
             date_string = kwargs.pop("date_string", None)
@@ -122,8 +96,14 @@ class TokenizerWrapper:
                     pass
             return self._tokenizer.encode(prompt, **kwargs)
 
-        if isinstance(prompt, list):
-            templated = self._tokenizer.apply_chat_template(prompt, **kwargs)
+        if isinstance(prompt, list) or isinstance(prompt, dict):
+            if isinstance(prompt, dict):
+                kwargs["events"] = prompt
+                conversation = list(prompt.values())
+                templated = self._tokenizer.apply_chat_template(conversation, **kwargs)
+            else:
+                templated = self._tokenizer.apply_chat_template(prompt, **kwargs)
+
             if isinstance(templated, str):
                 logger.info(f"Templated prompt:\n{templated}")
                 return templated

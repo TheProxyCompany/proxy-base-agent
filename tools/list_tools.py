@@ -1,25 +1,28 @@
 from agent.agent import Agent
-from agent.event import Event, State
+from agent.event import Event, EventState
 
 
-def list_tools(self: Agent, short: bool = True) -> Event:
+def list_tools(self: Agent, query: str | list[str] | None = None) -> Event:
     """
     List all tools available to the agent.
 
     Arguments:
-        short (bool): If True, only the tool name and description are shown. Default is True.
+        query (str | list[str] | None):
+            If provided, only tools matching the query are returned.
+            Default is None, and all tools are returned.
     """
 
     tools: list[str] = []
-    for tool in self.state.tools_map.values():
-        if short:
+    if not query:
+        for tool in self.state.tools_map.values():
             tools.append(f"{tool}")
-        else:
-            tools.append(f"{tool!r}")
+    else:
+        for tool in self.state.tools_map.values():
+            if tool.name in query:
+                tools.append(f"{tool}")
 
     return Event(
-        role="ipython",
-        state=State.TOOL_RESULT,
+        state=EventState.TOOL,
         name=self.state.name + "'s tools",
         content=tools,
     )

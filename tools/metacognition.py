@@ -1,5 +1,5 @@
 from agent.agent import Agent
-from agent.event import Event, State
+from agent.event import Event, EventState
 
 
 def metacognition(
@@ -35,8 +35,7 @@ def metacognition(
         chain_of_thought = json.dumps(chain_of_thought)
 
     return Event(
-        role="ipython",
-        state=State.METACOGNITION,
+        state=EventState.TOOL,
         name=self.state.name + " thoughts",
         content=chain_of_thought,
         feelings=feelings,
