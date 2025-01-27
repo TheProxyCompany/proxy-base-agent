@@ -81,10 +81,11 @@ class LocalInference:
         }
         max_tokens = inference_kwargs.get("max_tokens", 1000)
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
-        breakpoint()
         assert isinstance(encoded_prompt, list)
+        logger.info(f"{self.front_end.tokenizer.decode(encoded_prompt)}")
 
         for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):
+            breakpoint()
             encoded_prompt.extend(result.token_ids)
             if result.token_ids[-1] in self.front_end.tokenizer.stop_tokens:
                 break

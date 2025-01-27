@@ -25,14 +25,6 @@
 {%- set tool_names = tool_names | default(none) -%}
 {%- set prefill = prefill | default(none) -%}
 
-{# Event/message handling #}
-{%- if events is not defined -%}
-    {%- if messages is defined -%}
-        {%- set events = messages -%}
-    {%- elif prompt is defined -%}
-        {%- set events = prompt -%}
-    {%- endif -%}
-{%- endif -%}
 {# ------------------------------------------------------------------------ #}
 {# Macro to render individual events                                        #}
 {# ------------------------------------------------------------------------ #}
@@ -80,9 +72,19 @@
 {# ------------------------------------------------------------------------ #}
 {{- bos_token -}}
 
-{%- for event in events -%}
-    {{ render_event(event) -}}
-{%- endfor -%}
+{%- if events is defined -%}
+    {%- for event in events.values() -%}
+        {{ render_event(event) -}}
+    {%- endfor -%}
+{%- elif prompt is defined -%}
+    {%- for event in prompt -%}
+        {{ render_event(event) -}}
+    {%- endfor -%}
+{%- elif messages is defined -%}
+    {%- for event in messages -%}
+        {{ render_event(event) -}}
+    {%- endfor -%}
+{%- endif -%}
 
 {%- if continue_message_id is none -%}
     {{- render_tool_reminders() -}}

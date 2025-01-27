@@ -85,7 +85,6 @@ class TokenizerWrapper:
         Raises:
             ValueError: If chat template produces unsupported format
         """
-        breakpoint()
         if isinstance(prompt, str):
             tools = kwargs.pop("tools", None)
             date_string = kwargs.pop("date_string", None)
@@ -99,13 +98,12 @@ class TokenizerWrapper:
         if isinstance(prompt, list) or isinstance(prompt, dict):
             if isinstance(prompt, dict):
                 kwargs["events"] = prompt
-                conversation = list(prompt.values())
+                conversation = [event.to_dict() for event in prompt.values()]
                 templated = self._tokenizer.apply_chat_template(conversation, **kwargs)
             else:
                 templated = self._tokenizer.apply_chat_template(prompt, **kwargs)
 
             if isinstance(templated, str):
-                logger.info(f"Templated prompt:\n{templated}")
                 return templated
             if isinstance(templated, list) and isinstance(templated[0], int):
                 return templated  # type: ignore[reportReturnValue]
@@ -130,7 +128,6 @@ class TokenizerWrapper:
         control_tokens = get_control_tokens(model_type)
         tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
         tokenizer.chat_template = load_chat_template()
-        logger.debug(f"Loaded tokenizer: {tokenizer}")
         return TokenizerWrapper(tokenizer, control_tokens)
 
     def __getattribute__(self, name: str) -> Any:

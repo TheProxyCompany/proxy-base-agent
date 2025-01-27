@@ -45,7 +45,6 @@ class Event:
         self.name = name
         self.state = state
         self.tool_calls = tool_calls or []
-        self.tool_results: dict[str, Event] = {}
 
     def append_content(self, content: str | list[str]):
         if isinstance(self.content, list) and isinstance(content, list):
@@ -58,15 +57,14 @@ class Event:
     def to_dict(self) -> dict:
         dict = {
             "event_id": self.event_id,
-            "state": self.state.value,
+            "state": str(self.state),
+            "role": str(self.state),
             "content": self.content,
-            ""
-            "tool_calls": [tc.to_dict() for tc in self.tool_calls],
             "metadata": self.metadata,
         }
 
-        if len(self.tool_calls) == 0:
-            dict.pop("tool_calls")
+        if len(self.tool_calls) > 0:
+            dict["tool_calls"] = [tc.to_dict() for tc in self.tool_calls]
 
         if self.state == EventState.TOOL:
             dict["tool_call_id"] = str(self.event_id)  # openai
@@ -75,7 +73,7 @@ class Event:
         return dict
 
     def __str__(self) -> str:
-        return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
+        return json.dumps(self.to_dict(), indent=2)
 
     def __repr__(self) -> str:
         return self.__str__()

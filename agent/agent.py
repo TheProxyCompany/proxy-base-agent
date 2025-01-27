@@ -80,9 +80,9 @@ class Agent:
         """
         self.status = AgentStatus.PROCESSING
         inference_config = {
-            "prompt": self.hippocampus.events,
-            "structure": self.tool_schemas,
+            "prompt": [event.to_dict() for event in self.hippocampus.events.values()],
             "tool_names": list(self.state.tools_map.keys()),
+            "structure": self.tool_schemas,
             "output_type": FunctionCall,
             "add_reminders": False,
             "add_generation_prompt": True,
@@ -231,22 +231,30 @@ class Agent:
     @property
     def system_prompt(self) -> Event:
         prompt = self.state.system_prompt
-        prompt += "\n\n---- Tools ----\n"
+        prompt += self.tool_instructions
+        return Event(role="system", content=prompt)
+
+    @property
+    def tool_instructions(self) -> str:
+        prompt = "\n\n---- Tools ----\n"
         for tool in self.state.tools_map.values():
-            schema = tool.json_schema.get('function', tool.json_schema.get('schema', {}))
+            schema = tool.json_schema.get(
+                "function", tool.json_schema.get("schema", {})
+            )
             prompt += f"Tool name: {tool.name}\n"
             prompt += f'Tool description: \n"""\n{tool.description or "name indicates function."}\n"""\n'
             prompt += f"Tool schema: \n{json.dumps(schema, indent=2)}\n"
-        prompt += "\n---- End of tools ----\n"
+
         control_tokens = self.inference.front_end.tokenizer.control_tokens
         tool_use_token_start = control_tokens.tool_use_token_start
         tool_use_token_end = control_tokens.tool_use_token_end
-        prompt += f'Starting delimiter: "{tool_use_token_start}"\n'
-        prompt += f'Ending delimiter: "{tool_use_token_end}".\n'
-        prompt += f'Wrap tool calls between the delimiters "{tool_use_token_start}" and "{tool_use_token_end}".\n'
+        prompt += f'Starting delimiter: "{tool_use_token_start}"\n\n'
+        prompt += f'Ending delimiter: "{tool_use_token_end}"\n\n'
+        prompt += f'Wrap tool calls between the delimiters "{tool_use_token_start}" and "{tool_use_token_end}".\n\n'
+        prompt += "\n---- End of tools ----\n"
         prompt += "Any other text is yours to use as you see fit and is not shown to the user.\n"
         prompt += "Your tools give you agency.\n"
-        return Event(role="system", content=prompt)
+        return f'Wrap tool calls between the delimiters "{tool_use_token_start}" and "{tool_use_token_end}".\n'
 
     @property
     def can_act(self) -> bool:
