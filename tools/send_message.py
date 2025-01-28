@@ -4,8 +4,7 @@ from agent.event import Event, EventState
 
 def send_message(self: Agent, message: str, recipient: str = "user") -> Event:
     """
-    This function sends a message to the recipient.
-    Effectively conveys information to the recipient.
+    Sends a text based message to the recipient.
 
     Arguments:
         message (str):
@@ -20,7 +19,10 @@ def send_message(self: Agent, message: str, recipient: str = "user") -> Event:
     self.status = AgentStatus.AWAITING_INPUT
 
     return Event(
-        state=EventState.ASSISTANT,
+        state=EventState.TOOL,
         content=message,
-        name=self.state.name + " sent a message to " + recipient,
+        name=self.state.name + " sent a message",
+        buffer=recipient,
+        color="green",
+        emoji="speech_balloon",
     )

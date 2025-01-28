@@ -1,16 +1,14 @@
 import logging
 import time
 from collections.abc import Iterable
-from typing import Any, TypeVar
+from typing import Any
 
-from pse.structuring_engine import StructuringEngine
+from pse.structure import SchemaType
 
 from agent.event import Event
 from agent.model_inference.inference import FrontEnd, FrontEndType
 
 logger = logging.getLogger(__name__)
-
-OutputType = TypeVar("OutputType", bound=type)
 
 
 class LocalInference:
@@ -31,8 +29,7 @@ class LocalInference:
         - Setting up caches and data structures for efficient inference
         """
         self.front_end = FrontEnd.from_type(model_path, front_end_type)
-        self.engine = StructuringEngine(self.front_end.tokenizer._tokenizer)
-        self.front_end.engine = self.engine
+        self.engine = self.front_end.engine
 
     def __call__(self, *args, **kwargs) -> Iterable[FrontEnd.ModelOutput]:
         return self.run_inference(*args, **kwargs)
@@ -40,7 +37,7 @@ class LocalInference:
     def run_inference(
         self,
         prompt: str | list[dict[str, Any]] | list[Event],
-        structure: StructuringEngine.StructureType | None = None,
+        structure: SchemaType | None = None,
         tool_names: list[str] | None = None,
         prefill: str | None = None,
         add_generation_prompt: bool = True,
@@ -64,11 +61,14 @@ class LocalInference:
             Iterable[FrontEnd.ModelOutput]: The output of the model, each element are sampled tokens & logprobs
         """
         tic = time.perf_counter()
-        delimiters = self.front_end.tokenizer.control_tokens.tool_use_delimiters()
-        self.engine.configure(structure, delimiters, buffer_length)
-        toc = time.perf_counter()
-        setup_time = toc - tic
-        logger.debug(f"Engine setup time: {setup_time:.4f}s")
+        if structure and not self.engine.state_machine:
+            delimiters = self.front_end.tokenizer.control_tokens.tool_use_delimiters()
+            self.engine.configure(structure, delimiters, buffer_length)
+            toc = time.perf_counter()
+            setup_time = toc - tic
+            logger.debug(f"Structuring Engine setup in {setup_time:.4f}s")
+        elif self.engine.state_machine:
+            self.engine.reset()
 
         tokenizer_config = {
             "prompt": prompt,
@@ -82,10 +82,9 @@ class LocalInference:
         max_tokens = inference_kwargs.get("max_tokens", 1000)
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         assert isinstance(encoded_prompt, list)
-        logger.info(f"{self.front_end.tokenizer.decode(encoded_prompt)}")
-
+        logger.info(f"text prompt:\n\n{self.front_end.tokenizer.decode(encoded_prompt)}")
+        breakpoint()
         for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):
-            breakpoint()
             encoded_prompt.extend(result.token_ids)
             if result.token_ids[-1] in self.front_end.tokenizer.stop_tokens:
                 break

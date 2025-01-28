@@ -13,14 +13,21 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 
+agent_kwargs = {
+    "max_tokens": 1000,
+    "buffer_length": -1,
+    "temperature": 0.9,
+    "min_p": 0.02,
+    "min_tokens_to_keep": 7,
+    "tools": ["list_tools"],
+}
+
 async def main():
     interface = CLIInterface()
     try:
-        agent = await Agent.create(interface)
+        agent = await Agent.create(interface, **agent_kwargs)
         await agent()
     except Exception as error:
         await interface.exit_program(error)
-        import traceback
-        traceback.print_exc()
 
 asyncio.run(main())

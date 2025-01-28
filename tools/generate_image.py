@@ -7,19 +7,11 @@ from agent.event import Event, EventState
 
 def generate_image(self: Agent, prompt: str) -> Event:
     """
-    Visualize a scene or object by prompting an image generation model to generate an image.
+    Prompt an image generation model to generate an image.
 
     Guidelines for crafting image prompts:
     - Structure prompts with a clear subject, specific details, and contextual actions.
-    - Include artistic styles like "pixel art", "surrealism".
-
-    Examples:
-        Good:
-            "An ancient oak tree in a misty forest, its gnarled branches stretching out like arms,
-            leaves rustling softly in the twilight breeze, with rays of golden sunlight filtering
-            through the canopy."
-        Bad:
-            "A tree in a forest."
+    - Include artistic styles like "surrealism", "impressionist", "anime", "pixel art", etc.
     Args:
         prompt (str): Detailed prompt of the scene or object to visualize, including vivid visual details.
     """

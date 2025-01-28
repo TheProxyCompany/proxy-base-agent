@@ -46,13 +46,47 @@ class Event:
         self.state = state
         self.tool_calls = tool_calls or []
 
-    def append_content(self, content: str | list[str]):
-        if isinstance(self.content, list) and isinstance(content, list):
-            self.content.extend(content)
-        elif isinstance(self.content, str) and isinstance(content, str):
-            self.content += content
-        else:
-            self.content = str(self.content) + str(content)
+    @property
+    def styling(self) -> dict[str, str]:
+        """
+        Get styling information for this event type.
+        Returns a dict with title, color, and emoji fields.
+        """
+        title: str | None = self.metadata.get("title", self.name)
+        color: str | None = self.metadata.get("color", None)
+        emoji: str | None = self.metadata.get("emoji", None)
+
+        match self.state:
+            case EventState.ASSISTANT:
+                return {
+                    "title": title or "Assistant",
+                    "color": color or "cyan",
+                    "emoji": emoji or "robot"
+                }
+            case EventState.SYSTEM:
+                return {
+                    "title": title or "System",
+                    "color": color or "magenta",
+                    "emoji": emoji or "gear"
+                }
+            case EventState.TOOL:
+                return {
+                    "title": title or "Tool",
+                    "color": color or "yellow",
+                    "emoji": emoji or "wrench"
+                }
+            case EventState.USER:
+                return {
+                    "title": title or "User",
+                    "color": color or "green",
+                    "emoji": emoji or "speech_balloon"
+                }
+            case _:
+                return {
+                    "title": title or "Unknown",
+                    "color": color or "red",
+                    "emoji": emoji or "question"
+                }
 
     def to_dict(self) -> dict:
         dict = {

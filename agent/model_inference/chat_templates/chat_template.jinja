@@ -17,27 +17,24 @@
 {%- set tool_result_start = tool_result_start | default(start_header_token + roles.tool + end_header_token + "\n\n") -%}
 {%- set tool_result_end = tool_result_end | default(eos_token) -%}
 
-{# Control flags #}
 {%- set add_generation_prompt = add_generation_prompt | default(true) -%}
-{%- set add_reminders = add_reminders | default(false) -%}
-{%- set continue_message_id = continue_message_id | default(none) -%}
-
-{%- set tool_names = tool_names | default(none) -%}
 {%- set prefill = prefill | default(none) -%}
+{%- set system_reminder = system_reminder | default("") -%}
 
 {# ------------------------------------------------------------------------ #}
 {# Macro to render individual events                                        #}
 {# ------------------------------------------------------------------------ #}
 {%- macro render_event(event) -%}
+
     {%- set role = roles.get(event['state'], event['state']) -%}
     {{- start_header_token + role + end_header_token + "\n\n" -}}
     {{- event['content'] | safe -}}
 
     {%- for tool_call in event.tool_calls -%}
-        {{- tool_use_start + "\n" }}
+        {{- tool_use_start }}
         {%- set function = tool_call.function -%}
         {{- function | tojson(indent=2) | trim -}}
-        {{- "\n" + tool_use_end -}}
+        {{- tool_use_end -}}
 
         {%- if tool_call.tool_use_id in events -%}
             {{- eom_token -}}
@@ -52,20 +49,6 @@
     {{- eos_token -}}
 {%- endmacro -%}
 
-{# ------------------------------------------------------------------------ #}
-{# Render tool reminders                                                    #}
-{# ------------------------------------------------------------------------ #}
-{%- macro render_tool_reminders() -%}
-    {%- if add_reminders -%}
-        {{- start_header_token + roles.system + end_header_token + "\n\n" -}}
-        {%- if tool_names -%}
-            {{- "Available tools: " + tool_names | join(", ") + "\n" -}}
-        {%- endif -%}
-        {{- "Text generated before using a tool is considered your scratch pad / working memory.\n" -}}
-        {{- "Take action by using a tool." -}}
-        {{- eos_token -}}
-    {%- endif -%}
-{%- endmacro -%}
 
 {# ------------------------------------------------------------------------ #}
 {# Chat template                                                            #}
@@ -74,8 +57,10 @@
 
 {%- if events is defined -%}
     {%- for event in events.values() -%}
+    {%- if event.get("content", "").strip() or (event.tool_calls and event.tool_calls | length > 0) -%}
         {{ render_event(event) -}}
-    {%- endfor -%}
+    {%- endif -%}
+{%- endfor -%}
 {%- elif prompt is defined -%}
     {%- for event in prompt -%}
         {{ render_event(event) -}}
@@ -86,8 +71,8 @@
     {%- endfor -%}
 {%- endif -%}
 
-{%- if continue_message_id is none -%}
-    {{- render_tool_reminders() -}}
+{%- if system_reminder is defined and system_reminder != "" -%}
+    {{- system_reminder -}}
 {%- endif -%}
 
 {%- if add_generation_prompt -%}

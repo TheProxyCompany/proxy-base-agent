@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
 from rich.console import Console
-from rich.live import Live
 
 
 class Interface(ABC):
@@ -14,8 +13,6 @@ class Interface(ABC):
 
     def __init__(self):
         self.console = Console()
-        self.live_content = ""
-        self.live: Live | None = None
 
     @abstractmethod
     async def get_input(self, prompt: str | None = None) -> object | None:

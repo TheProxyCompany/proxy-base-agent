@@ -10,7 +10,7 @@ def get_available_prompts() -> list[str]:
     return sorted(prompt_file_names)
 
 
-def load_prompt_template(filepath: str | None = None) -> str:
+def load_prompt_template(filepath: str | None = None) -> str | None:
     """Load a prompt template from a .txt, .jinja, or .md file."""
     extensions = [".txt", ".jinja", ".md"]
 
@@ -24,4 +24,4 @@ def load_prompt_template(filepath: str | None = None) -> str:
             except FileNotFoundError:
                 continue
 
-    raise ValueError(f"valid prompt file not found in {filepath}")
+    return None

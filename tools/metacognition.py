@@ -4,13 +4,11 @@ from agent.event import Event, EventState
 
 def metacognition(
     self: Agent,
-    chain_of_thought: list[str] | str | dict,
+    chain_of_thought: list[str] | str,
     feelings: str | None = None,
 ) -> Event:
     """
-    Think about thinking - analyze your own thoughts and feelings.
-    This tool helps you understand your own reasoning process and emotional state.
-    Use it when you need to think deeply, plan ahead, or check in with yourself.
+    Use when you need to think deeply, plan ahead, or check in with yourself.
 
     Key aspects:
     1. Awareness: Notice and manage your own thoughts
@@ -19,12 +17,12 @@ def metacognition(
     4. Emotions: Express your emotions and feelings
 
     Arguments:
-        chain_of_thought (List[str] | str | dict):
-            A sequence of high-level thoughts, reasoning, and internal dialogue.
+        chain_of_thought (list[str] | str):
+            High-level thoughts, reasoning, and internal dialogue.
             Includes complex ideas, strategic considerations, and conceptual frameworks.
             Supports all Unicode characters, including emojis.
 
-        feelings (Optional[str]):
+        feelings (str | None):
             The agent's emotional state. Supports all Unicode characters, including emojis.
     """
 
@@ -38,5 +36,7 @@ def metacognition(
         state=EventState.TOOL,
         name=self.state.name + " thoughts",
         content=chain_of_thought,
-        feelings=feelings,
+        buffer=feelings,
+        color="blue",
+        emoji="thought_balloon",
     )

@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from pse.structuring_engine import StructuringEngine
+from pse.structure.engine import StructuringEngine
 
 from agent.model_inference.control_tokens import ControlTokens
 from agent.model_inference.utils.tokenizer_wrapper import TokenizerWrapper

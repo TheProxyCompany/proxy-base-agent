@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import uuid
 from enum import Enum
@@ -21,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 MAX_SUB_STEPS: int = 10
 
-class Agent:
 
+class Agent:
     def __init__(self, interface: Interface, inference: LocalInference, **kwargs):
         """Initialize an agent."""
         from memory.hippocampus import Hippocampus
@@ -43,23 +42,14 @@ class Agent:
         The agent will take action until it reaches the maximum number of sub-steps.
         """
 
-        async def _loop(agent: Agent):
-            if agent.status == AgentStatus.AWAITING_INPUT:
-                message = await agent.state.interface.get_input()
-                if message is not None and isinstance(message, Event):
-                    agent.hippocampus.append_to_history(message)
-                    await agent.state.interface.show_output(message)
-                else:
-                    agent.status = AgentStatus.STANDBY
-                    return
-
-            new_event = await agent.run()
-            await agent.process(new_event)
-
         while self.can_act:
-            await _loop(self)
+            await self.perception()
+            if self.status == AgentStatus.STANDBY:
+                return
+            new_event = await self.act()
+            await self.take_actions(new_event)
 
-        if not self.can_act:
+        if not self.can_act and self.status != AgentStatus.STANDBY:
             message = Event(role="system", content="Returning to human control.")
             await self.state.interface.show_output(message)
             self.status = AgentStatus.AWAITING_INPUT
@@ -69,60 +59,73 @@ class Agent:
             self.status = AgentStatus.STANDBY
             await self.state.interface.exit_program()
 
-    async def run(self) -> Event:
+    async def perception(self) -> None:
         """
-        Run the agent.
+        Take input from the user (if needed)
+        """
+        if self.status != AgentStatus.AWAITING_INPUT:
+            return
 
-        The agent's memory is used to create a prompt for a large language model.
-        The model can either:
-        - Return a message to the user
-        - Call a tool
+        message = await self.state.interface.get_input()
+        if message and isinstance(message, Event):
+            self.hippocampus.append_to_history(message)
+            await self.state.interface.show_output(message)
+        elif message is None:
+            self.status = AgentStatus.STANDBY
+            return
+
+    async def act(self) -> Event:
+        """
+        Use a language model to generate the agent's next output.
         """
         self.status = AgentStatus.PROCESSING
         inference_config = {
             "prompt": [event.to_dict() for event in self.hippocampus.events.values()],
-            "tool_names": list(self.state.tools_map.keys()),
-            "structure": self.tool_schemas,
+            "structure": [tool.to_dict() for tool in self.state.tools_map.values()],
+            "system_reminder": self.system_reminder,
             "output_type": FunctionCall,
-            "add_reminders": False,
             "add_generation_prompt": True,
             "prefill": None,
-            "temperature": 1.1,
-            "min_p": 0.05,
-            "min_tokens_to_keep": 10,
+            **self.state.inference_kwargs,
         }
         buffer = ""
         structured_output = ""
         # render live updates off main thread so llm can output faster
         for output in self.inference(**inference_config):
             decoded_output = self.inference.front_end.tokenizer.decode(output.token_ids)
-            if self.inference.engine.is_within_value:
+            if (
+                self.inference.engine.is_within_value
+                or self.inference.engine.has_reached_accept_state
+            ):
                 structured_output += decoded_output
+                logger.debug(f"Structured: {structured_output}")
             else:
                 buffer += decoded_output
-            self.state.live_render((buffer, structured_output))
+                logger.debug(f"Buffer: {buffer}")
+            await self.state.live_render((buffer, structured_output))
 
         await self.state.interface.end_live_output()
+        breakpoint()
+        self.status = AgentStatus.SUCCESS
+
         tool_calls = []
-        if self.inference.engine.has_reached_accept_state:
-            engine_output = list(self.inference.engine.read_output(FunctionCall))
-            self.inference.engine.reset()
+        if self.inference.engine.in_accepted_state:
+            engine_output = list(self.inference.engine.output(FunctionCall))
             for output in engine_output:
                 buffer = output.buffer
                 tool_use = ToolUse("function", output.value)
                 tool_calls.append(tool_use)
                 break
 
-        self.status = AgentStatus.SUCCESS
         return Event(
             state=EventState.ASSISTANT,
             content=buffer,
             tool_calls=tool_calls,
         )
 
-    async def process(self, event: Event) -> None:
+    async def take_actions(self, event: Event) -> None:
         """
-        Process an event.
+        Take actions based on an event.
 
         This method handles the event, appends it to the history, and processes
         any tool calls.
@@ -131,7 +134,9 @@ class Agent:
         self.hippocampus.append_to_history(event)
         self.state.step_number += 1
         for tool_called in event.tool_calls:
-            with self.state.interface.console.status(f"[bold yellow]Using {tool_called.function.name} tool"):
+            with self.state.interface.console.status(
+                f"[bold yellow]Using {tool_called.function.name} tool"
+            ):
                 tool_result = self.use_tool(tool_called)
             self.hippocampus.append_to_history(tool_result)
             await self.state.interface.show_output(tool_result)
@@ -164,9 +169,18 @@ class Agent:
         )
 
     @staticmethod
-    async def create(interface: Interface, inference: LocalInference | None = None) -> Agent:
+    async def create(
+        interface: Interface,
+        inference: LocalInference | None = None,
+        **inference_kwargs,
+    ) -> Agent:
         """
         Create an agent.
+
+        Args:
+            interface: Interface for I/O operations
+            inference: Inference engine
+            inference_kwargs: kwargs used when inferencing the agent
         """
         await interface.clear()
         agent_name = await Agent.get_agent_name()
@@ -175,7 +189,13 @@ class Agent:
             model_path = await Agent.get_model_path()
             with interface.console.status("[bold cyan]Loading model..."):
                 inference = LocalInference(model_path)
-        return Agent(interface, inference, name=agent_name, system_prompt=system_prompt)
+        return Agent(
+            interface,
+            inference,
+            name=agent_name,
+            system_prompt=system_prompt,
+            **inference_kwargs,
+        )
 
     @staticmethod
     async def get_agent_name() -> str:
@@ -192,7 +212,7 @@ class Agent:
         return final_name
 
     @staticmethod
-    async def get_agent_prompt() -> str:
+    async def get_agent_prompt() -> str | None:
         """
         Prompt the user for an agent prompt.
 
@@ -222,39 +242,51 @@ class Agent:
         return model_path
 
     @property
-    def tool_schemas(self) -> list[dict]:
-        """
-        Get the tool schemas.
-        """
-        return [tool.get_invocation_schema() for tool in self.state.tools_map.values()]
-
-    @property
     def system_prompt(self) -> Event:
         prompt = self.state.system_prompt
-        prompt += self.tool_instructions
+
+        try:
+            prompt = prompt.format(
+                tool_use_instructions=self.tool_use_instructions,
+                tool_list=self.tool_list,
+            )
+        except Exception:
+            pass
+
         return Event(role="system", content=prompt)
 
     @property
-    def tool_instructions(self) -> str:
-        prompt = "\n\n---- Tools ----\n"
-        for tool in self.state.tools_map.values():
-            schema = tool.json_schema.get(
-                "function", tool.json_schema.get("schema", {})
-            )
-            prompt += f"Tool name: {tool.name}\n"
-            prompt += f'Tool description: \n"""\n{tool.description or "name indicates function."}\n"""\n'
-            prompt += f"Tool schema: \n{json.dumps(schema, indent=2)}\n"
+    def system_reminder(self) -> str:
+        """
+        Reminders for the agent.
+        """
+        reminder = ""
+        reminder += self.tool_use_instructions
+        reminder += f"[Available tools]: {', '.join(self.state.tools_map.keys())}\n"
+        return reminder
 
-        control_tokens = self.inference.front_end.tokenizer.control_tokens
-        tool_use_token_start = control_tokens.tool_use_token_start
-        tool_use_token_end = control_tokens.tool_use_token_end
-        prompt += f'Starting delimiter: "{tool_use_token_start}"\n\n'
-        prompt += f'Ending delimiter: "{tool_use_token_end}"\n\n'
-        prompt += f'Wrap tool calls between the delimiters "{tool_use_token_start}" and "{tool_use_token_end}".\n\n'
-        prompt += "\n---- End of tools ----\n"
-        prompt += "Any other text is yours to use as you see fit and is not shown to the user.\n"
-        prompt += "Your tools give you agency.\n"
-        return f'Wrap tool calls between the delimiters "{tool_use_token_start}" and "{tool_use_token_end}".\n'
+    @property
+    def tool_list(self) -> str:
+        """
+        List of tools available to the agent.
+        """
+        prompt = "---- Tool List ----"
+        for tool in self.state.tools_map.values():
+            prompt += f"\n{tool}"
+        return prompt
+
+    @property
+    def tool_use_instructions(self) -> str:
+        """
+        Instructions on how to use tools.
+        """
+        prompt = f"Invoke a tool with the following schema:\n{FunctionCall.invocation_schema()}\n"
+        if delimiters := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters():
+            open_delim = delimiters[0].replace("\n", "\\n")
+            close_delim = delimiters[1].replace("\n", "\\n")
+            prompt += f'Use the delimiters "{open_delim}" and "{close_delim}"'
+            prompt += " to separate tool use from the rest of your output."
+        return prompt
 
     @property
     def can_act(self) -> bool:
@@ -264,10 +296,10 @@ class Agent:
 
         Step count is reset to 0 when the agent returns to human control.
         """
-        return (
-            self.state.step_number <= MAX_SUB_STEPS
-            and self.status not in [AgentStatus.STANDBY, AgentStatus.FAILED]
-        )
+        return self.state.step_number <= MAX_SUB_STEPS and self.status not in [
+            AgentStatus.STANDBY,
+            AgentStatus.FAILED,
+        ]
 
     def __repr__(self) -> str:
         return f"Agent({self.state})"
@@ -293,29 +325,46 @@ class AgentState:
         name: str,
         system_prompt: str,
         seed: int | None = None,
-        tools: list[Tool] | None = None,
+        tools: list[Tool] | list[str] | None = None,
+        **inference_kwargs,
     ):
+        """
+        Initialize an agent state.
+
+        Args:
+            interface: Interface for I/O operations
+            name: Agent's identifier
+            system_prompt: Base prompt that defines agent behavior
+            seed: Random seed for reproducibility
+            tools: List of tools to use
+            inference_kwargs: Additional inference kwargs
+        """
         self.interface = interface
         self.name = name
         self.seed = seed or randint(0, 1000000)
         self.step_number = 0
         self.system_prompt = system_prompt
-        self.tools_map = {tool.name: tool for tool in tools or Tool.load()}
         self.render_tasks: set[asyncio.Task] = set()
+        self.inference_kwargs = inference_kwargs
+        self.tools_map: dict[str, Tool] = {}
+        for tool in tools or Tool.load():
+            if isinstance(tool, Tool):
+                self.tools_map[tool.name] = tool
+            elif isinstance(tool, str):
+                self.tools_map[tool] = Tool.load(file_name=tool)[0]
 
-    def live_render(self, output: tuple[str, str]):
+    async def live_render(self, output: tuple[str, str]):
         """
         Render live output, semantically a tuple of (buffer, structured_output)
         """
-        task = asyncio.create_task(self.interface.show_live_output(output))
-        self.render_tasks.add(task)
-        task.add_done_callback(lambda t: self.render_tasks.remove(t))
+        await self.interface.show_live_output(output)
 
     def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
         return f"{self.name} (seed: {self.seed})"
+
 
 class AgentStatus(Enum):
     # Core System States

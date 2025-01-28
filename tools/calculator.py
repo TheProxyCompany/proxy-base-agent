@@ -71,12 +71,10 @@ def calculator(
         variable_a (number): The first variable to perform the operation on. Integer or float.
         variable_b (number): The second variable to perform the operation on. Integer or float.
         operation (MathOperation): The operation to perform on the two variables.
-
-    Returns:
-        Event: The result of the operation.
     """
     self.status = AgentStatus.PROCESSING
-    
+    operation = MathOperation(operation)
+
     match operation:
         case MathOperation.ADDITION:
             result = variable_a + variable_b
@@ -116,6 +114,6 @@ def calculator(
     self.status = AgentStatus.SUCCESS
     return Event(
         state=EventState.TOOL,
-        name=self.state.name + "'s calculator tool",
+        name=self.state.name + "'s calculator",
         content=content,
     )

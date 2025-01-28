@@ -8,6 +8,7 @@ import mlx.nn as nn
 from mlx_lm.models.cache import RotatingKVCache
 from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
 from mlx_lm.utils import _get_classes, get_model_path, load_config
+from pse.structure.engine import StructuringEngine
 
 from agent.model_inference.inference import FrontEnd
 from agent.model_inference.utils.reuseable_cache import ReusableKVCache
@@ -32,6 +33,7 @@ class MLXFrontEnd(FrontEnd):
         self.load_model(model_path)
         self.initialize_cache(self.model)
         self.tokenizer = TokenizerWrapper.load(model_path, self.model_type)
+        self.engine = StructuringEngine(self.tokenizer._tokenizer)
 
     def inference(self, prompt: list[int], **kwargs) -> Iterator[FrontEnd.ModelOutput]:
         """
@@ -42,9 +44,6 @@ class MLXFrontEnd(FrontEnd):
             **kwargs: Keyword arguments for the sampler.
         """
         mlx_prompt = mx.array(prompt)
-
-        if not self.computed_prompt_tokens:
-            self.computed_prompt_tokens = prompt
 
         if isinstance(self.cache[0], ReusableKVCache) and self.computed_prompt_tokens:
             tic = time.perf_counter()
@@ -64,6 +63,9 @@ class MLXFrontEnd(FrontEnd):
         else:
             y = mlx_prompt
 
+        if not self.computed_prompt_tokens:
+            self.computed_prompt_tokens = prompt
+
         model_output = self.inference_step(y, **kwargs)
         y, logprobs = model_output.tokens, model_output.logprobs
         mx.async_eval(model_output.tokens, logprobs)
@@ -78,9 +80,7 @@ class MLXFrontEnd(FrontEnd):
             model_output = new_model_output
             y, logprobs = new_y, new_logprobs
 
-    def inference_step(
-        self, prompt: mx.array, **sampler_kwargs
-    ) -> FrontEnd.ModelOutput:
+    def inference_step(self, prompt: mx.array, **sampler_kwargs) -> FrontEnd.ModelOutput:
         """
         A single step of inference on the given prompt from the model.
 
@@ -155,9 +155,7 @@ class MLXFrontEnd(FrontEnd):
 
         return token
 
-    def initialize_cache(
-        self, model: nn.Module, max_kv_size: int | None = None
-    ) -> None:
+    def initialize_cache(self, model: nn.Module, max_kv_size: int | None = None) -> None:
         """
         Initialize the cache for the model.
 

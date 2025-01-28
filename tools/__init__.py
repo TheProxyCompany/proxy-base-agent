@@ -4,13 +4,16 @@ import importlib
 import importlib.util
 import inspect
 import json
+import logging
 import os
 import uuid
 from collections.abc import Callable
 from typing import Any
 
-from pse.util import callable_to_json_schema
+from pse.structure.from_function import callable_to_schema
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class Tool:
@@ -26,8 +29,7 @@ class Tool:
         self.callable = callable
         self.source_type = source_type
         self.source_code = inspect.getsource(callable)
-        self.json_schema = callable_to_json_schema(callable)
-        self.json_schema["schema"] = self.get_invocation_schema()
+        self.schema = callable_to_schema(callable)
 
     def __call__(self, caller: Any, **kwargs) -> Any:
         """
@@ -62,94 +64,137 @@ class Tool:
         return result
 
     @staticmethod
-    def load(filepath: str | None = None, file_name: str | None = None) -> list[Tool]:
+    def from_file(filepath: str) -> Tool | None:
         """
-        Load a single Python function from a given file and generate its schema.
-
-        Args:
-            filepath (str): Path to the Python file containing the function.
-
-        Returns:
-            dict[str, dict]: Dictionary containing the module source, function object,
-                and JSON schema for the loaded function.
-
-        Raises:
-            ModuleNotFoundError: If the module cannot be loaded from the filepath.
-            ValueError: If no function matching the module name is found.
-            ImportError: If there are errors importing module dependencies.
+        Load a single Tool from a given file.
         """
-        path = filepath or os.path.dirname(__file__)
-
-        if file_name:
-            path = os.path.join(path, file_name)
-
-        if os.path.isdir(path):
-            tools = []
-            for file in os.listdir(path):
-                new_tools = Tool.load(path, file)
-                tools.extend(new_tools)
-            return tools
-        elif (
-            not os.path.isfile(path)
-            or not path.endswith(".py")
-            or (file_name and file_name.startswith("__"))
+        # valid .py file
+        if (
+            not os.path.isfile(filepath)
+            or not filepath.endswith(".py")
+            or os.path.basename(filepath).startswith("__")
         ):
-            return []
+            return None
 
-        # Extract module name from filepath
-        module_name = os.path.splitext(os.path.basename(path))[0]
-
+        # Extract the module name from file name
+        module_name = os.path.splitext(os.path.basename(filepath))[0]
         # Import the module dynamically
-        spec = importlib.util.spec_from_file_location(module_name, path)
+        spec = importlib.util.spec_from_file_location(module_name, filepath)
         if not spec or not spec.loader:
-            raise ModuleNotFoundError(f"Cannot load module from {path}")
+            logger.error(f"Cannot load module from {filepath}")
+            return None
 
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        # Get the function matching the module name
+        # We expect a function that matches the module name
         function = getattr(module, module_name, None)
         if not inspect.isfunction(function):
-            raise ValueError(f"No function named '{module_name}' found in {path}.")
+            logger.warning(f"No function named '{module_name}' found in {filepath}.")
+            return None
 
-        return [Tool(module_name, function)]
+        return Tool(module_name, function)
 
-    def get_invocation_schema(self) -> dict[str, Any]:
-        tool_name = self.name
-        tool_schema = self.json_schema
-        tool_parameters = tool_schema.get("parameters", {})
-        invocation_schema = {
-            "type": "object",
-            "properties": {
-                "name": {"type": "const", "const": tool_name},
-                "arguments": {
-                    "type": "object",
-                    "properties": tool_parameters.get("properties", {}),
-                    "required": tool_parameters.get("required", []),
-                },
-            },
-            "required": ["name", "arguments"],
-        }
-        return invocation_schema
+    @staticmethod
+    def load(
+        filepath: str | None = None,
+        file_name: str | list[str] | None = None,
+    ) -> list[Tool]:
+        """
+        Loads Python tool(s) from:
+          1. A single .py file
+          2. A directory of .py files
+          3. A directory + specific file(s) (by name, without .py)
+
+        If no filepath is given, we default to the current directory of this __init__.py.
+
+        Args:
+            filepath (str | None):
+                - If None, defaults to directory of this __init__.py.
+                - If it's a directory, we look for either `file_name` or all .py files.
+                - If it's a path to a file, we load that single file.
+            file_name (str | List[str] | None):
+                - If None, load all .py files in the directory (excluding __*).
+                - If a string, loads one specific file name (adds .py if missing).
+                - If a list of strings, loads multiple file names (each gets .py if missing).
+
+        Returns:
+            list[Tool]: List of loaded Tool objects.
+        """
+        if not filepath:
+            # Default to the directory containing this file
+            filepath = os.path.dirname(__file__)
+
+        found_tools = []
+        # -----------------------------------------------------
+        # CASE A: `filepath` is a direct *.py file -> load it
+        # -----------------------------------------------------
+        if os.path.isfile(filepath):
+            # Make sure it is actually a .py file
+            if filepath.endswith(".py") and not os.path.basename(filepath).startswith(
+                "__"
+            ):
+                tool = Tool.from_file(filepath)
+                if tool:
+                    found_tools.append(tool)
+                else:
+                    logger.error(f"Cannot load tool from {filepath}")
+
+        # -----------------------------------------------------
+        # CASE B: `filepath` is a directory
+        # -----------------------------------------------------
+        elif os.path.isdir(filepath):
+            # Normalize `file_name` into a list and load all .py files (except __*.py)
+            files_to_process = (
+                os.listdir(filepath)
+                if file_name is None
+                else [
+                    f if f.endswith(".py") else f + ".py"
+                    for f in ([file_name] if isinstance(file_name, str) else file_name)
+                ]
+            )
+
+            # Process each file
+            for f in files_to_process:
+                if f.endswith(".py") and not f.startswith("__"):
+                    full_path = os.path.join(filepath, f)
+                    tool = Tool.from_file(full_path)
+                    if tool:
+                        found_tools.append(tool)
+                    else:
+                        logger.error(f"Cannot load tool from {full_path}")
+
+        return found_tools
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "name": self.name,
-            "description": self.description,
-            "schema": self.get_invocation_schema(),
+            "type": "object",
+            "description": self.description or self.name,
+            "properties": {
+                "name": {"const": self.name},
+                "arguments": self.schema.get("parameters", {}),
+            },
+            "required": ["name", "arguments"],
         }
 
     def __getattribute__(self, name: str) -> Any:
         try:
             return object.__getattribute__(self, name)
         except AttributeError:
-            json_schema = object.__getattribute__(self, "json_schema")
-            if name in json_schema:
-                return json_schema[name]
+            schema = object.__getattribute__(self, "schema")
+            if name in schema:
+                return schema[name]
             return None
 
     def __str__(self) -> str:
-        return f"{self.name}:\n{self.description}"
+        tool_str = ""
+        tool_str += f"Tool: {self.name}\n"
+        tool_str += f"Description: {self.description}\n"
+        args = self.schema.get("parameters", {})
+        tool_str += f"Arguments: {json.dumps(args.get('properties', {}), indent=2)}\n"
+        if args.get("required"):
+            tool_str += f"Required: {args['required']}\n"
+        return tool_str
 
     def __repr__(self) -> str:
         return json.dumps(self.to_dict(), indent=4)
@@ -188,4 +233,15 @@ class ToolUse(BaseModel):
 
 class FunctionCall(BaseModel):
     name: str
+    """The name of the tool to call."""
     arguments: dict[str, Any]
+    """The arguments to pass to the tool."""
+
+    @staticmethod
+    def invocation_schema() -> str:
+        schema = {
+            "name": "string",
+            "arguments": "object",
+            "required": ["name", "arguments"]
+        }
+        return json.dumps(schema, indent=2)

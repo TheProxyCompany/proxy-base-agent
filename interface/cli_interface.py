@@ -1,10 +1,12 @@
 import logging
 import os
 import sys
+import traceback
 
 import questionary
-from rich.align import Align
+from rich.console import RenderableType
 from rich.emoji import Emoji
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 
@@ -25,6 +27,17 @@ class CLIInterface(Interface):
     PANEL_WIDTH = 120
     PANEL_EXPAND = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._renderable: RenderableType | None = None
+        self.live = Live(
+            console=self.console,
+            vertical_overflow="visible",
+            get_renderable=lambda: self._renderable or Markdown(""),
+        )
+        self.structured_output = None
+        self.buffer = None
+
     async def get_input(self, prompt: str | None = None) -> object | None:
         """Gets user input from the command line using `questionary`.
 
@@ -32,6 +45,7 @@ class CLIInterface(Interface):
             object: The user input, or `None` if the user enters Ctrl+C
                  (KeyboardInterrupt).
         """
+        exit_phrases = ["exit", "quit", "q", "quit()", "exit()"]
         user_input: str | None = await questionary.text(
             message=prompt or "Enter your message [enter to send, Ctrl+C to exit]:",
             qmark=">",
@@ -40,13 +54,14 @@ class CLIInterface(Interface):
         sys.stdout.write("\033[1A\033[2K\033[G")
         sys.stdout.flush()
 
-        if not user_input:
+        if user_input is None:
             return user_input
+        elif user_input.lower() in exit_phrases:
+            return None
 
         return Event(
             content=user_input.strip(),
             state=EventState.USER,
-            name="User",
         )
 
     async def show_output(self, input: object | list[object]) -> None:
@@ -55,102 +70,75 @@ class CLIInterface(Interface):
         Args:
             message: The `Message` object to be handled.
         """
-        if isinstance(input, list):
-            for message in input:
-                await self.show_output(message)
-            return
 
         if not isinstance(input, Event):
+            breakpoint()
             return
 
         if input.image_path:
             await self.render_image(input.image_path)
             return
 
+        content = input.content
+
+        if not content:
+            return
+        style = input.styling
+        emoji = Emoji(style["emoji"])
+        panel_style = {
+            "border_style": style["color"],
+            "title": f"{emoji} {input.name or style['title']}",
+            "title_align": "left",
+            "expand": False,
+            "width": self.PANEL_WIDTH,
+        }
+
+        if subtitle := input.buffer:
+            panel_style["subtitle"] = subtitle
+            panel_style["subtitle_align"] = "left"
+
+        self.console.print(
+            Panel(
+                Markdown(
+                    str(content or "\n\n"),
+                    justify="left",
+                    code_theme="monokai",
+                    inline_code_lexer="text",
+                    inline_code_theme="solarized-dark",
+                ),
+                **panel_style,
+            )
+        )
+
     async def show_live_output(self, output: object) -> None:
         """Show partial output."""
-        from pse.structuring_engine import EngineOutput
 
-        if not isinstance(output, EngineOutput):
-            return
+        if not isinstance(output, tuple):
+            raise ValueError("Output is not a tuple")
 
-        renderables = []
-
-        if output.buffer:
-            print(output.buffer)
-            buffer_markdown_content = Markdown(
-                str(output.buffer),
-                justify="left",
-                code_theme="monokai",
-                inline_code_lexer="text",
-                inline_code_theme="solarized-dark",
-            )
-            renderables.append(buffer_markdown_content)
-
-        if output.value:
-            print(output.value)
-            value_markdown_content = Markdown(
-                str(output.value),
+        if output[1]:
+            self.structured_output = Markdown(
+                str(output[1]),
                 justify="left",
                 code_theme="monokai",
                 inline_code_lexer="json",
                 inline_code_theme="solarized-dark",
             )
-            renderables.append(value_markdown_content)
+            # if we're switching from buffer to structured output, print the buffer
+            if self._renderable == self.buffer:
+                self.console.print(self.buffer)
 
-        # if renderables:
-        #     panel = Panel(
-        #         Columns(renderables),
-        #         title="Output",
-        #         title_align="left",
-        #         expand=True,
-        #     )
-
-        #     # self.console.print(panel)
-
-        #     self.live = Live(
-        #         panel,
-        #         console=self.console,
-        #         vertical_overflow="visible",
-        #         transient=True,
-        #     )
-
-    async def _display_message(
-        self,
-        message: Event,
-        title: str,
-        border_style: str,
-        emoji: str | None = None,
-    ) -> None:
-        """Displays a message with consistent formatting and an optional emoji.
-
-        Args:
-            message: The `Message` object to be displayed.
-            title: The title of the panel.
-            border_style: The style of the panel border (Rich library color).
-            emoji (Optional[str]): The name of the emoji to include in the
-                                    panel title (uses Rich library emojis).
-                                    Defaults to `None`.
-        """
-        title_text = f"{Emoji(emoji)} {title}" if emoji else title
-        text = (
-            f"{message.content}\n\n💭 *{message.inner_thoughts}*"
-            if message.inner_thoughts
-            else message.content
-        )
-        self.console.print(
-            Align.left(
-                Panel(
-                    Markdown(str(text), justify="left"),
-                    title=title_text,
-                    title_align="left",
-                    border_style=border_style,
-                    expand=self.PANEL_EXPAND,
-                    width=self.PANEL_WIDTH,
-                )
+            self._renderable = self.structured_output
+        elif output[0]:
+            self.buffer = Markdown(
+                str(output[0]),
+                justify="left",
+                code_theme="monokai",
+                inline_code_lexer="text",
+                inline_code_theme="solarized-dark",
             )
-        )
-        self.console.print()
+            self._renderable = self.buffer
+        self.live.start()
 
     async def show_error_message(
         self, message: Event | None = None, e: Exception | None = None
@@ -160,7 +148,7 @@ class CLIInterface(Interface):
             return
 
         error_message = message or Event(role="system", content=f"{e}")
-        await self._display_message(error_message, "Error", "red", "warning")
+        await self.show_output(error_message)
 
     async def render_image(self, image_url: str) -> None:
         """Displays an image from a URL, with optional caption and thoughts.
@@ -176,12 +164,37 @@ class CLIInterface(Interface):
         try:
             img = Image.open(urlopen(image_url))
             imgcat(img)
+            breakpoint()
         except Exception as error:
             await self.show_error_message(e=error)
 
     async def exit_program(self, error: Exception | None = None) -> None:
-        """Exits the program with a goodbye message and a waving hand emoji."""
-        self.console.print(f"{Emoji('wave')} [bold]Goodbye![/bold]")
+        """
+        Exits the program.
+        """
+        if error:
+            title = f"{Emoji(name='exclamation')} Error"
+            content = f"```pytb\n{traceback.format_exc()}\n```"
+            border_style = "red"
+        else:
+            title = f"{Emoji('wave')} Goodbye"
+            content = "*Program terminated.*"
+            border_style = "blue"
+
+        markdown = Markdown(
+            content,
+            justify="left",
+            inline_code_theme="solarized-dark",
+        )
+
+        panel = Panel(
+            markdown,
+            title=title,
+            title_align="left",
+            border_style=border_style,
+            expand=True,
+        )
+        self.console.print(panel)
 
     async def clear(self) -> None:
         """
@@ -198,6 +211,4 @@ class CLIInterface(Interface):
         """
         if self.live:
             self.live.stop()
-            self.live = None
-            self.live_content = ""
             self.console.print()

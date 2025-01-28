@@ -3,8 +3,8 @@
     "bos_token": "<|begin_of_text|>",
     "eos_token": "<|eot_id|>",
     "eom_token": "<|eom_id|>",
-    "tool_use_token_start": "```json\\n",
-    "tool_use_token_end": "\\n```",
+    "tool_use_token_start": "```json\n",
+    "tool_use_token_end": "\n```",
     "start_header_token": "<|start_header_id|>",
     "end_header_token": "<|end_header_id|>",
     "roles": {
