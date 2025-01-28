@@ -97,7 +97,6 @@ class TokenizerWrapper:
 
         if isinstance(prompt, list) or isinstance(prompt, dict):
             if isinstance(prompt, dict):
-                kwargs["events"] = prompt
                 conversation = [event.to_dict() for event in prompt.values()]
                 templated = self._tokenizer.apply_chat_template(conversation, **kwargs)
             else:

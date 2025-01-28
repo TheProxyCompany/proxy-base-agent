@@ -4,7 +4,7 @@ import os
 import sys
 
 from agent.agent import Agent
-from interface.cli_interface import CLIInterface
+from agent.interface.cli_interface import CLIInterface
 
 # Set up logging
 logging.basicConfig(

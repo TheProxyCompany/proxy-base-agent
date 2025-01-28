@@ -1,9 +1,9 @@
 [project]
-name = ""
-version = "0.1.0"
-description = "Add your description here"
+name = "Agent"
+version = "0.1"
+description = "An autonomous tool using agent powered by the Proxy Structuring Engine."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "discord>=2.3.2",
     "docstring-parser>=0.16",
@@ -19,6 +19,7 @@ dependencies = [
     "ruff>=0.9.3",
     "imgcat>=0.6.0",
     "pillow>=11.1.0",
+    "torch",
 ]
 
 [tool.ruff.lint]
@@ -29,6 +30,3 @@ extend-select = [
   "RUF",  # Ruff-specific
   "UP",   # pyupgrade
 ]
-
-[tool.uv.sources]
-pse = { path = "../proxy-structuring-engine" }

@@ -7,18 +7,17 @@ import uuid
 from enum import Enum
 from random import randint
 
-from memory.hippocampus import Hippocampus
-
 from agent.inference import (
     DEFAULT_MODEL_FOLDER,
     DEFAULT_MODEL_NAME,
     get_available_models,
 )
-from agent.inference.inference.local import LocalInference
+from agent.inference.local import LocalInference
 from agent.inference.prompts import get_available_prompts, load_prompt_template
 from agent.interaction import Interaction
-from interface import CLIInterface, Interface
-from tools import FunctionCall, Tool, ToolUse
+from agent.interface import CLIInterface, Interface
+from agent.memory.hippocampus import Hippocampus
+from agent.tools import FunctionCall, Tool, ToolUse
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +81,12 @@ class Agent:
 
         The agent will take action until it reaches the maximum number of sub-steps.
         """
+        if not self.hippocampus.events:
+            self.hippocampus.append_to_history(self.system_prompt)
+
         message = await self.interface.get_input(
             message="Enter your message [enter to send, Ctrl+C to exit]:",
             qmark=">",
-            default="",
         )
         if isinstance(message, Interaction):
             self.status = Agent.Status.PROCESSING
@@ -132,7 +133,6 @@ class Agent:
 
         await self.interface.end_live_output()
         breakpoint()
-        self.status = Agent.Status.SUCCESS
 
         tool_calls = []
         if self.inference.engine.in_accepted_state:
@@ -143,6 +143,7 @@ class Agent:
                 tool_calls.append(tool_use)
                 break
 
+        self.status = Agent.Status.SUCCESS
         return Interaction(
             role=Interaction.Role.ASSISTANT,
             content=buffer,
@@ -209,12 +210,11 @@ class Agent:
             inference_kwargs: kwargs used when inferencing the agent
         """
         interface = interface or CLIInterface()
+        await interface.clear()
         if inference is None:
             model_path = await Agent.get_model_path(interface)
             with interface.console.status("[bold cyan]Loading model..."):
                 inference = LocalInference(model_path)
-
-        await interface.clear()
         agent_name = await Agent.get_agent_name(interface)
         system_prompt = await Agent.get_agent_prompt(interface)
         return Agent(

@@ -8,7 +8,7 @@ from typing import Any
 
 import pytz
 
-from tools import ToolUse
+from agent.tools import ToolUse
 
 
 class Interaction:
@@ -84,7 +84,7 @@ class Interaction:
     def to_dict(self) -> dict:
         dict = {
             "event_id": self.event_id,
-            "role": self.role,
+            "role": self.role.value,
             "content": self.content,
             "metadata": self.metadata,
         }

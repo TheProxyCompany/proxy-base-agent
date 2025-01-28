@@ -54,12 +54,6 @@
 {# ------------------------------------------------------------------------ #}
 {{- bos_token -}}
 
-{%- if events is defined -%}
-    {%- for event in events.values() -%}
-    {%- if event.get("content", "").strip() or (event.tool_calls and event.tool_calls | length > 0) -%}
-        {{ render_event(event) -}}
-    {%- endif -%}
-{%- endfor -%}
 {%- elif prompt is defined -%}
     {%- for event in prompt -%}
         {{ render_event(event) -}}

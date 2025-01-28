@@ -11,7 +11,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from agent.interaction import Interaction
-from interface import Interface
+from agent.interface import Interface
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class CLIInterface(Interface):
         else:
             answer: str = await questionary.text(**kwargs).ask_async()
 
-        if answer.lower() in exit_phrases:
+        if answer is None or answer.lower() in exit_phrases:
             await self.exit_program()
             sys.exit(0)
 

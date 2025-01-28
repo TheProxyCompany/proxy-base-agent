@@ -40,6 +40,7 @@ class LocalInference:
         prompt: str | list[dict[str, Any]] | list[Interaction],
         structure: SchemaType | None = None,
         buffer_length: int = -1,
+        max_tokens: int = 1000,
         **inference_kwargs,
     ) -> Iterable[FrontEnd.ModelOutput]:
         """
@@ -48,14 +49,12 @@ class LocalInference:
         Args:
             prompt (str | list[dict[str, Any]] | list[Event]): The input prompt for completion.
             structure (StructuringEngine.StructureType | None): schema to constrain the output.
-            prefill (str | None): Prefill text to add to the prompt.
-            add_generation_prompt (bool): Whether to add the generation prompt.
-            add_reminders (bool): Whether to add reminders.
             buffer_length (int): The length of the buffer to use for inference.
+            max_tokens (int): The maximum number of tokens to generate.
             **inference_kwargs: Additional keyword arguments to use for inference.
 
         Returns:
-            Iterable[FrontEnd.ModelOutput]: The output of the model, each element are sampled tokens & logprobs
+            Iterable[ModelOutput]: The output from the model, each element are sampled tokens & logprobs
         """
         tic = time.perf_counter()
         if structure:
@@ -72,11 +71,10 @@ class LocalInference:
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         assert isinstance(encoded_prompt, list)
-        logger.info(
-            f"text prompt:\n\n{self.front_end.tokenizer.decode(encoded_prompt)}"
-        )
+        logger.info(f"text prompt:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
+
         breakpoint()
-        max_tokens = inference_kwargs.get("max_tokens", 1000)
+
         for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):
             encoded_prompt.extend(result.token_ids)
             if result.token_ids[-1] in self.front_end.tokenizer.stop_tokens:
