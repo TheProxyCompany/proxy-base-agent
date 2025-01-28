@@ -16,8 +16,10 @@ class ControlTokens(BaseModel):
     bos_token: str
     eos_token: str
     eom_token: str
-    tool_use_token_start: str
-    tool_use_token_end: str
+    tool_use_start: str
+    tool_use_end: str
+    tool_result_start: str
+    tool_result_end: str
     start_header_token: str
     end_header_token: str
     roles: RoleTokens
@@ -26,8 +28,8 @@ class ControlTokens(BaseModel):
         return [self.eos_token, self.eom_token]
 
     def tool_use_delimiters(self) -> tuple[str, str] | None:
-        if self.tool_use_token_start and self.tool_use_token_end:
-            return self.tool_use_token_start, self.tool_use_token_end
+        if self.tool_use_start and self.tool_use_end:
+            return self.tool_use_start, self.tool_use_end
         return None
 
 

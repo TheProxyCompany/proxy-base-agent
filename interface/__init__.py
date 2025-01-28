@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 
 from rich.console import Console
 
+from agent.interaction import Interaction
+
 
 class Interface(ABC):
     """
@@ -15,12 +17,12 @@ class Interface(ABC):
         self.console = Console()
 
     @abstractmethod
-    async def get_input(self, prompt: str | None = None) -> object | None:
+    async def get_input(self, **kwargs) -> Interaction:
         """
-        Get user input.
+        Get input.
 
         Returns:
-            str: The user input.
+            Interaction: The input.
         """
         pass
 

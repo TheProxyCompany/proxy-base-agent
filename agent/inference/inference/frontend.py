@@ -8,8 +8,8 @@ from typing import Any
 
 from pse.structure.engine import StructuringEngine
 
-from agent.model_inference.control_tokens import ControlTokens
-from agent.model_inference.utils.tokenizer_wrapper import TokenizerWrapper
+from agent.inference.control_tokens import ControlTokens
+from agent.inference.utils.tokenizer_wrapper import TokenizerWrapper
 
 
 class FrontEndType(enum.Enum):
@@ -40,7 +40,7 @@ class FrontEnd(ABC):
             front_end_type = FrontEndType.MLX
 
         if front_end_type == FrontEndType.MLX:
-            from agent.model_inference.inference.frontend_mlx import MLXFrontEnd
+            from agent.inference.inference.frontend_mlx import MLXFrontEnd
 
             return MLXFrontEnd(model_path)
         else:
@@ -76,13 +76,12 @@ class FrontEnd(ABC):
         Result of a generation step.
 
         Args:
-            token (mx.array): The generated token.
-            token_id (int): The id of the generated token.
-            logprobs (mx.array): The log probabilities of the generated token.
-            tool_called (bool): Whether a tool was called.
-            inference_time (float): The time taken for inference.
-            engine_time (float): The time taken for the engine.
-            sampling_time (float): The time taken for sampling.
+            tokens: The generated tokens.
+            token_ids: The ids of the generated tokens.
+            logprobs: The log probabilities of the generated tokens.
+            inference_time: The time taken for inference.
+            engine_time: The time taken for the engine.
+            sampling_time: The time taken for sampling.
         """
 
         tokens: Any

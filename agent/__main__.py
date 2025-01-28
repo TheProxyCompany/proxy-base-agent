@@ -14,19 +14,20 @@ logging.basicConfig(
 )
 
 agent_kwargs = {
+    "prefill": "[SCRATCHPAD]\n",
     "max_tokens": 1000,
     "buffer_length": -1,
     "temperature": 0.9,
     "min_p": 0.02,
     "min_tokens_to_keep": 7,
-    "tools": ["list_tools"],
+    "add_generation_prompt": True,
 }
 
 async def main():
     interface = CLIInterface()
     try:
         agent = await Agent.create(interface, **agent_kwargs)
-        await agent()
+        await agent.loop()
     except Exception as error:
         await interface.exit_program(error)
 

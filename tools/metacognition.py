@@ -1,12 +1,12 @@
 from agent.agent import Agent
-from agent.event import Event, EventState
+from agent.interaction import Interaction
 
 
 def metacognition(
     self: Agent,
     chain_of_thought: list[str] | str,
     feelings: str | None = None,
-) -> Event:
+) -> Interaction:
     """
     Use when you need to think deeply, plan ahead, or check in with yourself.
 
@@ -30,11 +30,12 @@ def metacognition(
         chain_of_thought = "\n".join(chain_of_thought)
     elif isinstance(chain_of_thought, dict):
         import json
+
         chain_of_thought = json.dumps(chain_of_thought)
 
-    return Event(
-        state=EventState.TOOL,
-        name=self.state.name + " thoughts",
+    return Interaction(
+        role=Interaction.Role.TOOL,
+        name=self.name + " thoughts",
         content=chain_of_thought,
         buffer=feelings,
         color="blue",

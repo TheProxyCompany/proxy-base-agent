@@ -1,8 +1,8 @@
 import enum
 import math
 
-from agent.agent import Agent, AgentStatus
-from agent.event import Event, EventState
+from agent.agent import Agent
+from agent.interaction import Interaction
 
 
 class MathOperation(enum.Enum):
@@ -59,61 +59,61 @@ class MathOperation(enum.Enum):
 
 
 def calculator(
-    self: Agent,
-    variable_a: float,
-    variable_b: float,
-    operation: MathOperation,
-) -> Event:
+    self: Agent, a: float, b: float, operation: MathOperation
+) -> Interaction:
     """
-    Perform a mathematical operation on two variables.
+    Perform a mathematical operation on two numbers.
+    Response is formatted as "a `operation` b = result".
+    Example: "1 + 2 = 3"
 
     Args:
-        variable_a (number): The first variable to perform the operation on. Integer or float.
-        variable_b (number): The second variable to perform the operation on. Integer or float.
-        operation (MathOperation): The operation to perform on the two variables.
+        a (number): The first number to perform the operation on.
+        b (number): The second number to perform the operation on.
+        operation (MathOperation): The operation to perform with the two numbers.
     """
-    self.status = AgentStatus.PROCESSING
+    self.status = Agent.Status.PROCESSING
     operation = MathOperation(operation)
 
     match operation:
         case MathOperation.ADDITION:
-            result = variable_a + variable_b
+            result = a + b
         case MathOperation.SUBTRACTION:
-            result = variable_a - variable_b
+            result = a - b
         case MathOperation.MULTIPLICATION:
-            result = variable_a * variable_b
+            result = a * b
         case MathOperation.DIVISION:
-            result = variable_a / variable_b
+            result = a / b
         case MathOperation.GREATER_THAN:
-            result = variable_a > variable_b
+            result = a > b
         case MathOperation.LESS_THAN:
-            result = variable_a < variable_b
+            result = a < b
         case MathOperation.GREATER_THAN_OR_EQUAL_TO:
-            result = variable_a >= variable_b
+            result = a >= b
         case MathOperation.LESS_THAN_OR_EQUAL_TO:
-            result = variable_a <= variable_b
+            result = a <= b
         case MathOperation.EQUAL_TO:
-            result = variable_a == variable_b
+            result = a == b
         case MathOperation.NOT_EQUAL_TO:
-            result = variable_a != variable_b
+            result = a != b
         case MathOperation.POWER:
-            result = variable_a ** variable_b
+            result = a**b
         case MathOperation.ROOT:
-            result = variable_a ** (1 / variable_b)
+            result = a ** (1 / b)
         case MathOperation.LOGARITHM:
-            result = math.log(variable_a, variable_b)
+            result = math.log(a, b)
         case MathOperation.EXPONENT:
-            result = variable_a ** variable_b
+            result = a**b
         case MathOperation.FACTORIAL:
-            result = math.factorial(int(variable_a))
+            result = math.factorial(int(a))
         case _:
-            self.status = AgentStatus.FAILED
+            self.status = Agent.Status.FAILED
             raise ValueError(f"Invalid operation: {operation}")
 
-    content = f"{variable_a} {operation} {variable_b} = {result}"
-    self.status = AgentStatus.SUCCESS
-    return Event(
-        state=EventState.TOOL,
-        name=self.state.name + "'s calculator",
+    content = f"{a} {operation} {b} = {result}"
+    self.status = Agent.Status.SUCCESS
+
+    return Interaction(
+        role=Interaction.Role.TOOL,
+        name=self.name + "'s calculator",
         content=content,
     )

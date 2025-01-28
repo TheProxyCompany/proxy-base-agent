@@ -1,33 +1,24 @@
-from agent.agent import AgentState
-from agent.event import Event
+from agent.interaction import Interaction
 
 
 class Hippocampus:
     """Central memory management system for the agent."""
 
-    def __init__(self, agent_state: AgentState):
+    def __init__(self):
         """
         Initialize the Hippocampus with different memory components.
-
-        Args:
-            interface (AgentInterface): The interface for agent communication.
-            agent_seed (int): Seed value for the agent.
         """
-        self.agent_state = agent_state
-        self.events: dict[str, Event] = {}
+        self.events: dict[str, Interaction] = {}
 
-    def append_to_history(self, input_events: list[Event] | Event) -> None:
+    def append_to_history(self, input_events: list[Interaction] | Interaction) -> None:
         """
-        Append events to the history.
+        Append events to the agent's history.
 
         Args:
             input_events: A single Event or list of Events to append to history.
-
-        Raises:
-            ValueError: If input is not an Event or list of Events.
         """
         if isinstance(input_events, list):
-            if not all(isinstance(event, Event) for event in input_events):
+            if not all(isinstance(event, Interaction) for event in input_events):
                 raise ValueError("All items in list must be Events")
             for event in input_events:
                 self.events[event.event_id] = event

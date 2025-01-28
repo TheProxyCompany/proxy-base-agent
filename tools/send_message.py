@@ -1,10 +1,10 @@
-from agent.agent import Agent, AgentStatus
-from agent.event import Event, EventState
+from agent.agent import Agent
+from agent.interaction import Interaction
 
 
-def send_message(self: Agent, message: str, recipient: str = "user") -> Event:
+def send_message(self: Agent, message: str, recipient: str = "user") -> Interaction:
     """
-    Sends a text based message to the recipient.
+    Sends a message to the recipient.
 
     Arguments:
         message (str):
@@ -15,13 +15,12 @@ def send_message(self: Agent, message: str, recipient: str = "user") -> Event:
             The recipient of the message. Default is "user".
     """
 
-    self.state.step_number = 0
-    self.status = AgentStatus.AWAITING_INPUT
+    self.status = Agent.Status.AWAITING_INPUT
 
-    return Event(
-        state=EventState.TOOL,
+    return Interaction(
+        role=Interaction.Role.TOOL,
         content=message,
-        name=self.state.name + " sent a message",
+        name=self.name + " sent a message",
         buffer=recipient,
         color="green",
         emoji="speech_balloon",

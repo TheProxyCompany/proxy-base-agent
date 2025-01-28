@@ -5,13 +5,14 @@ from typing import Any
 
 from pse.structure import SchemaType
 
-from agent.event import Event
-from agent.model_inference.inference import FrontEnd, FrontEndType
+from agent.interaction import Interaction
+from agent.inference.inference import FrontEnd, FrontEndType
 
 logger = logging.getLogger(__name__)
 
 
 class LocalInference:
+
     def __init__(
         self,
         model_path: str,
@@ -36,12 +37,8 @@ class LocalInference:
 
     def run_inference(
         self,
-        prompt: str | list[dict[str, Any]] | list[Event],
+        prompt: str | list[dict[str, Any]] | list[Interaction],
         structure: SchemaType | None = None,
-        tool_names: list[str] | None = None,
-        prefill: str | None = None,
-        add_generation_prompt: bool = True,
-        add_reminders: bool = True,
         buffer_length: int = -1,
         **inference_kwargs,
     ) -> Iterable[FrontEnd.ModelOutput]:
@@ -61,29 +58,25 @@ class LocalInference:
             Iterable[FrontEnd.ModelOutput]: The output of the model, each element are sampled tokens & logprobs
         """
         tic = time.perf_counter()
-        if structure and not self.engine.state_machine:
+        if structure:
             delimiters = self.front_end.tokenizer.control_tokens.tool_use_delimiters()
             self.engine.configure(structure, delimiters, buffer_length)
             toc = time.perf_counter()
             setup_time = toc - tic
             logger.debug(f"Structuring Engine setup in {setup_time:.4f}s")
-        elif self.engine.state_machine:
-            self.engine.reset()
 
         tokenizer_config = {
             "prompt": prompt,
-            "prefill": prefill,
-            "tool_names": tool_names,
-            "add_generation_prompt": add_generation_prompt,
-            "add_reminders": add_reminders,
-            "model_type": self.front_end.model_type,
+            **inference_kwargs,
             **self.front_end.tokenizer.control_tokens.model_dump(),
         }
-        max_tokens = inference_kwargs.get("max_tokens", 1000)
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         assert isinstance(encoded_prompt, list)
-        logger.info(f"text prompt:\n\n{self.front_end.tokenizer.decode(encoded_prompt)}")
+        logger.info(
+            f"text prompt:\n\n{self.front_end.tokenizer.decode(encoded_prompt)}"
+        )
         breakpoint()
+        max_tokens = inference_kwargs.get("max_tokens", 1000)
         for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):
             encoded_prompt.extend(result.token_ids)
             if result.token_ids[-1] in self.front_end.tokenizer.stop_tokens:
@@ -91,7 +84,7 @@ class LocalInference:
 
             yield result
 
-            if self.engine.has_reached_accept_state or n > max_tokens:
+            if self.engine.in_accepted_state or n > max_tokens:
                 break
 
         toc = time.perf_counter()

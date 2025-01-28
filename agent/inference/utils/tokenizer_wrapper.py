@@ -6,8 +6,8 @@ from typing import Any
 
 from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast
 
-from agent.model_inference.chat_templates import load_chat_template
-from agent.model_inference.control_tokens import ControlTokens, get_control_tokens
+from agent.inference.chat_templates import load_chat_template
+from agent.inference.control_tokens import ControlTokens, get_control_tokens
 
 logger = logging.getLogger(__name__)
 class TokenizerWrapper:

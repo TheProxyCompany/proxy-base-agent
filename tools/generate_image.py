@@ -1,11 +1,11 @@
 import dotenv
 import fal_client
 
-from agent.agent import Agent, AgentStatus
-from agent.event import Event, EventState
+from agent.agent import Agent
+from agent.interaction import Interaction
 
 
-def generate_image(self: Agent, prompt: str) -> Event:
+def generate_image(self: Agent, prompt: str) -> Interaction:
     """
     Prompt an image generation model to generate an image.
 
@@ -17,14 +17,14 @@ def generate_image(self: Agent, prompt: str) -> Event:
     """
     dotenv.load_dotenv()
 
-    self.status = AgentStatus.PROCESSING
+    self.status = Agent.Status.PROCESSING
 
     image_url: str | None = None
     image_args = {
         "prompt": prompt + " pixelated, low resolution, 8-bit, 16x16, retro style.",
         "has_nsfw_concepts": True,
         "image_size": "square",
-        "seed": self.state.seed,
+        "seed": self.seed,
         "guidance_scale": 11.0,
     }
     handler = fal_client.submit("fal-ai/flux/dev", image_args)
@@ -38,11 +38,11 @@ def generate_image(self: Agent, prompt: str) -> Event:
         raise ValueError("No valid images in visualization response")
 
     image_url = visualization["images"][0].get("url")
-    self.status = AgentStatus.SUCCESS
+    self.status = Agent.Status.SUCCESS
 
-    return Event(
-        state=EventState.TOOL,
+    return Interaction(
+        role=Interaction.Role.TOOL,
         content=prompt,
-        name=self.state.name + "'s image",
+        name=self.name + "'s image",
         image_url=image_url,
     )

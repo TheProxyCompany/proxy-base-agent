@@ -2,12 +2,12 @@ import os
 
 import requests
 
-from agent.agent import Agent, AgentStatus
-from agent.event import Event, EventState
-from agent.prompts import load_prompt_template
+from agent.agent import Agent
+from agent.interaction import Interaction
+from agent.inference.prompts import load_prompt_template
 
 
-def web_search(self: Agent, query: str, max_results: int = 1) -> Event:
+def web_search(self: Agent, query: str, max_results: int = 1) -> Interaction:
     """
     Perform a web search and read an AI generated summary of the results.
 
@@ -19,7 +19,7 @@ def web_search(self: Agent, query: str, max_results: int = 1) -> Event:
     template = load_prompt_template("web_search")
     if not template:
         raise ValueError("No prompt template found for web search")
-    system_instructions = template.format(agent_name=self.state.name)
+    system_instructions = template.format(agent_name=self.name)
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
@@ -40,18 +40,22 @@ def web_search(self: Agent, query: str, max_results: int = 1) -> Event:
         raise ValueError("Search results not found")
 
     choices = search_results["choices"]
-    formatted_results = ""
     for choice in choices:
         if "message" in choice and "content" in choice["message"]:
-            formatted_results += "\n" + str(choice["message"]["content"])
-            break
+            return Interaction(
+                content=choice["message"]["content"],
+                role=Interaction.Role.TOOL,
+                name=self.name + "'s web search result",
+                buffer=query,
+                color="yellow",
+                emoji="magnifying_glass",
+            )
 
-    self.status = AgentStatus.SUCCESS
-    return Event(
-        content=formatted_results,
-        state=EventState.TOOL,
-        name=self.state.name + "'s web search result",
+    return Interaction(
+        content="No search results found",
+        role=Interaction.Role.TOOL,
+        name=self.name + "'s web search result",
         buffer=query,
-        color="yellow",
+        color="red",
         emoji="magnifying_glass",
     )

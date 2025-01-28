@@ -1,25 +1,14 @@
 from agent.agent import Agent
-from agent.event import Event, EventState
+from agent.interaction import Interaction
 
 
-def list_tools(self: Agent, name: str | None = None) -> Event:
+def list_tools(self: Agent) -> Interaction:
     """
     List all tools available to the agent.
-
-    Arguments:
-        name (str | None):
-            Optional tool name to get specific information about. If None (default), returns information about all available tools.
     """
 
-    tools: list[str] = []
-    content = self.tool_list
-    if not name:
-        for tool in self.state.tools_map.values():
-            tools.append(f"{tool}")
-            content = "\n".join(tools)
-
-    return Event(
-        state=EventState.TOOL,
-        name=self.state.name + "'s tools",
-        content=content,
+    return Interaction(
+        role=Interaction.Role.TOOL,
+        name=self.name + "'s tools",
+        content=self.tool_reminder,
     )

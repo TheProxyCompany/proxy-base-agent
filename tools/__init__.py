@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class Tool:
-    """A tool is a piece of code that can be invoked by an agent."""
+    """A tool is a piece of code that can be invoked by an ."""
 
     def __init__(
         self,
@@ -197,7 +197,7 @@ class Tool:
         return tool_str
 
     def __repr__(self) -> str:
-        return json.dumps(self.to_dict(), indent=4)
+        return json.dumps(self.to_dict(), indent=2)
 
 
 class ToolUse(BaseModel):
@@ -242,6 +242,6 @@ class FunctionCall(BaseModel):
         schema = {
             "name": "string",
             "arguments": "object",
-            "required": ["name", "arguments"]
+            "required": ["name", "arguments"],
         }
         return json.dumps(schema, indent=2)

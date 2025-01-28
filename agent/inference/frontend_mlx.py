@@ -10,9 +10,9 @@ from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
 from mlx_lm.utils import _get_classes, get_model_path, load_config
 from pse.structure.engine import StructuringEngine
 
-from agent.model_inference.inference import FrontEnd
-from agent.model_inference.utils.reuseable_cache import ReusableKVCache
-from agent.model_inference.utils.tokenizer_wrapper import TokenizerWrapper
+from agent.inference import FrontEnd
+from agent.inference.utils.reuseable_cache import ReusableKVCache
+from agent.inference.utils.tokenizer_wrapper import TokenizerWrapper
 
 logger = logging.getLogger(__name__)
 

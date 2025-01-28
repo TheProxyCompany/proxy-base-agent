@@ -11,30 +11,23 @@ import pytz
 from tools import ToolUse
 
 
-class EventState(Enum):
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
-    TOOL = "tool"
-    USER = "user"
-
-    def __str__(self):
-        return self.value
-
-    @classmethod
-    def from_string(cls, state_string: str):
-        return cls(state_string)
-
-class Event:
+class Interaction:
     """
-    Represents an event in the agent's context.
+    An interaction in the agent's environment.
     """
+
+    class Role(Enum):
+        ASSISTANT = "assistant"
+        SYSTEM = "system"
+        TOOL = "tool"
+        USER = "user"
 
     def __init__(
         self,
         event_id: str | None = None,
-        content: str | list[str] = "",
         name: str | None = None,
-        state: EventState = EventState.SYSTEM,
+        role: Role = Role.SYSTEM,
+        content: str = "",
         tool_calls: list[ToolUse] | None = None,
         **kwargs,
     ) -> None:
@@ -42,8 +35,8 @@ class Event:
         self.created_at = datetime.now().astimezone(pytz.timezone("US/Eastern"))
         self.event_id = event_id or str(uuid.uuid4())
         self.metadata = kwargs
-        self.name = name
-        self.state = state
+        self.name = name or role.value
+        self.role = role
         self.tool_calls = tool_calls or []
 
     @property
@@ -56,43 +49,42 @@ class Event:
         color: str | None = self.metadata.get("color", None)
         emoji: str | None = self.metadata.get("emoji", None)
 
-        match self.state:
-            case EventState.ASSISTANT:
+        match self.role:
+            case Interaction.Role.ASSISTANT:
                 return {
-                    "title": title or "Assistant",
+                    "title": title or "Agent",
                     "color": color or "cyan",
-                    "emoji": emoji or "robot"
+                    "emoji": emoji or "alien",
                 }
-            case EventState.SYSTEM:
+            case Interaction.Role.SYSTEM:
                 return {
                     "title": title or "System",
                     "color": color or "magenta",
-                    "emoji": emoji or "gear"
+                    "emoji": emoji or "gear",
                 }
-            case EventState.TOOL:
+            case Interaction.Role.TOOL:
                 return {
                     "title": title or "Tool",
                     "color": color or "yellow",
-                    "emoji": emoji or "wrench"
+                    "emoji": emoji or "wrench",
                 }
-            case EventState.USER:
+            case Interaction.Role.USER:
                 return {
                     "title": title or "User",
                     "color": color or "green",
-                    "emoji": emoji or "speech_balloon"
+                    "emoji": emoji or "speech_balloon",
                 }
             case _:
                 return {
                     "title": title or "Unknown",
                     "color": color or "red",
-                    "emoji": emoji or "question"
+                    "emoji": emoji or "question",
                 }
 
     def to_dict(self) -> dict:
         dict = {
             "event_id": self.event_id,
-            "state": str(self.state),
-            "role": str(self.state),
+            "role": self.role,
             "content": self.content,
             "metadata": self.metadata,
         }
@@ -100,7 +92,7 @@ class Event:
         if len(self.tool_calls) > 0:
             dict["tool_calls"] = [tc.to_dict() for tc in self.tool_calls]
 
-        if self.state == EventState.TOOL:
+        if self.role == Interaction.Role.TOOL:
             dict["tool_call_id"] = str(self.event_id)  # openai
             dict["tool_used_id"] = str(self.event_id)  # anthropic
 
@@ -113,7 +105,7 @@ class Event:
         return self.__str__()
 
     def __eq__(self, other):
-        if not isinstance(other, Event):
+        if not isinstance(other, Interaction):
             return False
         return self.event_id == other.event_id
 

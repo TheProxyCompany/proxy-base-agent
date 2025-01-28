@@ -26,14 +26,14 @@
 {# ------------------------------------------------------------------------ #}
 {%- macro render_event(event) -%}
 
-    {%- set role = roles.get(event['state'], event['state']) -%}
+    {%- set role = roles.get(event['role'], event['role']) -%}
     {{- start_header_token + role + end_header_token + "\n\n" -}}
     {{- event['content'] | safe -}}
 
     {%- for tool_call in event.tool_calls -%}
         {{- tool_use_start }}
         {%- set function = tool_call.function -%}
-        {{- function | tojson(indent=2) | trim -}}
+        {{- function | trim -}}
         {{- tool_use_end -}}
 
         {%- if tool_call.tool_use_id in events -%}
@@ -48,7 +48,6 @@
     {%- endfor -%}
     {{- eos_token -}}
 {%- endmacro -%}
-
 
 {# ------------------------------------------------------------------------ #}
 {# Chat template                                                            #}
@@ -69,10 +68,6 @@
     {%- for event in messages -%}
         {{ render_event(event) -}}
     {%- endfor -%}
-{%- endif -%}
-
-{%- if system_reminder is defined and system_reminder != "" -%}
-    {{- system_reminder -}}
 {%- endif -%}
 
 {%- if add_generation_prompt -%}

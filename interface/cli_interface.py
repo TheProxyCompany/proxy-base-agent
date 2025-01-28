@@ -10,7 +10,7 @@ from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from agent.event import Event, EventState
+from agent.interaction import Interaction
 from interface import Interface
 
 logger = logging.getLogger(__name__)
@@ -38,30 +38,26 @@ class CLIInterface(Interface):
         self.structured_output = None
         self.buffer = None
 
-    async def get_input(self, prompt: str | None = None) -> object | None:
-        """Gets user input from the command line using `questionary`.
-
-        Returns:
-            object: The user input, or `None` if the user enters Ctrl+C
-                 (KeyboardInterrupt).
+    async def get_input(self, **kwargs) -> Interaction:
+        """
+        Gets user input from the command line.
         """
         exit_phrases = ["exit", "quit", "q", "quit()", "exit()"]
-        user_input: str | None = await questionary.text(
-            message=prompt or "Enter your message [enter to send, Ctrl+C to exit]:",
-            qmark=">",
-        ).ask_async()
-        # Clear the line after input
-        sys.stdout.write("\033[1A\033[2K\033[G")
-        sys.stdout.flush()
+        default: str = kwargs.get("default", "")
+        answer: str = default
 
-        if user_input is None:
-            return user_input
-        elif user_input.lower() in exit_phrases:
-            return None
+        if kwargs.get("choices"):
+            answer: str = await questionary.select(**kwargs).ask_async()
+        else:
+            answer: str = await questionary.text(**kwargs).ask_async()
 
-        return Event(
-            content=user_input.strip(),
-            state=EventState.USER,
+        if answer.lower() in exit_phrases:
+            await self.exit_program()
+            sys.exit(0)
+
+        return Interaction(
+            content=answer,
+            role=Interaction.Role.USER,
         )
 
     async def show_output(self, input: object | list[object]) -> None:
@@ -71,8 +67,7 @@ class CLIInterface(Interface):
             message: The `Message` object to be handled.
         """
 
-        if not isinstance(input, Event):
-            breakpoint()
+        if not isinstance(input, Interaction):
             return
 
         if input.image_path:
@@ -141,13 +136,13 @@ class CLIInterface(Interface):
         self.live.start()
 
     async def show_error_message(
-        self, message: Event | None = None, e: Exception | None = None
+        self, message: Interaction | None = None, e: Exception | None = None
     ) -> None:
         """Display an error message with a warning emoji."""
         if not message or e:
             return
 
-        error_message = message or Event(role="system", content=f"{e}")
+        error_message = message or Interaction(role="system", content=f"{e}")
         await self.show_output(error_message)
 
     async def render_image(self, image_url: str) -> None:
@@ -160,6 +155,8 @@ class CLIInterface(Interface):
 
         from imgcat import imgcat
         from PIL import Image
+
+        breakpoint()
 
         try:
             img = Image.open(urlopen(image_url))
@@ -194,6 +191,7 @@ class CLIInterface(Interface):
             border_style=border_style,
             expand=True,
         )
+        self.live.stop()
         self.console.print(panel)
 
     async def clear(self) -> None:
