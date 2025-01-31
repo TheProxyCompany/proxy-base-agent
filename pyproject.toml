@@ -19,7 +19,7 @@ dependencies = [
     "ruff>=0.9.3",
     "imgcat>=0.6.0",
     "pillow>=11.1.0",
-    "torch",
+    "huggingface-hub>=0.28.1",
 ]
 
 [tool.ruff.lint]

@@ -68,7 +68,7 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    async def exit_program(self, e: Exception | None = None) -> None:
+    async def exit_program(self, error: Exception | None = None) -> None:
         """Exit the program with a goodbye message."""
         pass
 

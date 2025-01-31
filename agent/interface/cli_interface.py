@@ -70,20 +70,20 @@ class CLIInterface(Interface):
             role=Interaction.Role.USER,
         )
 
-    async def show_output(self, input: object | list[object]) -> None:
+    async def show_output(self, output: object | list[object]) -> None:
         """Handles and displays different types of messages.
 
         Args:
             message: The `Message` object to be handled.
         """
 
-        if not isinstance(input, Interaction):
+        if not isinstance(output, Interaction):
             return
 
-        if input.image_url:
-            await self.render_image(input.image_url)
+        if output.image_url:
+            await self.render_image(output.image_url)
 
-        style = input.styling
+        style = output.styling
         try:
             emoji = f"{Emoji(style['emoji'])} "
         except Exception:
@@ -91,26 +91,26 @@ class CLIInterface(Interface):
 
         panel_style = {
             "border_style": style["color"],
-            "title": f"{emoji}{style['title'] or input.title}",
+            "title": f"{emoji}{style['title'] or output.title}",
             "title_align": "left",
             "subtitle_align": "left",
             "expand": PANEL_EXPAND,
             "width": PANEL_WIDTH,
         }
 
-        if input.scratchpad:
+        if output.scratchpad:
             panel_style["title"] = f"{Emoji('notebook')} scratchpad"
             panel_style["border_style"] = "dim white"
-            self.console.print(self.get_panel(input.scratchpad, **panel_style))
+            self.console.print(self.get_panel(output.scratchpad, **panel_style))
 
-        if (subtitle := input.subtitle):
+        if (subtitle := output.subtitle):
             panel_style["subtitle"] = subtitle
 
-        if input.content:
-            self.console.print(self.get_panel(input.content, **panel_style))
+        if output.content:
+            self.console.print(self.get_panel(output.content, **panel_style))
 
-        if input.tool_result and isinstance(input.tool_result, Interaction):
-            await self.show_output(input.tool_result)
+        if output.tool_result and isinstance(output.tool_result, Interaction):
+            await self.show_output(output.tool_result)
 
     async def show_tool_use(self, tool_call: ToolCall) -> None:
         """Show a tool call."""

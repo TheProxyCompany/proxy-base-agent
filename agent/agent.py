@@ -261,7 +261,7 @@ class Agent:
             return available_prompts[0]
 
         prompt_name = await interface.get_input(
-            message="Select a prompt for the agent (hit enter for default):",
+            message="Select a prompt for the agent:",
             choices=available_prompts,
             default="base" if "base" in available_prompts else available_prompts[0],
         )
@@ -279,7 +279,7 @@ class Agent:
         """
         available_models = [name for name, _ in get_available_models()]
         model_name = await interface.get_input(
-            message="Select a model for the agent (hit enter for default):",
+            message="Select a model for the agent:",
             choices=available_models,
             default=DEFAULT_MODEL_NAME,
         )
