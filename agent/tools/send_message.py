@@ -2,26 +2,23 @@ from agent.agent import Agent
 from agent.interaction import Interaction
 
 
-def send_message(self: Agent, message: str, recipient: str = "user") -> Interaction:
+def send_message(self: Agent, message: str) -> Interaction:
     """
     Sends a message to the recipient.
 
     Arguments:
         message (str):
             The message content to be sent to the recipient.
-            Supports all Unicode characters, including emojis.
-
-        recipient (str):
-            The recipient of the message. Default is "user".
+            This is the message that the agent will send to the recipient.
     """
 
-    self.status = Agent.Status.AWAITING_INPUT
+    self.status = Agent.Status.SUCCESS
 
     return Interaction(
-        role=Interaction.Role.TOOL,
+        role=Interaction.Role.ASSISTANT,
         content=message,
-        name=self.name + " sent a message",
-        buffer=recipient,
+        title=self.name,
         color="green",
         emoji="speech_balloon",
+        last=True,
     )

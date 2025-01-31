@@ -5,13 +5,11 @@
     "eom_token": "<|eom_id|>",
     "tool_use_start": "```json\n",
     "tool_use_end": "\n```",
-    "tool_result_start": "<|tool_result_id|>",
-    "tool_result_end": "</tool_result_id>",
     "start_header_token": "<|start_header_id|>",
     "end_header_token": "<|end_header_id|>",
     "roles": {
         "system": "system",
-        "assistant": "agent",
+        "assistant": "assistant",
         "user": "user",
         "tool": "ipython"
     }

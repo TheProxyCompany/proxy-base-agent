@@ -14,13 +14,13 @@ logging.basicConfig(
 )
 
 agent_kwargs = {
-    "prefill": "[SCRATCHPAD]\n",
     "max_tokens": 1000,
-    "buffer_length": -1,
-    "temperature": 0.9,
+    "buffer_length": 1,
+    "temperature": 1.1,
     "min_p": 0.02,
-    "min_tokens_to_keep": 7,
+    "min_tokens_to_keep": 10,
     "add_generation_prompt": True,
+    "prefill": "\n\n",
 }
 
 async def main():

@@ -2,9 +2,9 @@ import logging
 import os
 import sys
 import traceback
+from typing import Any
 
 import questionary
-from rich.console import RenderableType
 from rich.emoji import Emoji
 from rich.live import Live
 from rich.markdown import Markdown
@@ -12,8 +12,13 @@ from rich.panel import Panel
 
 from agent.interaction import Interaction
 from agent.interface import Interface
+from agent.tools import ToolCall
 
 logger = logging.getLogger(__name__)
+
+
+PANEL_WIDTH = 120
+PANEL_EXPAND = False
 
 
 class CLIInterface(Interface):
@@ -24,19 +29,24 @@ class CLIInterface(Interface):
     using Rich library elements (Panels, Markdown, Emojis).
     """
 
-    PANEL_WIDTH = 120
-    PANEL_EXPAND = False
+    def __init__(self):
+        super().__init__()
+        self.live = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._renderable: RenderableType | None = None
-        self.live = Live(
-            console=self.console,
-            vertical_overflow="visible",
-            get_renderable=lambda: self._renderable or Markdown(""),
+    @staticmethod
+    def get_panel(content: Any, **panel_style) -> Panel:
+        if isinstance(content, list):
+            content = "\n\n".join(content)
+
+        markdown = Markdown(
+            str(content),
+            justify="left",
+            code_theme="monokai",
+            inline_code_lexer="markdown",
+            inline_code_theme="solarized-dark",
         )
-        self.structured_output = None
-        self.buffer = None
+
+        return Panel(markdown, **panel_style)
 
     async def get_input(self, **kwargs) -> Interaction:
         """
@@ -70,73 +80,83 @@ class CLIInterface(Interface):
         if not isinstance(input, Interaction):
             return
 
-        if input.image_path:
-            await self.render_image(input.image_path)
-            return
+        if input.image_url:
+            await self.render_image(input.image_url)
 
-        content = input.content
-
-        if not content:
-            return
         style = input.styling
-        emoji = Emoji(style["emoji"])
+        try:
+            emoji = f"{Emoji(style['emoji'])} "
+        except Exception:
+            emoji = ""
+
         panel_style = {
             "border_style": style["color"],
-            "title": f"{emoji} {input.name or style['title']}",
+            "title": f"{emoji}{style['title'] or input.title}",
             "title_align": "left",
-            "expand": False,
-            "width": self.PANEL_WIDTH,
+            "subtitle_align": "left",
+            "expand": PANEL_EXPAND,
+            "width": PANEL_WIDTH,
         }
 
-        if subtitle := input.buffer:
+        if input.scratchpad:
+            panel_style["title"] = f"{Emoji('notebook')} scratchpad"
+            panel_style["border_style"] = "dim white"
+            self.console.print(self.get_panel(input.scratchpad, **panel_style))
+
+        if (subtitle := input.subtitle):
             panel_style["subtitle"] = subtitle
-            panel_style["subtitle_align"] = "left"
 
-        self.console.print(
-            Panel(
-                Markdown(
-                    str(content or "\n\n"),
-                    justify="left",
-                    code_theme="monokai",
-                    inline_code_lexer="text",
-                    inline_code_theme="solarized-dark",
-                ),
-                **panel_style,
-            )
+        if input.content:
+            self.console.print(self.get_panel(input.content, **panel_style))
+
+        if input.tool_result and isinstance(input.tool_result, Interaction):
+            await self.show_output(input.tool_result)
+
+    async def show_tool_use(self, tool_call: ToolCall) -> None:
+        """Show a tool call."""
+        markdown = Markdown(
+            str(tool_call),
+            justify="left",
+            code_theme="monokai",
+            inline_code_lexer="json",
+            inline_code_theme="solarized-dark",
         )
+        panel_style = {
+            "border_style": "blue",
+            "title": f"{Emoji('hammer')} {tool_call.name}",
+            "title_align": "left",
+            "expand": PANEL_EXPAND,
+            "width": PANEL_WIDTH,
+        }
+        self.console.print(Panel(markdown, **panel_style))
 
-    async def show_live_output(self, output: object) -> None:
+    def show_live_output(self, output: object) -> None:
         """Show partial output."""
-
-        if not isinstance(output, tuple):
-            raise ValueError("Output is not a tuple")
-
-        if output[1]:
-            self.structured_output = Markdown(
-                str(output[1]),
-                justify="left",
-                code_theme="monokai",
-                inline_code_lexer="json",
-                inline_code_theme="solarized-dark",
+        if not self.live:
+            self.live = Live(
+                console=self.console,
+                refresh_per_second=10,
+                auto_refresh=True,
+                transient=True,
+                vertical_overflow="visible",
             )
-            # if we're switching from buffer to structured output, print the buffer
-            if self._renderable == self.buffer:
-                self.console.print(self.buffer)
+            self.live.start()
 
-            self._renderable = self.structured_output
-        elif output[0]:
-            self.buffer = Markdown(
-                str(output[0]),
-                justify="left",
-                code_theme="monokai",
-                inline_code_lexer="text",
-                inline_code_theme="solarized-dark",
-            )
-            self._renderable = self.buffer
-        self.live.start()
+        self.live.update(Markdown(str(output)))
+
+    def end_live_output(self) -> None:
+        """End live output."""
+        self.console.clear_live()
+        if self.live:
+            self.live.stop()
+            self.live = None
+
+        self.console.print()
 
     async def show_error_message(
-        self, message: Interaction | None = None, e: Exception | None = None
+        self,
+        message: Interaction | None = None,
+        e: Exception | None = None,
     ) -> None:
         """Display an error message with a warning emoji."""
         if not message or e:
@@ -156,12 +176,10 @@ class CLIInterface(Interface):
         from imgcat import imgcat
         from PIL import Image
 
-        breakpoint()
-
         try:
+            os.environ["TOKENIZERS_PARALLELISM"] = "false"  # weird bug
             img = Image.open(urlopen(image_url))
             imgcat(img)
-            breakpoint()
         except Exception as error:
             await self.show_error_message(e=error)
 
@@ -191,7 +209,6 @@ class CLIInterface(Interface):
             border_style=border_style,
             expand=True,
         )
-        self.live.stop()
         self.console.print(panel)
 
     async def clear(self) -> None:
@@ -202,11 +219,3 @@ class CLIInterface(Interface):
             os.system("cls")  # For Windows
         else:
             os.system("clear")  # For Unix/Linux/macOS
-
-    async def end_live_output(self) -> None:
-        """
-        End the live output.
-        """
-        if self.live:
-            self.live.stop()
-            self.console.print()

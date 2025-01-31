@@ -8,7 +8,6 @@ from typing import Any
 
 from pse.structure.engine import StructuringEngine
 
-from agent.inference.control_tokens import ControlTokens
 from agent.inference.utils.tokenizer_wrapper import TokenizerWrapper
 
 
@@ -26,21 +25,18 @@ class FrontEnd(ABC):
     Abstract base class for front-ends.
     """
 
-    control_tokens: ControlTokens
     engine: StructuringEngine
     model_type: str
     computed_prompt_tokens: list[int]
     tokenizer: TokenizerWrapper
 
     @staticmethod
-    def from_type(
-        model_path: str, front_end_type: FrontEndType | None = None
-    ) -> FrontEnd:
+    def from_type(model_path: str, front_end_type: FrontEndType | None = None) -> FrontEnd:
         if front_end_type is None:
             front_end_type = FrontEndType.MLX
 
         if front_end_type == FrontEndType.MLX:
-            from agent.inference.frontend_mlx import MLXFrontEnd
+            from agent.inference.frontend.mlx import MLXFrontEnd
 
             return MLXFrontEnd(model_path)
         else:
@@ -87,6 +83,7 @@ class FrontEnd(ABC):
         tokens: Any
         token_ids: list[int]
         logprobs: Any
+        structured: bool
         inference_time: float
         engine_time: float
         sampling_time: float

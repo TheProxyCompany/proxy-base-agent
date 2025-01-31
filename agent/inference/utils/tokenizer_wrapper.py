@@ -6,10 +6,12 @@ from typing import Any
 
 from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast
 
-from agent.inference.chat_templates import load_chat_template
 from agent.inference.control_tokens import ControlTokens, get_control_tokens
+from agent.prompts import load_template
 
 logger = logging.getLogger(__name__)
+
+
 class TokenizerWrapper:
     """A wrapper around a Hugging Face tokenizer that adds control token handling and chat templating.
 
@@ -17,7 +19,11 @@ class TokenizerWrapper:
     and vocabulary management.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast, control_tokens: ControlTokens | None = None) -> None:
+    def __init__(
+        self,
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+        control_tokens: ControlTokens | None = None,
+    ) -> None:
         """Initialize the TokenizerWrapper.
 
         Args:
@@ -69,7 +75,9 @@ class TokenizerWrapper:
         """
         return self._tokenizer.decode(tokens, **kwargs)
 
-    def encode(self, prompt: str | list[dict[str, str]] | dict[str, Any], **kwargs) -> str | list[int]:
+    def encode(
+        self, prompt: str | list[dict[str, str]] | dict[str, Any], **kwargs
+    ) -> str | list[int]:
         """Encode text or chat messages into tokens.
 
         Handles both raw text and chat message formats. For raw text, supports
@@ -96,6 +104,7 @@ class TokenizerWrapper:
             return self._tokenizer.encode(prompt, **kwargs)
 
         if isinstance(prompt, list) or isinstance(prompt, dict):
+            kwargs["interactions"] = prompt
             if isinstance(prompt, dict):
                 conversation = [event.to_dict() for event in prompt.values()]
                 templated = self._tokenizer.apply_chat_template(conversation, **kwargs)
@@ -126,7 +135,7 @@ class TokenizerWrapper:
         """
         control_tokens = get_control_tokens(model_type)
         tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
-        tokenizer.chat_template = load_chat_template()
+        tokenizer.chat_template = load_template()
         return TokenizerWrapper(tokenizer, control_tokens)
 
     def __getattribute__(self, name: str) -> Any:

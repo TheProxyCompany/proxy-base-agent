@@ -8,8 +8,6 @@ from typing import Any
 
 import pytz
 
-from agent.tools import ToolUse
-
 
 class Interaction:
     """
@@ -27,17 +25,15 @@ class Interaction:
         event_id: str | None = None,
         name: str | None = None,
         role: Role = Role.SYSTEM,
-        content: str = "",
-        tool_calls: list[ToolUse] | None = None,
+        content: Any = "",
         **kwargs,
     ) -> None:
         self.content = content
         self.created_at = datetime.now().astimezone(pytz.timezone("US/Eastern"))
         self.event_id = event_id or str(uuid.uuid4())
         self.metadata = kwargs
-        self.name = name or role.value
+        self.name = name
         self.role = role
-        self.tool_calls = tool_calls or []
 
     @property
     def styling(self) -> dict[str, str]:
@@ -85,12 +81,15 @@ class Interaction:
         dict = {
             "event_id": self.event_id,
             "role": self.role.value,
-            "content": self.content,
-            "metadata": self.metadata,
+            "content": str(self.content),
         }
-
-        if len(self.tool_calls) > 0:
-            dict["tool_calls"] = [tc.to_dict() for tc in self.tool_calls]
+        for key, value in self.metadata.items():
+            if value and hasattr(value, "to_dict"):
+                dict[key] = value.to_dict()
+            elif isinstance(value, str):
+                dict[key] = value
+            else:
+                dict[key] = json.dumps(value)
 
         if self.role == Interaction.Role.TOOL:
             dict["tool_call_id"] = str(self.event_id)  # openai

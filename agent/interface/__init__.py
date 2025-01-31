@@ -3,14 +3,13 @@ from abc import ABC, abstractmethod
 from rich.console import Console
 
 from agent.interaction import Interaction
+from agent.tools import ToolCall
 
 
 class Interface(ABC):
     """
-    Abstract base class for handling Brain-related events.
-
-    This class provides a foundation for creating interfaces
-    that handle various types of messages and display them in different formats.
+    This class provides a foundation for creating interfaces that
+    handle various types of interactions and display them in different formats.
     """
 
     def __init__(self):
@@ -37,17 +36,25 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    async def show_live_output(self, output: object) -> None:
+    async def show_tool_use(self, tool_call: ToolCall) -> None:
         """
-        Show partial output.
+        Show a tool call.
         """
         pass
 
     @abstractmethod
-    async def end_live_output(self) -> None:
+    def show_live_output(self, output: object) -> None:
         """
-        End the live output.
+        Show partial output.
+
+        Args:
+            output (object): The output to be displayed.
         """
+        pass
+
+    @abstractmethod
+    def end_live_output(self) -> None:
+        """End live output."""
         pass
 
     @abstractmethod

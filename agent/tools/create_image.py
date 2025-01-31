@@ -5,23 +5,29 @@ from agent.agent import Agent
 from agent.interaction import Interaction
 
 
-def generate_image(self: Agent, prompt: str) -> Interaction:
+def create_image(
+    self: Agent,
+    ideas: list[str] | str,
+    first_draft: str,
+    final_prompt: str,
+) -> Interaction:
     """
-    Prompt an image generation model to generate an image.
+    Prompt an image generation model to generate an image. This image is displayed to the user.
 
     Guidelines for crafting image prompts:
     - Structure prompts with a clear subject, specific details, and contextual actions.
     - Include artistic styles like "surrealism", "impressionist", "anime", "pixel art", etc.
+
     Args:
-        prompt (str): Detailed prompt of the scene or object to visualize, including vivid visual details.
+        ideas (list[str] | str): Short, brief adjectives or artistic phrases that inspire the image
+        first_draft (str): The first draft of the prompt. Explores the idea, rough yet detailed.
+        final_prompt (str): The final prompt for the image generation model. The prompt is refined from the first draft.
     """
     dotenv.load_dotenv()
 
-    self.status = Agent.Status.PROCESSING
-
     image_url: str | None = None
     image_args = {
-        "prompt": prompt + " pixelated, low resolution, 8-bit, 16x16, retro style.",
+        "prompt": final_prompt + " pixelated, low resolution, 8-bit, 16x16, retro style.",
         "has_nsfw_concepts": True,
         "image_size": "square",
         "seed": self.seed,
@@ -38,11 +44,13 @@ def generate_image(self: Agent, prompt: str) -> Interaction:
         raise ValueError("No valid images in visualization response")
 
     image_url = visualization["images"][0].get("url")
-    self.status = Agent.Status.SUCCESS
 
     return Interaction(
-        role=Interaction.Role.TOOL,
-        content=prompt,
-        name=self.name + "'s image",
+        role=Interaction.Role.ASSISTANT,
+        content=f"*{final_prompt}*",
+        subtitle=", ".join(ideas),
+        title=self.name + "'s image",
         image_url=image_url,
+        color="green",
+        emoji="camera",
     )

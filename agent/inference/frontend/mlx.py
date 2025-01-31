@@ -10,7 +10,7 @@ from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
 from mlx_lm.utils import _get_classes, get_model_path, load_config
 from pse.structure.engine import StructuringEngine
 
-from agent.inference import FrontEnd
+from agent.inference.frontend import FrontEnd
 from agent.inference.utils.reuseable_cache import ReusableKVCache
 from agent.inference.utils.tokenizer_wrapper import TokenizerWrapper
 
@@ -29,11 +29,11 @@ class MLXFrontEnd(FrontEnd):
         Args:
             model_path (str): The path to the model.
         """
-        self.computed_prompt_tokens = []
         self.load_model(model_path)
         self.initialize_cache(self.model)
         self.tokenizer = TokenizerWrapper.load(model_path, self.model_type)
         self.engine = StructuringEngine(self.tokenizer._tokenizer)
+        self.computed_prompt_tokens = []
 
     def inference(self, prompt: list[int], **kwargs) -> Iterator[FrontEnd.ModelOutput]:
         """
@@ -123,6 +123,7 @@ class MLXFrontEnd(FrontEnd):
             mx.array(token_ids, dtype=prompt.dtype),
             token_ids,
             logprobs,
+            self.engine is not None and self.engine.is_within_value,
             inference_time,
             engine_time,
             sampling_time,
@@ -210,6 +211,7 @@ class MLXFrontEnd(FrontEnd):
             FileNotFoundError: If the weight files (.safetensors) are not found.
             ValueError: If the model class or args class are not found or cannot be instantiated.
         """
+        self.run_configuration_script()
         path = get_model_path(model_path)
         config = load_config(path)
         model_type: str = config.get("model_type", "chatml")
@@ -257,3 +259,18 @@ class MLXFrontEnd(FrontEnd):
         model.eval()
         self.model = model
         self.model_type = model_type
+
+    def run_configuration_script(self):
+        """
+        Shell script to configure the Apple Silicon memory settings.
+        Shell script written by EXO Labs.
+        """
+        import os
+        import subprocess
+
+        file_name = "mlx.sh"
+        try:
+            file_path = os.path.join(os.path.dirname(__file__), file_name)
+            subprocess.run(["bash", file_path], check=True)
+        except Exception as e:
+            logger.error(f"Failed to run configure script: {e}")

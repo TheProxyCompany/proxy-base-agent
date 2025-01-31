@@ -6,7 +6,6 @@ import inspect
 import json
 import logging
 import os
-import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -23,11 +22,9 @@ class Tool:
         self,
         name: str,
         callable: Callable,
-        source_type: str = "python",
     ):
         self.name = name
         self.callable = callable
-        self.source_type = source_type
         self.source_code = inspect.getsource(callable)
         self.schema = callable_to_schema(callable)
 
@@ -42,10 +39,7 @@ class Tool:
         Returns:
             Any: The result of the tool call.
         """
-        arguments = {
-            "self": caller,
-            **kwargs,
-        }
+        arguments = {"self": caller, **kwargs}
         spec = inspect.getfullargspec(self.callable)
         annotations = spec.annotations
         for arg_name in spec.args:
@@ -191,51 +185,32 @@ class Tool:
         tool_str += f"Tool: {self.name}\n"
         tool_str += f"Description: {self.description}\n"
         args = self.schema.get("parameters", {})
-        tool_str += f"Arguments: {json.dumps(args.get('properties', {}), indent=2)}\n"
-        if args.get("required"):
-            tool_str += f"Required: {args['required']}\n"
+        if props := args.get("properties", {}):
+            tool_str += f"Arguments: {json.dumps(props, indent=2)}\n"
+        if required := args.get("required", []):
+            tool_str += f"Required: {required}\n"
         return tool_str
 
-    def __repr__(self) -> str:
-        return json.dumps(self.to_dict(), indent=2)
 
+class ToolCall(BaseModel):
+    """
+    A tool call is an invocation of a tool.
+    """
 
-class ToolUse(BaseModel):
-    tool_use_id: str
-    tool_type: str
-    function: FunctionCall
-
-    def __init__(
-        self,
-        tool_type: str,
-        function: FunctionCall | Any,
-        tool_use_id: str | None = None,
-    ):
-        if function and not isinstance(function, FunctionCall):
-            name = function.get("name", "")
-            arguments = function.get("arguments", {})
-            function = FunctionCall(name=name, arguments=arguments)
-        super().__init__(
-            tool_use_id=tool_use_id or str(uuid.uuid4()),
-            tool_type=tool_type,
-            function=function,
-        )
-
-    def to_dict(self) -> dict[str, Any]:
-        return self.model_dump()
-
-    def __str__(self) -> str:
-        return json.dumps(self.to_dict())
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-
-class FunctionCall(BaseModel):
     name: str
     """The name of the tool to call."""
     arguments: dict[str, Any]
     """The arguments to pass to the tool."""
+
+    def __str__(self) -> str:
+        return self.model_dump_json(indent=2)
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump()
+
+    @staticmethod
+    def fallback_tool(**kwargs) -> ToolCall:
+        return ToolCall(name="send_message", arguments=kwargs)
 
     @staticmethod
     def invocation_schema() -> str:

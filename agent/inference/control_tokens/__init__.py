@@ -16,10 +16,10 @@ class ControlTokens(BaseModel):
     bos_token: str
     eos_token: str
     eom_token: str
-    tool_use_start: str
-    tool_use_end: str
-    tool_result_start: str
-    tool_result_end: str
+    tool_use_start: str | None = None
+    tool_use_end: str | None = None
+    tool_result_start: str | None = None
+    tool_result_end: str | None = None
     start_header_token: str
     end_header_token: str
     roles: RoleTokens

@@ -4,11 +4,10 @@ import os
 
 from agent.inference.frontend import FrontEnd, FrontEndType
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_MODEL_FOLDER = ".language_models"
 DEFAULT_MODEL_NAME = "Llama-3.1-SuperNova-Lite"
-
-
-logger = logging.getLogger(__name__)
 
 def get_available_models() -> list[tuple[str, str]]:
     """Get a list of available models."""

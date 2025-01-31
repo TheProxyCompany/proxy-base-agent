@@ -62,7 +62,7 @@ class LocalInference:
             self.engine.configure(structure, delimiters, buffer_length)
             toc = time.perf_counter()
             setup_time = toc - tic
-            logger.debug(f"Structuring Engine setup in {setup_time:.4f}s")
+            logger.debug(f"Structuring Engine configured in {setup_time:.4f}s")
 
         tokenizer_config = {
             "prompt": prompt,
@@ -71,17 +71,13 @@ class LocalInference:
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         assert isinstance(encoded_prompt, list)
-        logger.info(f"text prompt:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-
-        breakpoint()
+        logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
 
         for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):
-            encoded_prompt.extend(result.token_ids)
             if result.token_ids[-1] in self.front_end.tokenizer.stop_tokens:
                 break
-
+            encoded_prompt.extend(result.token_ids)
             yield result
-
             if self.engine.in_accepted_state or n > max_tokens:
                 break
 

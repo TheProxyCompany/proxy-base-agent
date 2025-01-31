@@ -6,6 +6,7 @@ import logging
 import uuid
 from enum import Enum
 from random import randint
+from typing import TypeVar
 
 from agent.inference import (
     DEFAULT_MODEL_FOLDER,
@@ -13,24 +14,25 @@ from agent.inference import (
     get_available_models,
 )
 from agent.inference.local import LocalInference
-from agent.inference.prompts import get_available_prompts, load_prompt_template
 from agent.interaction import Interaction
 from agent.interface import CLIInterface, Interface
 from agent.memory.hippocampus import Hippocampus
-from agent.tools import FunctionCall, Tool, ToolUse
+from agent.prompts import get_available_prompts, load_prompt
+from agent.tools import Tool, ToolCall
 
 logger = logging.getLogger(__name__)
 
 MAX_SUB_STEPS: int = 10
 
+T = TypeVar("T")
+
 
 class Agent:
-
     class Status(Enum):
         # Core System States
         PROCESSING = "processing"
         STANDBY = "standby"
-        AWAITING_INPUT = "awaiting_input"
+        IDLE = "idle"
 
         # Error and Recovery States
         SUCCESS = "success"
@@ -56,14 +58,10 @@ class Agent:
         **inference_kwargs,
     ):
         """Initialize an agent."""
-        self.inference = inference
-        self.interface = interface
-        self.hippocampus = Hippocampus()
-
         self.seed = seed or randint(0, 1000000)
         self.name = name
         self.step_number = 0
-        self.status = Agent.Status.AWAITING_INPUT
+        self.status = Agent.Status.IDLE
 
         self.system_prompt_name = system_prompt_name
         self.inference_kwargs = inference_kwargs
@@ -75,125 +73,135 @@ class Agent:
             elif isinstance(tool, str):
                 self.tools[tool] = Tool.load(file_name=tool)[0]
 
+        self.inference = inference
+        self.interface = interface
+        self.hippocampus = Hippocampus(self.system_prompt)
+
+    @property
+    def can_act(self) -> bool:
+        """
+        The agent can act if the current step number is less than or equal to the
+        maximum number of sub-steps.
+
+        Step count is reset to 0 when the agent returns to human control.
+        """
+        return self.step_number <= MAX_SUB_STEPS and self.status not in [
+            Agent.Status.STANDBY,
+            Agent.Status.SUCCESS,
+        ]
+
     async def loop(self) -> None:
         """
         Run the agent within a loop.
 
         The agent will take action until it reaches the maximum number of sub-steps.
         """
-        if not self.hippocampus.events:
-            self.hippocampus.append_to_history(self.system_prompt)
-
         message = await self.interface.get_input(
             message="Enter your message [enter to send, Ctrl+C to exit]:",
             qmark=">",
         )
         if isinstance(message, Interaction):
-            self.status = Agent.Status.PROCESSING
-            self.hippocampus.append_to_history(message)
-            await self.interface.show_output(message)
+            if message.content:
+                self.hippocampus.append_to_history(message)
+                await self.interface.show_output(message)
         elif message is None:
             self.status = Agent.Status.STANDBY
             await self.interface.exit_program()
             return
 
+        self.status = Agent.Status.PROCESSING
         self.step_number = 0
+
         while self.can_act:
-            new_event = await self.run()
-            await self.take_actions(new_event)
+            self.step_number += 1
+            self.status = Agent.Status.PROCESSING
+            scratchpad, tool_call = await self.output(ToolCall)
+            await self.take_action(scratchpad, tool_call)
 
         await self.loop()
 
-    async def run(self) -> Interaction:
+    async def output(
+        self,
+        output_type: type[T],
+        prompt: list[Interaction] | None = None,
+        tools: list[Tool] | None = None,
+    ) -> tuple[str, T | None]:
         """
         Use a language model to generate the agent's next output.
+        Accepts a prompt and tools to use, and an expected output type.
         """
-        self.status = Agent.Status.PROCESSING
+
+        buffer: list[int] = []
+        structured: list[int] = []
         inference_config = {
-            "prompt": [event.to_dict() for event in self.hippocampus.events.values()],
-            "structure": [tool.to_dict() for tool in self.tools.values()],
-            "output_type": FunctionCall,
+            "prompt": [e.to_dict() for e in prompt or self.hippocampus.events.values()],
+            "structure": [t.to_dict() for t in tools or self.tools.values()],
+            "output_type": output_type,
+            "system_reminder": self.system_reminder,
             **self.inference_kwargs,
         }
-        buffer = ""
-        structured_output = ""
-        # render live updates off main thread so llm can output faster
-        for output in self.inference(**inference_config):
-            decoded_output = self.inference.front_end.tokenizer.decode(output.token_ids)
-            if (
-                self.inference.engine.is_within_value
-                or self.inference.engine.has_reached_accept_state
-            ):
-                structured_output += decoded_output
-                logger.debug(f"Structured: {structured_output}")
+        for cast_output in self.inference(**inference_config):
+            if self.inference.engine.is_within_value:
+                structured.extend(cast_output.token_ids)
             else:
-                buffer += decoded_output
-                logger.debug(f"Buffer: {buffer}")
-            await self.interface.show_live_output((buffer, structured_output))
+                buffer.extend(cast_output.token_ids)
+            decoded_output = self.inference.engine.tokenizer.decode(buffer + structured)
+            self.interface.show_live_output(decoded_output)
 
-        await self.interface.end_live_output()
-        breakpoint()
+        self.interface.end_live_output()
+        scratchpad = self.inference.engine.tokenizer.decode(buffer)
+        structured_output = self.inference.engine.tokenizer.decode(structured)
+        cast_output = self.inference.engine.cast_output(structured_output, output_type)
+        logger.debug(f"Scratchpad: {scratchpad}")
+        logger.debug(f"Structured Output: {cast_output or structured_output}")
+        return scratchpad, cast_output
 
-        tool_calls = []
-        if self.inference.engine.in_accepted_state:
-            engine_output = list(self.inference.engine.output(FunctionCall))
-            for output in engine_output:
-                buffer = output.buffer
-                tool_use = ToolUse("function", output.value)
-                tool_calls.append(tool_use)
-                break
-
-        self.status = Agent.Status.SUCCESS
-        return Interaction(
-            role=Interaction.Role.ASSISTANT,
-            content=buffer,
-            tool_calls=tool_calls,
-        )
-
-    async def take_actions(self, event: Interaction) -> None:
+    async def take_action(self, scratchpad: str, tool_call: ToolCall | None) -> None:
         """
         Take actions based on an event.
 
         This method handles the event, appends it to the history, and processes
         any tool calls.
         """
-        await self.interface.show_output(event)
-        self.hippocampus.append_to_history(event)
-        self.step_number += 1
-        for tool_called in event.tool_calls:
-            with self.interface.console.status(
-                f"[bold yellow]Using {tool_called.function.name} tool"
-            ):
-                tool_result = self.use_tool(tool_called)
-            self.hippocampus.append_to_history(tool_result)
-            await self.interface.show_output(tool_result)
+        action = Interaction(
+            role=Interaction.Role.ASSISTANT,
+            name=self.name,
+            scratchpad=scratchpad,
+        )
+        if tool_call:
+            action.metadata["tool_call"] = tool_call
+            action.metadata["tool_result"] = self.use_tool(tool_call)
+        elif not tool_call and scratchpad:
+            tool_call = tool_call or ToolCall.fallback_tool(message=scratchpad)
+            action.metadata["tool_call"] = tool_call
+            del action.metadata["scratchpad"]
 
-    def use_tool(self, tool_use: ToolUse) -> Interaction:
+        if not tool_call:
+            raise ValueError("No tool call or scratch pad provided")
+
+        action.metadata["tool_result"] = self.use_tool(tool_call)
+
+        await self.interface.show_output(action)
+        self.hippocampus.append_to_history(action)
+
+    def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
 
         Args:
             tool_use: The tool call to use.
         """
-
-        content = ""
         try:
-            tool = self.tools[tool_use.function.name]
-            result = tool(self, **tool_use.function.arguments)
-            if isinstance(result, Interaction):
-                result.event_id = tool_use.tool_use_id
-                return result
-
-            content = str(result)
+            tool = self.tools[tool_call.name]
+            with self.interface.console.status(f"[yellow]Using {tool_call.name}"):
+                result = tool(self, **tool_call.arguments)
+            assert isinstance(result, Interaction)
+            return result
         except Exception as e:
-            content = str(e)
             self.status = Agent.Status.FAILED
-
-        return Interaction(
-            event_id=tool_use.tool_use_id,
-            role=Interaction.Role.TOOL,
-            content=content,
-            name=tool_use.function.name,
-        )
+            return Interaction(
+                role=Interaction.Role.TOOL,
+                content=f"Tool call failed: {e}",
+            )
 
     @staticmethod
     async def create(
@@ -213,8 +221,7 @@ class Agent:
         await interface.clear()
         if inference is None:
             model_path = await Agent.get_model_path(interface)
-            with interface.console.status("[bold cyan]Loading model..."):
-                inference = LocalInference(model_path)
+            inference = LocalInference(model_path)
         agent_name = await Agent.get_agent_name(interface)
         system_prompt = await Agent.get_agent_prompt(interface)
         return Agent(
@@ -233,11 +240,9 @@ class Agent:
         Returns:
             str: The chosen agent name or a generated UUID if left blank.
         """
-        response = await interface.get_input(
-            message="Enter a name (hit enter for Cerebra):",
-            default="Cerebra"
-        )
+        response = await interface.get_input(message="Give the ai a name:")
         agent_name = response.content if isinstance(response, Interaction) else response
+        assert isinstance(agent_name, str)
         final_name = agent_name.strip() if agent_name else f"agent_{uuid.uuid4()}"
         return final_name
 
@@ -255,7 +260,9 @@ class Agent:
             choices=available_prompts,
             default="base" if "base" in available_prompts else available_prompts[0],
         )
-        return prompt_name.content if isinstance(prompt_name, Interaction) else prompt_name
+        return (
+            prompt_name.content if isinstance(prompt_name, Interaction) else prompt_name
+        )
 
     @staticmethod
     async def get_model_path(interface: Interface) -> str:
@@ -276,12 +283,13 @@ class Agent:
 
     @property
     def system_prompt(self) -> Interaction:
-        prompt = load_prompt_template(self.system_prompt_name)
+        prompt = load_prompt(self.system_prompt_name)
         if prompt is None:
             prompt = f"No System Prompt Found for {self.system_prompt_name}"
         else:
             try:
                 prompt = prompt.format(
+                    name=self.name,
                     tool_use_instructions=self.tool_use_instructions,
                     tool_list=self.tool_list,
                 )
@@ -308,7 +316,7 @@ class Agent:
         """
         Instructions on how to use tools.
         """
-        prompt = f"Invoke a tool with the following schema:\n{FunctionCall.invocation_schema()}\n"
+        prompt = f"Invoke a tool with the following schema:\n{ToolCall.invocation_schema()}\n"
         if (
             delimiters
             := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
@@ -324,23 +332,25 @@ class Agent:
         """
         Reminders for the agent.
         """
-        reminder = "\n" + self.tool_use_instructions + "\n"
-        reminder += f"[Available tools]: {', '.join(self.tools.keys())}\n"
+        delimiters: tuple[str, str] = (
+            self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
+            or ("", "")
+        )
+        reminder = f"Invoke a tool with the following schema:{delimiters[0]}{ToolCall.invocation_schema()}{delimiters[1]}\n"
+        reminder = f"[Available tools]: {', '.join(self.tools.keys())}.\n\n"
         return reminder
 
     @property
-    def can_act(self) -> bool:
-        """
-        The agent can act if the current step number is less than or equal to the
-        maximum number of sub-steps.
-
-        Step count is reset to 0 when the agent returns to human control.
-        """
-        return self.step_number <= MAX_SUB_STEPS and self.status not in [
-            Agent.Status.STANDBY,
-            Agent.Status.FAILED,
-            Agent.Status.AWAITING_INPUT,
-        ]
+    def system_reminder(self) -> dict | None:
+        if self.step_number % 4 != 0 and self.step_number > 0:
+            return None
+        tool_reminder = self.tool_reminder
+        reminder = f"You are {self.name}, an agentic large language model.\n"
+        reminder += "Do not forget that you have tools available to you.\n"
+        reminder += f"{tool_reminder}"
+        reminder += "Maintain your sense of self and your place in the conversation.\n"
+        reminder += "Do not forget about the present topic.\n"
+        return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
 
     def __repr__(self) -> str:
         return f"{self.name} ({self.status})"

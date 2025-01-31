@@ -4,11 +4,11 @@ from agent.interaction import Interaction
 class Hippocampus:
     """Central memory management system for the agent."""
 
-    def __init__(self):
+    def __init__(self, system: Interaction):
         """
         Initialize the Hippocampus with different memory components.
         """
-        self.events: dict[str, Interaction] = {}
+        self.events: dict[str, Interaction] = {system.event_id: system}
 
     def append_to_history(self, input_events: list[Interaction] | Interaction) -> None:
         """

@@ -10,12 +10,31 @@ def get_available_prompts() -> list[str]:
     return sorted(prompt_file_names)
 
 
-def load_prompt_template(filepath: str | None = None) -> str | None:
+def load_template(name: str = "chat_template.jinja") -> str:
+    """
+    Load the chat template from the specified file.
+    Looks in the current directory (agent/prompts) for the file.
+
+    Args:
+        name: The name of the template file.
+        Defaults to "chat_template.jinja".
+
+    Returns:
+        The content of the template file.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(current_dir, name)
+    with open(template_path) as file:
+        return file.read()
+
+
+def load_prompt(filepath: str | None = None) -> str | None:
     """Load a prompt template from a .txt, .jinja, or .md file."""
     extensions = [".txt", ".jinja", ".md"]
 
     for ext in extensions:
-        full_path = os.path.join(os.path.dirname(__file__), f"{filepath}{ext}")
+        file_name = f"{filepath}{ext}"
+        full_path = os.path.join(os.path.dirname(__file__), file_name)
         if os.path.exists(full_path):
             try:
                 with open(full_path) as f:

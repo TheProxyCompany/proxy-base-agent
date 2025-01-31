@@ -1,0 +1,68 @@
+{# Default role mappings #}
+{%- set roles = roles or {
+    "user": "user",
+    "system": "system",
+    "assistant": "assistant",
+    "tool": "tool"
+} -%}
+
+{# Token definitions #}
+{%- set start_header_token = start_header_token or "<|start_header_id|>" -%}
+{%- set end_header_token = end_header_token or "<|end_header_id|>" -%}
+{%- set eom_token = eom_token or eos_token -%}
+
+{# Tool-related tokens #}
+{%- set tool_use_start = tool_use_start or "```json\n" -%}
+{%- set tool_use_end = tool_use_end or "\n```" -%}
+{%- set tool_result_start = tool_result_start or (start_header_token + roles.tool + end_header_token + "\n\n") -%}
+{%- set tool_result_end = tool_result_end or eom_token -%}
+
+{%- set add_generation_prompt = add_generation_prompt or true -%}
+{%- set prefill = prefill or none -%}
+{%- set system_reminder = system_reminder or "" -%}
+
+{# ------------------------------------------------------------------------ #}
+{# Macro to render individual interactions                                  #}
+{# ------------------------------------------------------------------------ #}
+{%- macro render_interaction(interaction) -%}
+    {%- set role = roles.get(interaction['role'], interaction['role']) -%}
+
+    {{- start_header_token + role + end_header_token + "\n\n" -}}
+    {%- if interaction["scratchpad"] -%}
+        {{- interaction["scratchpad"] | safe -}}
+    {%- endif -%}
+    {{- interaction['content'] | safe -}}
+    {%- if interaction.tool_call -%}
+        {{- tool_use_start }}
+        {{- interaction.tool_call | tojson(indent=2) | trim -}}
+        {{- tool_use_end -}}
+    {%- endif -%}
+
+    {%- if interaction.tool_result and not interaction.tool_result.last -%}
+        {{- eom_token -}}
+        {%- if interaction.tool_result.role == "tool" -%}
+            {{- tool_result_start -}}
+            {{- interaction.tool_result.content | safe -}}
+            {{- tool_result_end -}}
+        {%- endif -%}
+    {%- else -%}
+        {{- eos_token -}}
+    {%- endif -%}
+{%- endmacro -%}
+
+{# ------------------------------------------------------------------------ #}
+{# Chat template                                                            #}
+{# ------------------------------------------------------------------------ #}
+{{ bos_token }}
+{%- for interaction in interactions -%}
+    {{ render_interaction(interaction) -}}
+{%- endfor -%}
+{%- if system_reminder -%}
+    {{ render_interaction(system_reminder) }}
+{%- endif -%}
+{%- if add_generation_prompt -%}
+    {{- start_header_token + roles.assistant + end_header_token -}}
+{%- endif -%}
+{%- if prefill -%}
+    {{- prefill -}}
+{%- endif -%}
