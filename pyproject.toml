@@ -11,7 +11,7 @@ dependencies = [
     "mlx-lm>=0.21.1",
     "mlx>=0.22.0",
     "neo4j>=5.27.0",
-    "pse",
+    "pse>=1.0.0",
     "pydantic>=2.10.5",
     "python-dotenv>=1.0.1",
     "questionary>=2.1.0",
