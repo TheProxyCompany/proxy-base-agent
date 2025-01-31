@@ -108,6 +108,7 @@ class MLXFrontEnd(FrontEnd):
 
         tic = time.perf_counter()
         logprobs = logits - mx.logsumexp(logits, keepdims=True)
+        breakpoint()
         token_ids = (
             self.engine.sample(logprobs, self.sample_tokens, **sampler_kwargs)
             if self.engine

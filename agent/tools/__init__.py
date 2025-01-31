@@ -210,7 +210,7 @@ class ToolCall(BaseModel):
 
     @staticmethod
     def fallback_tool(**kwargs) -> ToolCall:
-        return ToolCall(name="send_message", arguments=kwargs)
+        return ToolCall(name="internal_thoughts", arguments=kwargs)
 
     @staticmethod
     def invocation_schema() -> str:

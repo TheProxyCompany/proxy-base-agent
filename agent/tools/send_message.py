@@ -5,6 +5,9 @@ from agent.interaction import Interaction
 def send_message(self: Agent, message: str) -> Interaction:
     """
     Sends a message to the recipient.
+    This tool is the only output visible to the user.
+    Do not assume the user has seen any of your previous messages.
+    Always write a new message from the context of the last received message.
 
     Arguments:
         message (str):

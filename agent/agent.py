@@ -109,9 +109,7 @@ class Agent:
             await self.interface.exit_program()
             return
 
-        self.status = Agent.Status.PROCESSING
         self.step_number = 0
-
         while self.can_act:
             self.step_number += 1
             self.status = Agent.Status.PROCESSING
@@ -172,7 +170,7 @@ class Agent:
             action.metadata["tool_call"] = tool_call
             action.metadata["tool_result"] = self.use_tool(tool_call)
         elif not tool_call and scratchpad:
-            tool_call = tool_call or ToolCall.fallback_tool(message=scratchpad)
+            tool_call = tool_call or ToolCall.fallback_tool(internal_thoughts=scratchpad)
             action.metadata["tool_call"] = tool_call
             del action.metadata["scratchpad"]
 
@@ -255,6 +253,9 @@ class Agent:
             str: The chosen agent prompt.
         """
         available_prompts = [file.split(".txt")[0] for file in get_available_prompts()]
+        if len(available_prompts) == 1:
+            return available_prompts[0]
+
         prompt_name = await interface.get_input(
             message="Select a prompt for the agent (hit enter for default):",
             choices=available_prompts,
@@ -316,40 +317,25 @@ class Agent:
         """
         Instructions on how to use tools.
         """
-        prompt = f"Invoke a tool with the following schema:\n{ToolCall.invocation_schema()}\n"
-        if (
-            delimiters
-            := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
-        ):
-            open_delim = delimiters[0].replace("\n", "\\n")
-            close_delim = delimiters[1].replace("\n", "\\n")
-            prompt += f'Use the delimiters "{open_delim}" and "{close_delim}"'
-            prompt += " to separate tool use from the rest of your output."
+        prompt = "Invoke a tool with the following schema:"
+        delimiters = self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
+        if delimiters:
+            prompt += f"{delimiters[0]}"
+        prompt += f"{ToolCall.invocation_schema()}"
+        if delimiters:
+            prompt += f"{delimiters[1]}"
+        prompt += " to separate tool use from your scratch pad."
+        prompt += f" [Available tools]: {', '.join(self.tools.keys())}.\n\n"
         return prompt
 
     @property
-    def tool_reminder(self) -> str:
-        """
-        Reminders for the agent.
-        """
-        delimiters: tuple[str, str] = (
-            self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
-            or ("", "")
-        )
-        reminder = f"Invoke a tool with the following schema:{delimiters[0]}{ToolCall.invocation_schema()}{delimiters[1]}\n"
-        reminder = f"[Available tools]: {', '.join(self.tools.keys())}.\n\n"
-        return reminder
-
-    @property
     def system_reminder(self) -> dict | None:
-        if self.step_number % 4 != 0 and self.step_number > 0:
+        if self.step_number % 5 != 0 and self.step_number > 0:
             return None
-        tool_reminder = self.tool_reminder
-        reminder = f"You are {self.name}, an agentic large language model.\n"
-        reminder += "Do not forget that you have tools available to you.\n"
-        reminder += f"{tool_reminder}"
+        reminder = self.tool_use_instructions
         reminder += "Maintain your sense of self and your place in the conversation.\n"
-        reminder += "Do not forget about the present topic.\n"
+        reminder += "Do not get distracted. Pause, think, and then act.\n"
+        reminder += "Stay focused on the present interaction.\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
 
     def __repr__(self) -> str:
