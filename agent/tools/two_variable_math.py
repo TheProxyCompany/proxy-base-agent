@@ -39,11 +39,15 @@ class Operation(enum.Enum):
                 return ""
 
 
-def calculator(
-    self: Agent, a: float, b: float, operation: Operation
+def two_variable_math(
+    self: Agent,
+    operation: Operation,
+    a: float,
+    b: float,
 ) -> Interaction:
     """
     Perform a mathematical operation on two numbers.
+    This is a very simple tool and should only be used for simple calculations.
 
     Args:
         a (number): The first number to perform the operation on.

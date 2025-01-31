@@ -4,8 +4,8 @@
     "eom_token": "",
     "tool_use_start": "<tool_call>\n",
     "tool_use_end": "\n</tool_call>",
-    "start_header_token": "<|im_start|>",
-    "end_header_token": "",
+    "start_header_token": "<|im_start|>\n",
+    "end_header_token": "\n",
     "tool_result_start": "<tool_response>",
     "tool_result_end": "</tool_response>",
     "roles": {

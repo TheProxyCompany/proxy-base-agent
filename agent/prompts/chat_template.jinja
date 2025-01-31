@@ -20,13 +20,11 @@
 {%- set add_generation_prompt = add_generation_prompt or true -%}
 {%- set prefill = prefill or none -%}
 {%- set system_reminder = system_reminder or "" -%}
-
 {# ------------------------------------------------------------------------ #}
 {# Macro to render individual interactions                                  #}
 {# ------------------------------------------------------------------------ #}
 {%- macro render_interaction(interaction) -%}
     {%- set role = roles.get(interaction['role'], interaction['role']) -%}
-
     {{- start_header_token + role + end_header_token + "\n\n" -}}
     {%- if interaction["scratchpad"] -%}
         {{- interaction["scratchpad"] | safe -}}
@@ -49,7 +47,6 @@
         {{- eos_token -}}
     {%- endif -%}
 {%- endmacro -%}
-
 {# ------------------------------------------------------------------------ #}
 {# Chat template                                                            #}
 {# ------------------------------------------------------------------------ #}
@@ -61,7 +58,7 @@
     {{ render_interaction(system_reminder) }}
 {%- endif -%}
 {%- if add_generation_prompt -%}
-    {{- start_header_token + roles.assistant + end_header_token -}}
+    {{- start_header_token + roles.assistant + end_header_token + "\n\n" -}}
 {%- endif -%}
 {%- if prefill -%}
     {{- prefill -}}

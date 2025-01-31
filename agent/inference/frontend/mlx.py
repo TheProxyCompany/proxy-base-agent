@@ -5,7 +5,6 @@ from collections.abc import Iterator
 
 import mlx.core as mx
 import mlx.nn as nn
-from mlx_lm.models.cache import RotatingKVCache
 from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
 from mlx_lm.utils import _get_classes, get_model_path, load_config
 from pse.structure.engine import StructuringEngine
@@ -43,8 +42,10 @@ class MLXFrontEnd(FrontEnd):
             prompt (list[int]): The input prompt.
             **kwargs: Keyword arguments for the sampler.
         """
-        mlx_prompt = mx.array(prompt)
+        if seed := kwargs.get("seed", None):
+            mx.random.seed(seed)
 
+        mlx_prompt = mx.array(prompt)
         if isinstance(self.cache[0], ReusableKVCache) and self.computed_prompt_tokens:
             tic = time.perf_counter()
             i = 0
@@ -108,7 +109,6 @@ class MLXFrontEnd(FrontEnd):
 
         tic = time.perf_counter()
         logprobs = logits - mx.logsumexp(logits, keepdims=True)
-        breakpoint()
         token_ids = (
             self.engine.sample(logprobs, self.sample_tokens, **sampler_kwargs)
             if self.engine
@@ -151,66 +151,20 @@ class MLXFrontEnd(FrontEnd):
         if min_p > 0.0:
             token = min_p_sampling(logprobs[None], min_p, min_tokens_to_keep, temp)
         elif temp > 0.0:
-            token = categorical_sampling(logprobs, temp)
+            token = categorical_sampling(logprobs[None], temp)
         else:
-            token = mx.argmax(logprobs, axis=-1)
+            token = mx.argmax(logprobs[None])
 
         return token
 
-    def initialize_cache(self, model: nn.Module, max_kv_size: int | None = None) -> None:
-        """
-        Initialize the cache for the model.
-
-        Args:
-            model (nn.Module): The model for which to initialize the cache.
-            max_kv_size (Optional[int]): The maximum size of the key-value cache.
-
-        Returns:
-            List[Cache]: A list of initialized caches for each layer of the model.
-        """
-        if model and hasattr(model, "make_cache"):
-            self.cache = model.make_cache()  # type: ignore reportOptionalCall
-        else:
-            assert model.args is not None
-            n_kv_heads = model.args.num_key_value_heads
-            head_dim = (
-                model.args.head_dim
-                or model.args.hidden_size // model.args.num_attention_heads
-            )
-            kv_heads = (
-                [n_kv_heads] * len(model.layers or [])
-                if isinstance(n_kv_heads, int)
-                else n_kv_heads
-            )
-            if max_kv_size is not None:
-                self.cache = [
-                    RotatingKVCache(max_kv_size, n)
-                    for n in range(len(model.layers or []))
-                ]
-            else:
-                self.cache = [ReusableKVCache(head_dim, n) for n in kv_heads or []]
-
-    def load_model(self, model_path: str, lazy: bool = False) -> None:
+    def load_model(self, model_path: str) -> None:
         """
         Load and initialize the model from a given path.
 
         Args:
             model_path (Path): The path to load the model from.
-            lazy (bool): If False eval the model parameters to make sure they are
-                loaded in memory before returning, otherwise they will be loaded
-                when needed. Default: ``False``
-            model_config (dict, optional): Configuration parameters for the model.
-                Defaults to an empty dictionary.
-            get_model_classes (Callable[[dict], Tuple[Type[nn.Module], Type]], optional):
-                A function that returns the model class and model args class given a config.
-                Defaults to the _get_classes function.
-
         Returns:
             nn.Module: The loaded and initialized model.
-
-        Raises:
-            FileNotFoundError: If the weight files (.safetensors) are not found.
-            ValueError: If the model class or args class are not found or cannot be instantiated.
         """
         self.run_configuration_script()
         path = get_model_path(model_path)
@@ -218,48 +172,44 @@ class MLXFrontEnd(FrontEnd):
         model_type: str = config.get("model_type", "chatml")
 
         weight_files = glob.glob(str(path / "model*.safetensors"))
-
-        if not weight_files:
-            # Try weight for back-compat
-            weight_files = glob.glob(str(path / "weight*.safetensors"))
-
         if not weight_files:
             logging.error(f"No safetensors found in {path}")
-            raise FileNotFoundError(f"No safetensors found in {path}")
 
         weights = {}
         for wf in weight_files:
             weights.update(mx.load(wf))
 
-        model_class, model_args_class = _get_classes(config=config)
-
+        model_class, model_args_class = _get_classes(config)
         model_args = model_args_class.from_dict(config)
         model = model_class(model_args)
+        breakpoint()
 
         if hasattr(model, "sanitize"):
             weights = model.sanitize(weights)
 
         if (quantization := config.get("quantization", None)) is not None:
-            # Handle legacy models which may not have everything quantized
-            def class_predicate(p, m):
-                if not hasattr(m, "to_quantized"):
-                    return False
-                return f"{p}.scales" in weights
-
             nn.quantize(
                 model,
                 **quantization,
-                class_predicate=class_predicate,
             )
 
         model.load_weights(list(weights.items()))
-
-        if not lazy:
-            mx.eval(model.parameters())
-
+        mx.eval(model.parameters())
         model.eval()
         self.model = model
         self.model_type = model_type
+
+    def initialize_cache(self, model: nn.Module) -> None:
+        """
+        Initialize the cache for the model.
+
+        Args:
+            model (nn.Module): The model for which to initialize the cache.
+        """
+        if model and hasattr(model, "make_cache"):
+            self.cache = model.make_cache()  # type: ignore reportOptionalCall
+        else:
+            self.cache = ReusableKVCache.for_model(model)
 
     def run_configuration_script(self):
         """

@@ -72,7 +72,7 @@ class LocalInference:
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         assert isinstance(encoded_prompt, list)
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-
+        breakpoint()
         for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):
             if result.token_ids[-1] in self.front_end.tokenizer.stop_tokens:
                 break

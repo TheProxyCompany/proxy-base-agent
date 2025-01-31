@@ -141,6 +141,12 @@ class ReusableKVCache(KVCache):
 
     @classmethod
     def for_model(cls, model):
+        if not hasattr(model, "n_kv_heads"):
+            if hasattr(model, "num_key_value_heads"):
+                model.n_kv_heads = model.num_key_value_heads
+            else:
+                raise ValueError("Model has no n_kv_heads attribute")
+
         kv_heads = (
             [model.n_kv_heads] * len(model.layers)
             if isinstance(model.n_kv_heads, int)

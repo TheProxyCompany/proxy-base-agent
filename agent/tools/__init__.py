@@ -181,14 +181,14 @@ class Tool:
             return None
 
     def __str__(self) -> str:
-        tool_str = ""
-        tool_str += f"Tool: {self.name}\n"
-        tool_str += f"Description: {self.description}\n"
+        tool = self.to_dict().get("properties", {})
+        tool_str = f"---{self.name}---\n"
+        tool_str += f"{json.dumps(tool, indent=2)}\n"
+        tool_str += f"{self.name} description: {self.description}\n"
         args = self.schema.get("parameters", {})
-        if props := args.get("properties", {}):
-            tool_str += f"Arguments: {json.dumps(props, indent=2)}\n"
         if required := args.get("required", []):
-            tool_str += f"Required: {required}\n"
+            tool_str += f"required arguments: {required}\n"
+        tool_str += "---------------\n"
         return tool_str
 
 
@@ -207,10 +207,6 @@ class ToolCall(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
-
-    @staticmethod
-    def fallback_tool(**kwargs) -> ToolCall:
-        return ToolCall(name="internal_thoughts", arguments=kwargs)
 
     @staticmethod
     def invocation_schema() -> str:

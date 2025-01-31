@@ -101,6 +101,7 @@ class Agent:
             qmark=">",
         )
         if isinstance(message, Interaction):
+            self.status = Agent.Status.PROCESSING
             if message.content:
                 self.hippocampus.append_to_history(message)
                 await self.interface.show_output(message)
@@ -170,7 +171,7 @@ class Agent:
             action.metadata["tool_call"] = tool_call
             action.metadata["tool_result"] = self.use_tool(tool_call)
         elif not tool_call and scratchpad:
-            tool_call = tool_call or ToolCall.fallback_tool(internal_thoughts=scratchpad)
+            tool_call = self.get_thinking_tool(scratchpad)
             action.metadata["tool_call"] = tool_call
             del action.metadata["scratchpad"]
 
@@ -238,7 +239,10 @@ class Agent:
         Returns:
             str: The chosen agent name or a generated UUID if left blank.
         """
-        response = await interface.get_input(message="Give the ai a name:")
+        response = await interface.get_input(
+            message="Give the ai a name:",
+            default="Cerebra",
+        )
         agent_name = response.content if isinstance(response, Interaction) else response
         assert isinstance(agent_name, str)
         final_name = agent_name.strip() if agent_name else f"agent_{uuid.uuid4()}"
@@ -297,17 +301,14 @@ class Agent:
             except Exception:
                 pass
 
-        return Interaction(
-            role=Interaction.Role.SYSTEM,
-            content=prompt,
-        )
+        return Interaction(role=Interaction.Role.SYSTEM, content=prompt)
 
     @property
     def tool_list(self) -> str:
         """
         List of tools available to the agent.
         """
-        prompt = "---- Tool List ----"
+        prompt = "---- Tool Definitions ----\n"
         for tool in self.tools.values():
             prompt += f"\n{tool}"
         return prompt
@@ -317,26 +318,33 @@ class Agent:
         """
         Instructions on how to use tools.
         """
-        prompt = "Invoke a tool with the following schema:"
-        delimiters = self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
-        if delimiters:
-            prompt += f"{delimiters[0]}"
-        prompt += f"{ToolCall.invocation_schema()}"
-        if delimiters:
-            prompt += f"{delimiters[1]}"
-        prompt += " to separate tool use from your scratch pad."
-        prompt += f" [Available tools]: {', '.join(self.tools.keys())}.\n\n"
+        prompt = f"Standardized tool call schema:\n{ToolCall.invocation_schema()}\n"
+        prompt += f"Available tools: [{', '.join(self.tools.keys())}]\n"
+        if delimiters := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters():
+            prompt += "You MUST use these delimiters to separate tool use from your scratch pad.\n"
+            prompt += f"Start of tool use delimiter: {delimiters[0]!r}\n"
+            prompt += f"End of tool use delimiter: {delimiters[1]!r}\n"
         return prompt
 
     @property
     def system_reminder(self) -> dict | None:
-        if self.step_number % 5 != 0 and self.step_number > 0:
+        if self.step_number % 5 != 0:
             return None
         reminder = self.tool_use_instructions
         reminder += "Maintain your sense of self and your place in the conversation.\n"
         reminder += "Do not get distracted. Pause, think, and then act.\n"
         reminder += "Stay focused on the present interaction.\n"
+        if (
+            delimiters
+            := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
+        ):
+            reminder += "You MUST use these delimiters to separate tool use from your scratch pad.\n"
+            reminder += f"Start of tool use delimiter: {delimiters[0]!r}\n"
+            reminder += f"End of tool use delimiter: {delimiters[1]!r}\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
+
+    def get_thinking_tool(self, scratchpad: str) -> ToolCall:
+        return ToolCall(name="internal_thoughts", arguments={"thoughts": scratchpad})
 
     def __repr__(self) -> str:
         return f"{self.name} ({self.status})"
