@@ -50,7 +50,7 @@ class FrontEnd(ABC):
         pass
 
     @abstractmethod
-    def inference_step(self, prompt: list[int], **kwargs: Any) -> ModelOutput:
+    def inference_step(self, prompt: Any, **kwargs: Any) -> ModelOutput:
         pass
 
     @staticmethod

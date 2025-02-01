@@ -157,7 +157,7 @@ class MLXFrontEnd(FrontEnd):
 
         return token
 
-    def load_model(self, model_path: str) -> None:
+    def load_model(self, model_path: str, **kwargs) -> None:
         """
         Load and initialize the model from a given path.
 
@@ -182,7 +182,6 @@ class MLXFrontEnd(FrontEnd):
         model_class, model_args_class = _get_classes(config)
         model_args = model_args_class.from_dict(config)
         model = model_class(model_args)
-        breakpoint()
 
         if hasattr(model, "sanitize"):
             weights = model.sanitize(weights)
@@ -199,7 +198,7 @@ class MLXFrontEnd(FrontEnd):
         self.model = model
         self.model_type = model_type
 
-    def initialize_cache(self, model: nn.Module) -> None:
+    def initialize_cache(self, model: nn.Module, **kwargs) -> None:
         """
         Initialize the cache for the model.
 

@@ -8,11 +8,7 @@ from enum import Enum
 from random import randint
 from typing import TypeVar
 
-from agent.inference import (
-    DEFAULT_MODEL_FOLDER,
-    DEFAULT_MODEL_NAME,
-    get_available_models,
-)
+from agent.inference import get_available_models
 from agent.inference.local import LocalInference
 from agent.interaction import Interaction
 from agent.interface import CLIInterface, Interface
@@ -277,13 +273,22 @@ class Agent:
         Returns:
             str: The chosen model name.
         """
-        available_models = [name for name, _ in get_available_models()]
+        available_models: dict[str, str] = {
+            name: path for name, path, _ in get_available_models()
+        }
+        if not available_models:
+            huggingface_model_name = await interface.get_input(
+                message="Download a model from HuggingFace:",
+                default="mlx-community/Meta-Llama-3.1-8B-Instruct-8bit",
+            )
+            return huggingface_model_name.content
+
         model_name = await interface.get_input(
             message="Select a model for the agent:",
-            choices=available_models,
-            default=DEFAULT_MODEL_NAME,
+            choices=list(available_models.keys()),
+            default=next(iter(available_models.keys())),
         )
-        model_path = f"{DEFAULT_MODEL_FOLDER}/{model_name.content}"
+        model_path = available_models[model_name.content]
         return model_path
 
     @property
