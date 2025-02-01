@@ -10,7 +10,7 @@ from pse.structure.engine import StructuringEngine
 from agent.llm.util.tokenizer_wrapper import TokenizerWrapper
 
 
-class LanguageModel(ABC):
+class Frontend(ABC):
     """
     Abstract base class for front-ends.
     """
@@ -21,10 +21,9 @@ class LanguageModel(ABC):
     tokenizer: TokenizerWrapper
 
     @staticmethod
-    def from_frontend(model_path: str, frontend: str | None = "mlx") -> LanguageModel:
+    def from_path(model_path: str, frontend: str | None = "mlx") -> Frontend:
         if frontend == "mlx":
-            from agent.llm.mlx.mlx import MLXFrontEnd
-
+            from agent.llm.inference.mlx_frontend import MLXFrontEnd
             return MLXFrontEnd(model_path)
         else:
             raise ValueError(f"Invalid front-end type: {frontend:}")

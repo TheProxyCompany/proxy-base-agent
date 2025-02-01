@@ -1,8 +1,8 @@
 import dotenv
 import fal_client
 
-from agent.agent import Agent
-from agent.interaction import Interaction
+from agent.core.agent import Agent
+from agent.core.interaction import Interaction
 
 
 def create_image(self: Agent, prompt: str) -> Interaction:

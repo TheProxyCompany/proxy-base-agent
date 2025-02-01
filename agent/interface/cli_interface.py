@@ -10,7 +10,7 @@ from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from agent.interaction import Interaction
+from agent.core.interaction import Interaction
 from agent.interface import Interface
 from agent.tools import ToolCall
 

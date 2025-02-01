@@ -1,22 +1,24 @@
 import glob
+import importlib
 import logging
 import time
 from collections.abc import Iterator
+from typing import Any
 
 import mlx.core as mx
 import mlx.nn as nn
 from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
-from mlx_lm.utils import _get_classes, get_model_path, load_config
+from mlx_lm.utils import get_model_path, load_config
 from pse.structure.engine import StructuringEngine
 
-from agent.llm import LanguageModel
-from agent.llm.mlx.reuseable_cache import ReusableKVCache
+from agent.llm.inference.frontend import Frontend
+from agent.llm.models.cache import ReusableKVCache
 from agent.llm.util.tokenizer_wrapper import TokenizerWrapper
 
 logger = logging.getLogger(__name__)
 
 
-class MLXFrontEnd(LanguageModel):
+class MLXFrontEnd(Frontend):
     """
     Front-end for MLX models.
     """
@@ -34,7 +36,7 @@ class MLXFrontEnd(LanguageModel):
         self.engine = StructuringEngine(self.tokenizer._tokenizer)
         self.computed_prompt_tokens = []
 
-    def inference(self, prompt: list[int], **kwargs) -> Iterator[LanguageModel.Output]:
+    def inference(self, prompt: list[int], **kwargs) -> Iterator[Frontend.Output]:
         """
         A generator producing token ids based on the given prompt from the model.
 
@@ -81,9 +83,7 @@ class MLXFrontEnd(LanguageModel):
             model_output = new_model_output
             y, logprobs = new_y, new_logprobs
 
-    def inference_step(
-        self, prompt: mx.array, **sampler_kwargs
-    ) -> LanguageModel.Output:
+    def inference_step(self, prompt: mx.array, **sampler_kwargs) -> Frontend.Output:
         """
         A single step of inference on the given prompt from the model.
 
@@ -122,7 +122,7 @@ class MLXFrontEnd(LanguageModel):
         sampling_time = toc - tic
         logger.debug(f"Sampling time: {sampling_time:.4f}s")
 
-        return LanguageModel.Output(
+        return Frontend.Output(
             mx.array(token_ids, dtype=prompt.dtype),
             token_ids,
             logprobs,
@@ -168,7 +168,6 @@ class MLXFrontEnd(LanguageModel):
         Returns:
             nn.Module: The loaded and initialized model.
         """
-        self.run_configuration_script()
         path = get_model_path(model_path)
         config = load_config(path)
         model_type: str = config.get("model_type", "chatml")
@@ -181,7 +180,7 @@ class MLXFrontEnd(LanguageModel):
         for wf in weight_files:
             weights.update(mx.load(wf))
 
-        model_class, model_args_class = _get_classes(config)
+        model_class, model_args_class = self.get_model_architecture(config)
         model_args = model_args_class.from_dict(config)
         model = model_class(model_args)
 
@@ -200,6 +199,33 @@ class MLXFrontEnd(LanguageModel):
         self.model = model
         self.model_type = model_type
 
+    def get_model_architecture(self, config: dict[str, Any]):
+        """
+        Retrieve the model and model args classes based on the configuration.
+
+        Args:
+            config (dict): The model configuration.
+
+        Returns:
+            A tuple containing the Model class and the ModelArgs class.
+        """
+        model_type = config["model_type"]
+        arch = None
+
+        try:
+            try:
+                arch = importlib.import_module(f"agent.llm.models.{model_type}")
+            except ImportError:
+                arch = importlib.import_module(f"mlx_lm.models.{model_type}")
+        except ImportError:
+            msg = f"Model type {model_type} not supported."
+            logging.error(msg)
+
+        if arch is None:
+            raise ValueError("No model architecture found for the given model type.")
+
+        return arch.Model, arch.ModelArgs
+
     def initialize_cache(self, model: nn.Module, **kwargs) -> None:
         """
         Initialize the cache for the model.
@@ -211,18 +237,3 @@ class MLXFrontEnd(LanguageModel):
             self.cache = model.make_cache()  # type: ignore reportOptionalCall
         else:
             self.cache = ReusableKVCache.for_model(model)
-
-    def run_configuration_script(self):
-        """
-        Shell script to configure the Apple Silicon memory settings.
-        Shell script written by EXO Labs.
-        """
-        import os
-        import subprocess
-
-        file_name = "configure_mlx.sh"
-        try:
-            file_path = os.path.join(os.path.dirname(__file__), file_name)
-            subprocess.run(["bash", file_path], check=True)
-        except Exception as e:
-            logger.error(f"Failed to run configure script: {e}")

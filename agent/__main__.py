@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from agent.agent import Agent
+from agent.core.agent import Agent
 from agent.interface.cli_interface import CLIInterface
 
 # Set up logging

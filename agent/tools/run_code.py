@@ -2,8 +2,8 @@ import ast
 import contextlib
 import io
 
-from agent.agent import Agent
-from agent.interaction import Interaction
+from agent.core.agent import Agent
+from agent.core.interaction import Interaction
 
 
 def run_code(self: Agent, code: str) -> Interaction:
