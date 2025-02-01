@@ -21,6 +21,9 @@ class BaseModelArgs:
             }
         )
 
+    def __iter__(self):
+        return iter(self.__dict__.items())
+
 
 def create_causal_mask(
     N: int,
@@ -49,10 +52,10 @@ def create_attention_mask(h: mx.array, cache: Any | None = None):
         if cache is not None and cache[0] is not None:
             c = cache[0]
             if hasattr(c, "max_size"):
-                offset = min(c.max_size, c.offset)
+                offset = min(c.max_size, c._offset)
                 window_size = c.max_size
             else:
-                offset = c.offset
+                offset = c._offset
         mask = create_causal_mask(T, offset, window_size=window_size)
         mask = mask.astype(h.dtype)
     else:

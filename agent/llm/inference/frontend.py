@@ -7,7 +7,7 @@ from typing import Any
 
 from pse.structure.engine import StructuringEngine
 
-from agent.llm.util.tokenizer_wrapper import TokenizerWrapper
+from agent.llm.util.tokenizer import Tokenizer
 
 
 class Frontend(ABC):
@@ -18,12 +18,13 @@ class Frontend(ABC):
     engine: StructuringEngine
     model_type: str
     computed_prompt_tokens: list[int]
-    tokenizer: TokenizerWrapper
+    tokenizer: Tokenizer
 
     @staticmethod
     def from_path(model_path: str, frontend: str | None = "mlx") -> Frontend:
         if frontend == "mlx":
             from agent.llm.inference.mlx_frontend import MLXFrontEnd
+
             return MLXFrontEnd(model_path)
         else:
             raise ValueError(f"Invalid front-end type: {frontend:}")
@@ -42,10 +43,6 @@ class Frontend(ABC):
     @staticmethod
     @abstractmethod
     def sample_tokens(logprobs: Any, **kwargs: Any) -> Any:
-        pass
-
-    @abstractmethod
-    def initialize_cache(self, model: Any, **kwargs: Any) -> None:
         pass
 
     @abstractmethod

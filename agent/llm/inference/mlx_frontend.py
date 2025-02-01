@@ -12,8 +12,10 @@ from mlx_lm.utils import get_model_path, load_config
 from pse.structure.engine import StructuringEngine
 
 from agent.llm.inference.frontend import Frontend
-from agent.llm.models.cache import ReusableKVCache
-from agent.llm.util.tokenizer_wrapper import TokenizerWrapper
+from agent.llm.util.kv_cache import KeyValueCache
+
+# from agent.llm.util.reusable_cache import ReusableKVCache
+from agent.llm.util.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +32,10 @@ class MLXFrontEnd(Frontend):
         Args:
             model_path (str): The path to the model.
         """
-        self.load_model(model_path)
-        self.initialize_cache(self.model)
-        self.tokenizer = TokenizerWrapper.load(model_path, self.model_type)
+        self.model, self.model_type = self.load_model(model_path)
+        # self.cache = ReusableKVCache.from_model(self.model)
+        self.cache = KeyValueCache.from_model(self.model)
+        self.tokenizer = Tokenizer.load(model_path, self.model_type)
         self.engine = StructuringEngine(self.tokenizer._tokenizer)
         self.computed_prompt_tokens = []
 
@@ -48,23 +51,23 @@ class MLXFrontEnd(Frontend):
             mx.random.seed(seed)
 
         mlx_prompt = mx.array(prompt)
-        if isinstance(self.cache[0], ReusableKVCache) and self.computed_prompt_tokens:
-            tic = time.perf_counter()
-            i = 0
-            for i, t in enumerate(self.computed_prompt_tokens):
-                if i >= len(mlx_prompt) - 1 or mlx_prompt[i] != t:
-                    break
-            for layer_cache in self.cache:
-                assert isinstance(layer_cache, ReusableKVCache)
-                layer_cache.reuse(len(mlx_prompt), i)
-            logger.debug(f"Reusing KVCache for {i}/{len(mlx_prompt)} tokens")
-            y = mlx_prompt[i:]
-            mx.metal.clear_cache()
-            toc = time.perf_counter()
-            reuse_time = toc - tic
-            logger.debug(f"Reuse time: {reuse_time:.4f}s")
-        else:
-            y = mlx_prompt
+        # if isinstance(self.cache[0], ReusableKVCache) and self.computed_prompt_tokens:
+        #     tic = time.perf_counter()
+        #     i = 0
+        #     for i, t in enumerate(self.computed_prompt_tokens):
+        #         if i >= len(mlx_prompt) - 1 or mlx_prompt[i] != t:
+        #             break
+        #     for layer_cache in self.cache:
+        #         assert isinstance(layer_cache, ReusableKVCache)
+        #         layer_cache.reuse(len(mlx_prompt), i)
+        #     logger.debug(f"Reusing KVCache for {i}/{len(mlx_prompt)} tokens")
+        #     y = mlx_prompt[i:]
+        #     mx.metal.clear_cache()
+        #     toc = time.perf_counter()
+        #     reuse_time = toc - tic
+        #     logger.debug(f"Reuse time: {reuse_time:.4f}s")
+        # else:
+        y = mlx_prompt
 
         if not self.computed_prompt_tokens:
             self.computed_prompt_tokens = prompt
@@ -159,7 +162,8 @@ class MLXFrontEnd(Frontend):
 
         return token
 
-    def load_model(self, model_path: str, **kwargs) -> None:
+    @staticmethod
+    def load_model(model_path: str) -> tuple[nn.Module, str]:
         """
         Load and initialize the model from a given path.
 
@@ -170,36 +174,28 @@ class MLXFrontEnd(Frontend):
         """
         path = get_model_path(model_path)
         config = load_config(path)
-        model_type: str = config.get("model_type", "chatml")
-
         weight_files = glob.glob(str(path / "model*.safetensors"))
-        if not weight_files:
-            logging.error(f"No safetensors found in {path}")
-
         weights = {}
         for wf in weight_files:
             weights.update(mx.load(wf))
 
-        model_class, model_args_class = self.get_model_architecture(config)
+        model_class, model_args_class = MLXFrontEnd.get_model_architecture(config)
         model_args = model_args_class.from_dict(config)
         model = model_class(model_args)
-
         if hasattr(model, "sanitize"):
             weights = model.sanitize(weights)
 
         if (quantization := config.get("quantization", None)) is not None:
-            nn.quantize(
-                model,
-                **quantization,
-            )
+            nn.quantize(model, **quantization)
 
         model.load_weights(list(weights.items()))
+        assert isinstance(model, nn.Module)
         mx.eval(model.parameters())
         model.eval()
-        self.model = model
-        self.model_type = model_type
+        return model, config.get("model_type", "chatml")
 
-    def get_model_architecture(self, config: dict[str, Any]):
+    @staticmethod
+    def get_model_architecture(config: dict[str, Any]):
         """
         Retrieve the model and model args classes based on the configuration.
 
@@ -215,8 +211,8 @@ class MLXFrontEnd(Frontend):
             "phi-msft": "phixtral",
             "falcon_mamba": "mamba",
         }.get(model_type, model_type)
-        arch = None
 
+        arch = None
         try:
             try:
                 arch = importlib.import_module(f"agent.llm.models.{model_type}")
@@ -230,15 +226,3 @@ class MLXFrontEnd(Frontend):
             raise ValueError("No model architecture found for the given model type.")
 
         return arch.Model, arch.ModelArgs
-
-    def initialize_cache(self, model: nn.Module, **kwargs) -> None:
-        """
-        Initialize the cache for the model.
-
-        Args:
-            model (nn.Module): The model for which to initialize the cache.
-        """
-        if model and hasattr(model, "make_cache"):
-            self.cache = model.make_cache()  # type: ignore reportOptionalCall
-        else:
-            self.cache = ReusableKVCache.for_model(model)

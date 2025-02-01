@@ -12,11 +12,11 @@ from agent.prompts import load_template
 logger = logging.getLogger(__name__)
 
 
-class TokenizerWrapper:
-    """A wrapper around a Hugging Face tokenizer that adds control token handling and chat templating.
+class Tokenizer:
+    """A convienience wrapper around a Hugging Face tokenizer.
 
-    The wrapper provides convenient access to control tokens, encoding/decoding with templates,
-    and vocabulary management.
+    The wrapper provides convienient access to control tokens,
+    encoding/decoding with templates, and vocabulary management.
     """
 
     def __init__(
@@ -24,8 +24,7 @@ class TokenizerWrapper:
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
         control_tokens: ControlTokens | None = None,
     ) -> None:
-        """Initialize the TokenizerWrapper.
-
+        """
         Args:
             tokenizer: The base Hugging Face tokenizer to wrap
             control_tokens: Optional control tokens - such as end-of-sequence or tool-use tokens
@@ -75,9 +74,7 @@ class TokenizerWrapper:
         """
         return self._tokenizer.decode(tokens, **kwargs)
 
-    def encode(
-        self, prompt: str | list[dict[str, str]] | dict[str, Any], **kwargs
-    ) -> str | list[int]:
+    def encode(self, prompt: str | list[dict[str, str]] | dict[str, Any], **kwargs) -> str | list[int]:
         """Encode text or chat messages into tokens.
 
         Handles both raw text and chat message formats. For raw text, supports
@@ -122,7 +119,7 @@ class TokenizerWrapper:
         model_path: str | Path,
         model_type: str,
         **kwargs,
-    ) -> TokenizerWrapper:
+    ) -> Tokenizer:
         """Create a TokenizerWrapper by loading a Hugging Face tokenizer.
 
         Args:
@@ -136,7 +133,7 @@ class TokenizerWrapper:
         control_tokens = get_control_tokens(model_type)
         tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
         tokenizer.chat_template = load_template()
-        return TokenizerWrapper(tokenizer, control_tokens)
+        return Tokenizer(tokenizer, control_tokens)
 
     def __getattribute__(self, name: str) -> Any:
         """Forward attribute lookups to the underlying tokenizer if not found on wrapper."""

@@ -11,7 +11,7 @@ from typing import TypeVar
 from agent.core.hippocampus import Hippocampus
 from agent.core.interaction import Interaction
 from agent.interface import CLIInterface, Interface
-from agent.llm.local import LocalInference
+from agent.llm.inference.local import LocalInference
 from agent.llm.models import get_available_models
 from agent.prompts import get_available_prompts, load_prompt
 from agent.tools import Tool, ToolCall
