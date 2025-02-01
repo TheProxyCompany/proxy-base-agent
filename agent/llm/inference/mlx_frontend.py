@@ -210,6 +210,11 @@ class MLXFrontEnd(Frontend):
             A tuple containing the Model class and the ModelArgs class.
         """
         model_type = config["model_type"]
+        model_type = {
+            "mistral": "llama",
+            "phi-msft": "phixtral",
+            "falcon_mamba": "mamba",
+        }.get(model_type, model_type)
         arch = None
 
         try:
