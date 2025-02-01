@@ -8,11 +8,11 @@ from enum import Enum
 from random import randint
 from typing import TypeVar
 
-from agent.core.hippocampus import Hippocampus
-from agent.core.interaction import Interaction
+from agent.interaction import Interaction
 from agent.interface import CLIInterface, Interface
+from agent.llm import get_available_models
 from agent.llm.inference.local import LocalInference
-from agent.llm.models import get_available_models
+from agent.memory import Hippocampus
 from agent.prompts import get_available_prompts, load_prompt
 from agent.tools import Tool, ToolCall
 
@@ -135,11 +135,11 @@ class Agent:
             "system_reminder": self.system_reminder,
             **self.inference_kwargs,
         }
-        for cast_output in self.inference(**inference_config):
+        for token_ids in self.inference(**inference_config):
             if self.inference.engine.is_within_value:
-                structured.extend(cast_output.token_ids)
+                structured.append(token_ids)
             else:
-                buffer.extend(cast_output.token_ids)
+                buffer.append(token_ids)
             decoded_output = self.inference.engine.tokenizer.decode(buffer + structured)
             self.interface.show_live_output(decoded_output)
 

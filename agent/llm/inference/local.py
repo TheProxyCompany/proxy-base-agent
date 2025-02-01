@@ -5,8 +5,8 @@ from typing import Any
 
 from pse.structure import SchemaType
 
-from agent.core.interaction import Interaction
-from agent.llm.inference.frontend import Frontend
+from agent.interaction import Interaction
+from agent.llm.inference import Frontend
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class LocalInference:
         self.front_end = Frontend.from_path(model_path, frontend)
         self.engine = self.front_end.engine
 
-    def __call__(self, *args, **kwargs) -> Iterable[Frontend.Output]:
+    def __call__(self, *args, **kwargs) -> Iterable[int]:
         return self.run_inference(*args, **kwargs)
 
     def run_inference(
@@ -35,9 +35,8 @@ class LocalInference:
         prompt: str | list[dict[str, Any]] | list[Interaction],
         structure: SchemaType | None = None,
         buffer_length: int = -1,
-        max_tokens: int = 1000,
         **inference_kwargs,
-    ) -> Iterable[Frontend.Output]:
+    ) -> Iterable[int]:
         """
         Generate a completion for the given prompt.
 
@@ -65,16 +64,12 @@ class LocalInference:
             **self.front_end.tokenizer.control_tokens.model_dump(),
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
-        assert isinstance(encoded_prompt, list)
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-        breakpoint()
-        for n, result in enumerate(self.front_end(encoded_prompt, **inference_kwargs)):
-            if result.token_ids[-1] in self.front_end.tokenizer.stop_tokens:
-                break
-            encoded_prompt.extend(result.token_ids)
-            yield result
-            if self.engine.in_accepted_state or n > max_tokens:
-                break
+
+        for token_id in self.front_end(encoded_prompt, **inference_kwargs):
+            logger.debug(f"generated token: {token_id}")
+            encoded_prompt.append(token_id)
+            yield token_id
 
         toc = time.perf_counter()
         generation_time = toc - tic

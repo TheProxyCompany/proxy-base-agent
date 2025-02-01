@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from rich.console import Console
 
-from agent.core.interaction import Interaction
+from agent.interaction import Interaction
 from agent.tools import ToolCall
 
 

@@ -3,10 +3,7 @@ import logging
 import os
 
 DEFAULT_MODEL_FOLDER = ".language_models"
-DEFAULT_MODEL_NAME = "Llama-3.1-8B-Instruct"
-
 logger = logging.getLogger(__name__)
-
 
 def _get_model_paths() -> list[str]:
     """

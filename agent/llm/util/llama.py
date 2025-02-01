@@ -45,7 +45,7 @@ class Attention(nn.Module):
 
         dim = args.hidden_size
         self.n_heads = args.num_attention_heads
-        self.n_kv_heads = args.num_key_value_heads or self.n_heads
+        self.n_kv_heads = args.num_key_value_heads or args.num_attention_heads
         self.head_dim = args.head_dim or args.hidden_size // self.n_heads
 
         self.scale = self.head_dim**-0.5
@@ -79,8 +79,8 @@ class Attention(nn.Module):
 
         # Prepare the queries, keys and values for the attention computation
         queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
-        keys = keys.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
-        values = values.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
+        keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+        values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
 
         if cache is not None:
             queries = self.rope(queries, offset=cache.offset)

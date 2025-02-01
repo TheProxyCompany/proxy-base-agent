@@ -1,5 +1,5 @@
-from agent.core.agent import Agent
-from agent.core.interaction import Interaction
+from agent.agent import Agent
+from agent.interaction import Interaction
 
 
 def internal_thoughts(

@@ -1,4 +1,4 @@
-from agent.core.interaction import Interaction
+from agent.interaction import Interaction
 
 
 class Hippocampus:

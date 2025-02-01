@@ -8,17 +8,15 @@ class Llama3RoPE(nn.Module):
     def __init__(
         self,
         dims: int,
+        scaling_config: dict,
         max_position_embeddings: int | None = None,
         traditional: bool = False,
         base: float = 10000,
-        scaling_config: dict | None = None,
     ):
         super().__init__()
         self.dims = dims
         self.max_position_embeddings = max_position_embeddings or 2048
         self.traditional = traditional
-        if scaling_config is None:
-            scaling_config = {}
 
         factor = scaling_config["factor"]
         low_freq_factor = scaling_config.get("low_freq_factor", 1.0)
@@ -82,7 +80,7 @@ def initialize_rope(
     elif rope_type == "llama3":
         return Llama3RoPE(
             dims=dims,
-            max_position_embeddings=max_position_embeddings or 2048,
+            max_position_embeddings=max_position_embeddings,
             traditional=traditional,
             base=base,
             scaling_config=scaling_config,

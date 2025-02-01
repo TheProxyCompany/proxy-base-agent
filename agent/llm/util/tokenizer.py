@@ -74,7 +74,7 @@ class Tokenizer:
         """
         return self._tokenizer.decode(tokens, **kwargs)
 
-    def encode(self, prompt: str | list[dict[str, str]] | dict[str, Any], **kwargs) -> str | list[int]:
+    def encode(self, prompt: str | list[dict[str, str]] | dict[str, Any], **kwargs) -> list[int]:
         """Encode text or chat messages into tokens.
 
         Handles both raw text and chat message formats. For raw text, supports
@@ -108,8 +108,6 @@ class Tokenizer:
             else:
                 templated = self._tokenizer.apply_chat_template(prompt, **kwargs)
 
-            if isinstance(templated, str):
-                return templated
             if isinstance(templated, list) and isinstance(templated[0], int):
                 return templated  # type: ignore[reportReturnValue]
             raise ValueError(f"Unsupported prompt format: {templated}")
