@@ -2,12 +2,11 @@ import json
 import logging
 import os
 
-from agent.inference.frontend import FrontEnd, FrontEndType
+DEFAULT_MODEL_FOLDER = ".language_models"
+DEFAULT_MODEL_NAME = "Llama-3.1-8B-Instruct"
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL_FOLDER = ".language_models"
-DEFAULT_MODEL_NAME = "Llama-3.1-8B-Instruct"
 
 def _get_model_paths() -> list[str]:
     """
@@ -30,6 +29,7 @@ def _get_model_paths() -> list[str]:
         paths.append(default_path)
 
     return paths
+
 
 def _get_config_path(model_dir: os.DirEntry) -> tuple[str, str]:
     """
@@ -54,6 +54,7 @@ def _get_config_path(model_dir: os.DirEntry) -> tuple[str, str]:
                     break
 
     return config_path, model_path
+
 
 def _scan_model_dir(model_dir: os.DirEntry) -> tuple[str, str, str] | None:
     """
@@ -84,6 +85,7 @@ def _scan_model_dir(model_dir: os.DirEntry) -> tuple[str, str, str] | None:
 
     return None
 
+
 def get_available_models() -> list[tuple[str, str, str]]:
     """
     Get a list of available models from all model paths.
@@ -99,6 +101,3 @@ def get_available_models() -> list[tuple[str, str, str]]:
                 model_file_names.append(model_info)
 
     return sorted(model_file_names, key=lambda x: x[0])
-
-
-__all__ = ["FrontEnd", "FrontEndType", "get_available_models"]

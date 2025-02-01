@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import enum
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -8,19 +7,10 @@ from typing import Any
 
 from pse.structure.engine import StructuringEngine
 
-from agent.inference.utils.tokenizer_wrapper import TokenizerWrapper
+from agent.llm.util.tokenizer_wrapper import TokenizerWrapper
 
 
-class FrontEndType(enum.Enum):
-    MLX = "mlx"
-    TORCH = "torch"
-    JAX = "jax"
-
-    def __str__(self):
-        return self.value
-
-
-class FrontEnd(ABC):
+class LanguageModel(ABC):
     """
     Abstract base class for front-ends.
     """
@@ -31,26 +21,23 @@ class FrontEnd(ABC):
     tokenizer: TokenizerWrapper
 
     @staticmethod
-    def from_type(model_path: str, front_end_type: FrontEndType | None = None) -> FrontEnd:
-        if front_end_type is None:
-            front_end_type = FrontEndType.MLX
-
-        if front_end_type == FrontEndType.MLX:
-            from agent.inference.frontend.mlx import MLXFrontEnd
+    def from_frontend(model_path: str, frontend: str | None = "mlx") -> LanguageModel:
+        if frontend == "mlx":
+            from agent.llm.mlx.mlx import MLXFrontEnd
 
             return MLXFrontEnd(model_path)
         else:
-            raise ValueError(f"Invalid front-end type: {front_end_type}")
+            raise ValueError(f"Invalid front-end type: {frontend:}")
 
-    def __call__(self, prompt: list[int], **kwargs) -> Iterator[ModelOutput]:
+    def __call__(self, prompt: list[int], **kwargs) -> Iterator[Output]:
         return self.inference(prompt, **kwargs)
 
     @abstractmethod
-    def inference(self, prompt: list[int], **kwargs: Any) -> Iterator[ModelOutput]:
+    def inference(self, prompt: list[int], **kwargs: Any) -> Iterator[Output]:
         pass
 
     @abstractmethod
-    def inference_step(self, prompt: Any, **kwargs: Any) -> ModelOutput:
+    def inference_step(self, prompt: Any, **kwargs: Any) -> Output:
         pass
 
     @staticmethod
@@ -67,7 +54,7 @@ class FrontEnd(ABC):
         pass
 
     @dataclass
-    class ModelOutput:
+    class Output:
         """
         Result of a generation step.
 

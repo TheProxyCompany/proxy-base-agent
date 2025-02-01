@@ -9,14 +9,14 @@ from mlx_lm.sample_utils import categorical_sampling, min_p_sampling
 from mlx_lm.utils import _get_classes, get_model_path, load_config
 from pse.structure.engine import StructuringEngine
 
-from agent.inference.frontend import FrontEnd
-from agent.inference.utils.reuseable_cache import ReusableKVCache
-from agent.inference.utils.tokenizer_wrapper import TokenizerWrapper
+from agent.llm import LanguageModel
+from agent.llm.mlx.reuseable_cache import ReusableKVCache
+from agent.llm.util.tokenizer_wrapper import TokenizerWrapper
 
 logger = logging.getLogger(__name__)
 
 
-class MLXFrontEnd(FrontEnd):
+class MLXFrontEnd(LanguageModel):
     """
     Front-end for MLX models.
     """
@@ -34,7 +34,7 @@ class MLXFrontEnd(FrontEnd):
         self.engine = StructuringEngine(self.tokenizer._tokenizer)
         self.computed_prompt_tokens = []
 
-    def inference(self, prompt: list[int], **kwargs) -> Iterator[FrontEnd.ModelOutput]:
+    def inference(self, prompt: list[int], **kwargs) -> Iterator[LanguageModel.Output]:
         """
         A generator producing token ids based on the given prompt from the model.
 
@@ -81,7 +81,9 @@ class MLXFrontEnd(FrontEnd):
             model_output = new_model_output
             y, logprobs = new_y, new_logprobs
 
-    def inference_step(self, prompt: mx.array, **sampler_kwargs) -> FrontEnd.ModelOutput:
+    def inference_step(
+        self, prompt: mx.array, **sampler_kwargs
+    ) -> LanguageModel.Output:
         """
         A single step of inference on the given prompt from the model.
 
@@ -120,7 +122,7 @@ class MLXFrontEnd(FrontEnd):
         sampling_time = toc - tic
         logger.debug(f"Sampling time: {sampling_time:.4f}s")
 
-        return FrontEnd.ModelOutput(
+        return LanguageModel.Output(
             mx.array(token_ids, dtype=prompt.dtype),
             token_ids,
             logprobs,
@@ -218,7 +220,7 @@ class MLXFrontEnd(FrontEnd):
         import os
         import subprocess
 
-        file_name = "mlx.sh"
+        file_name = "configure_mlx.sh"
         try:
             file_path = os.path.join(os.path.dirname(__file__), file_name)
             subprocess.run(["bash", file_path], check=True)

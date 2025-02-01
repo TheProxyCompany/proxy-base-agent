@@ -5,19 +5,14 @@ from typing import Any
 
 from pse.structure import SchemaType
 
-from agent.inference import FrontEnd, FrontEndType
 from agent.interaction import Interaction
+from agent.llm import LanguageModel
 
 logger = logging.getLogger(__name__)
 
 
 class LocalInference:
-
-    def __init__(
-        self,
-        model_path: str,
-        front_end_type: FrontEndType | None = None,
-    ):
+    def __init__(self, model_path: str, frontend: str | None = "mlx"):
         """
         Initialize the Inference class.
 
@@ -29,10 +24,10 @@ class LocalInference:
         - Initializing the tokenizer and model
         - Setting up caches and data structures for efficient inference
         """
-        self.front_end = FrontEnd.from_type(model_path, front_end_type)
+        self.front_end = LanguageModel.from_frontend(model_path, frontend)
         self.engine = self.front_end.engine
 
-    def __call__(self, *args, **kwargs) -> Iterable[FrontEnd.ModelOutput]:
+    def __call__(self, *args, **kwargs) -> Iterable[LanguageModel.Output]:
         return self.run_inference(*args, **kwargs)
 
     def run_inference(
@@ -42,7 +37,7 @@ class LocalInference:
         buffer_length: int = -1,
         max_tokens: int = 1000,
         **inference_kwargs,
-    ) -> Iterable[FrontEnd.ModelOutput]:
+    ) -> Iterable[LanguageModel.Output]:
         """
         Generate a completion for the given prompt.
 

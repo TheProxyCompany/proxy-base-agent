@@ -172,7 +172,9 @@ cython_debug/
 
 .memories/
 
-.langauge_models
+.language_models/*
+
+.language_models
 
 .DS_Store
 uv.lock
