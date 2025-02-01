@@ -216,7 +216,8 @@ class Agent:
         await interface.clear()
         if inference is None:
             model_path = await Agent.get_model_path(interface)
-            inference = LocalInference(model_path)
+            with interface.console.status(f"[yellow]Loading model from {model_path}"):
+                inference = LocalInference(model_path)
         agent_name = await Agent.get_agent_name(interface)
         system_prompt = await Agent.get_agent_prompt(interface)
         return Agent(
