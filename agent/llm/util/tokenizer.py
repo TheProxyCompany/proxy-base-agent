@@ -6,7 +6,7 @@ from typing import Any
 
 from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast
 
-from agent.control_tokens import ControlTokens, get_control_tokens
+from agent.llm.util.control_tokens import ControlTokens, get_control_tokens
 from agent.prompts import load_template
 
 logger = logging.getLogger(__name__)

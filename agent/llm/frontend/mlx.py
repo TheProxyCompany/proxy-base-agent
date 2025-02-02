@@ -11,7 +11,7 @@ from mlx_lm.utils import generate_step, get_model_path, load_config
 from pse.structure.engine import StructuringEngine
 
 from agent.llm.frontend import Frontend
-from agent.llm.tokenizer import Tokenizer
+from agent.llm.util.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
 
