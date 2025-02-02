@@ -21,7 +21,7 @@ def _get_model_paths() -> list[str]:
 
     # Add default models path
     root_dir = os.path.dirname(__file__)
-    default_path = f"{root_dir}/../../../{DEFAULT_MODEL_FOLDER}"
+    default_path = f"{root_dir}/../../{DEFAULT_MODEL_FOLDER}"
     if os.path.exists(default_path):
         paths.append(default_path)
 
