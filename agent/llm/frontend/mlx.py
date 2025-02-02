@@ -10,9 +10,8 @@ from mlx_lm.sample_utils import make_sampler
 from mlx_lm.utils import generate_step, get_model_path, load_config
 from pse.structure.engine import StructuringEngine
 
-from agent.llm.inference import Frontend
-from agent.llm.util.kv_cache import KeyValueCache
-from agent.llm.util.tokenizer import Tokenizer
+from agent.llm.frontend import Frontend
+from agent.llm.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +30,10 @@ class MLXLLM(Frontend):
         """
         self.set_device_limit()
         self.model, self.model_type = self.load_model(model_path)
-        self.cache = KeyValueCache.from_model(self.model)
         self.tokenizer = Tokenizer.load(model_path, self.model_type)
         self.engine = StructuringEngine(self.tokenizer._tokenizer)
 
-    def inference(
-        self, prompt: list[int], structured: bool = True, **kwargs
-    ) -> Iterator[int]:
+    def inference(self, prompt: list[int], structured: bool = True, **kwargs) -> Iterator[int]:
         """
         A generator producing token ids based on the given prompt from the model.
 
@@ -52,7 +48,6 @@ class MLXLLM(Frontend):
         for tokens, _ in generate_step(
             prompt=mx.array(prompt),
             model=self.model,
-            # prompt_cache=self.cache,
             logits_processors=[self.engine.process_logits] if structured else None,
             sampler=self.make_sampler(structured, **kwargs),
             max_tokens=kwargs.get("max_tokens", 1000),
@@ -79,7 +74,6 @@ class MLXLLM(Frontend):
         temp = float(kwargs.get("temp", 1.0))
         min_p = float(kwargs.get("min_p", 0.0))
         min_tokens_to_keep = int(kwargs.get("min_tokens_to_keep", 1))
-        # use mlx's sampler for demo purposes
         sampler = make_sampler(
             temp=temp,
             min_p=min_p,

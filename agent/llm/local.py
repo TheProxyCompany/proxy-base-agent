@@ -6,7 +6,7 @@ from typing import Any
 from pse.structure import SchemaType
 
 from agent.interaction import Interaction
-from agent.llm.inference import Frontend
+from agent.llm.frontend import Frontend
 
 logger = logging.getLogger(__name__)
 

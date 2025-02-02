@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 
 from pse.structure.engine import StructuringEngine
 
-from agent.llm.util.tokenizer import Tokenizer
+from agent.llm.tokenizer import Tokenizer
 
 T = TypeVar("T")
 
@@ -22,7 +22,7 @@ class Frontend(ABC):
     @staticmethod
     def from_path(model_path: str, frontend: str | None = "mlx") -> Frontend:
         if frontend == "mlx":
-            from agent.llm.inference.mlx import MLXLLM
+            from agent.llm.frontend.mlx import MLXLLM
 
             return MLXLLM(model_path)
         else:
