@@ -32,7 +32,10 @@ class MLXInference(Frontend):
         self.engine = StructuringEngine(self.tokenizer._tokenizer)
 
     def inference(
-        self, prompt: list[int], structured: bool = True, **kwargs
+        self,
+        prompt: list[int],
+        structured: bool = True,
+        **kwargs,
     ) -> Iterator[int]:
         """
         A generator producing token ids based on the given prompt from the model.
@@ -45,22 +48,24 @@ class MLXInference(Frontend):
         if seed := kwargs.get("seed", None):
             mx.random.seed(seed)
 
-        for tokens, _ in generate_step(
+        for generated_tokens, _ in generate_step(
             prompt=mx.array(prompt),
             model=self.model,
             logits_processors=[self.engine] if structured else None,
             sampler=self.make_sampler(structured, **kwargs),
             max_tokens=kwargs.get("max_tokens", 1000),
         ):
-            if isinstance(tokens, int):
-                tokens = [tokens]
-            else:
-                tokens = tokens.tolist()
+            assert isinstance(generated_tokens, mx.array)
+            assert generated_tokens.ndim == 1
+            tokens = generated_tokens.tolist()
             assert isinstance(tokens, list)
             for token_id in tokens:
                 if token_id in self.tokenizer.stop_tokens:
                     return
                 yield token_id
+
+            if self.engine.has_reached_accept_state:
+                break
 
     def make_sampler(self, structured: bool, **kwargs) -> Callable[..., Any]:
         """

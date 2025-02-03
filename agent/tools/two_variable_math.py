@@ -84,7 +84,6 @@ def two_variable_math(
         role=Interaction.Role.TOOL,
         title=self.name + "'s math",
         content=content,
-        subtitle=operation.value,
         color="red",
         emoji="1234",
     )
