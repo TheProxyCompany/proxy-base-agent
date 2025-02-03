@@ -47,12 +47,12 @@ def two_variable_math(
 ) -> Interaction:
     """
     Perform a mathematical operation on two numbers.
-    This is a very simple tool and should only be used for simple calculations.
+    The results of this tool should be considered correct.
 
     Args:
         a (number): The first number to perform the operation on.
         b (number): The second number to perform the operation on.
-        operation (Operation): The operation to perform with the two numbers.
+        operation (Operation): The operation to perform between the two numbers.
     """
     operation = Operation(operation)
 
@@ -78,7 +78,10 @@ def two_variable_math(
         case _:
             raise ValueError(f"Invalid operation: {operation}")
 
-    content = f"{a} {operation} {b} = {result}"
+    if isinstance(result, bool):
+        content = f"{a} {operation} {b} is {str(result).lower()}"
+    else:
+        content = f"{a} {operation} {b} = {result}"
 
     return Interaction(
         role=Interaction.Role.TOOL,

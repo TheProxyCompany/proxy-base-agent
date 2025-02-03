@@ -7,7 +7,8 @@ from agent.interaction import Interaction
 
 def create_image(self: Agent, prompt: str) -> Interaction:
     """
-    Prompt an image generation model to generate an image. This image is displayed to the user.
+    Prompt an image generation model to generate an image.
+    This image is displayed to the user.
 
     Guidelines for crafting image prompts:
     - Structure prompts with a clear subject, specific details, and contextual actions.
