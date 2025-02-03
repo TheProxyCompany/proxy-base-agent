@@ -9,7 +9,7 @@ from mlx_proxy.utils import load_model, set_max_reccomended_device_limit
 from pse.structure.engine import StructuringEngine
 
 from agent.llm.frontend import Frontend
-from agent.llm.util.tokenizer import Tokenizer
+from agent.llm.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
 

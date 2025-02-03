@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 
 from pse.structure.engine import StructuringEngine
 
-from agent.llm.util.tokenizer import Tokenizer
+from agent.llm.tokenizer import Tokenizer
 
 T = TypeVar("T")
 
