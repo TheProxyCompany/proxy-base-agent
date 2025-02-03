@@ -22,18 +22,14 @@ class Frontend(ABC):
     @staticmethod
     def from_path(model_path: str, frontend: str | None = "mlx") -> Frontend:
         if frontend == "mlx":
-            from agent.llm.frontend.mlx import MLXLLM
+            from agent.llm.frontend.mlx import MLXInference
 
-            return MLXLLM(model_path)
+            return MLXInference(model_path)
         else:
             raise ValueError(f"Invalid front-end type: {frontend:}")
 
     def __call__(self, prompt: list[int], **kwargs) -> Iterator[int]:
         return self.inference(prompt, **kwargs)
-
-    @abstractmethod
-    def load_model(self, model_path: str, **kwargs: Any) -> None:
-        pass
 
     @abstractmethod
     def inference(self, prompt: list[int], **kwargs: Any) -> Iterator[int]:

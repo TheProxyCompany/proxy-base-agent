@@ -18,7 +18,7 @@ agent_kwargs = {
     "buffer_length": 0,
     "temp": 0.9,
     "min_p": 0.05,
-    "min_tokens_to_keep": 1,
+    "min_tokens_to_keep": 10,
     "add_generation_prompt": True,
     "prefill": "",
     "seed": 11,

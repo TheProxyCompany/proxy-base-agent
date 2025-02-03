@@ -1,5 +1,6 @@
 {
     "template_type": "mistral",
+    "bos_token": "<|begin_of_text|>",
     "eos_token": "<|eot_id|>",
     "eom_token": "<|eom_id|>",
     "tool_use_start": "```json\n",

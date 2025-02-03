@@ -142,7 +142,6 @@ class Agent:
                 buffer.append(token_ids)
             decoded_output = self.inference.engine.tokenizer.decode(buffer + structured)
             self.interface.show_live_output(decoded_output)
-
         self.interface.end_live_output()
         scratchpad = self.inference.engine.tokenizer.decode(buffer)
         structured_output = self.inference.engine.tokenizer.decode(structured)
