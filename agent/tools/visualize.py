@@ -5,7 +5,7 @@ from agent.agent import Agent
 from agent.interaction import Interaction
 
 
-def create_image(self: Agent, prompt: str) -> Interaction:
+def visualize(self: Agent, prompt: str) -> Interaction:
     """
     Prompt an image generation model to generate an image.
     This image is displayed to the user.
