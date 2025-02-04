@@ -135,6 +135,7 @@ class Agent:
             "output_type": output_type,
             "system_reminder": self.system_reminder,
             "prefill": self.prefill or self.inference_kwargs.get("prefill", ""),
+            "buffer_length": -1 if self.prefill else self.inference_kwargs.get("buffer_length", 0),
             **self.inference_kwargs,
         }
         for token_ids in self.inference(**inference_config):
