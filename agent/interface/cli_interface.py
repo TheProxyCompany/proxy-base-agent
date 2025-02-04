@@ -174,14 +174,11 @@ class CLIInterface(Interface):
         Args:
             image_url: The URL of the image to be displayed.
         """
-        from urllib.request import urlopen
-
         from imgcat import imgcat
         from PIL import Image
 
         try:
-            os.environ["TOKENIZERS_PARALLELISM"] = "false"  # weird bug
-            img = Image.open(urlopen(image_url))
+            img = Image.open(image_url)
             imgcat(img)
         except Exception as error:
             await self.show_error_message(e=error)

@@ -13,6 +13,8 @@ def execute_code(self: Agent, code: str) -> Interaction:
     logic validation, and other tasks that are not easily expressed
     in natural language.
 
+    Use sparingly. Only the standard library is available, no imports.
+
     Arguments:
         code (str): The python code to execute.
     """
@@ -32,7 +34,7 @@ def execute_code(self: Agent, code: str) -> Interaction:
             output += str(exec_locals["_"])
 
         if output:
-            result = f"```\n{code}\n```\nSTDOUT: {output}"
+            result = f"```\n{code}\n```\n```\n{output}\n```"
         else:
             result = f"```\n{code}\n```\n*No output produced*"
 

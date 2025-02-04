@@ -163,19 +163,20 @@ class Agent:
         This method handles the event, appends it to the history, and processes
         any tool calls.
         """
-        action = Interaction(
-            role=Interaction.Role.ASSISTANT,
-            name=self.name,
-            scratchpad=scratchpad,
-        )
         if tool_call:
+            action = Interaction(
+                role=Interaction.Role.ASSISTANT,
+                name=self.name,
+                scratchpad= (self.prefill or "") + "\n" + scratchpad,
+            )
+            self.prefill = None
             action.metadata["tool_call"] = tool_call
             action.metadata["tool_result"] = self.use_tool(tool_call)
             action.metadata["tool_result"].metadata["intention"] = tool_call.intention
             await self.interface.show_output(action)
             self.hippocampus.append_to_history(action)
         elif not tool_call and scratchpad:
-            self.prefill = f"scratchpad: {scratchpad}\nI'll use the send_message tool now:"
+            self.prefill = (self.prefill or "") + f"\n{scratchpad}...I need to use a tool."
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
