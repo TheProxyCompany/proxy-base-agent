@@ -5,7 +5,7 @@ from agent.interaction import Interaction
 def metacognition(
     self: Agent,
     chain_of_thought: list[str] | str,
-    feelings: str | None = None,
+    internal_state: str | None = None,
 ) -> Interaction:
     """
     This module encapsulates the agent's internal cognitive mechanisms, completely hidden from user view.
@@ -28,18 +28,18 @@ def metacognition(
         4. Self-Determination Theory: Recognizes the roles of intrinsic motivation and emotional balance in guiding behavior.
 
     Arguments:
-        chain_of_thought:
+        chain_of_thought (list[str] | str):
             A sequence of high-level thoughts, reasoning, and internal dialogue.
             Includes complex ideas, strategic considerations, and conceptual frameworks.
-            Supports all Unicode characters, including emojis.
-        feelings:
-            A reflection of the agent's emotional state. Supports all Unicode characters, including emojis.
+            Supports all Unicode characters, including emojis. List or string.
+        internal_state (str | None):
+            A reflection of the agent's internal state. Supports all Unicode characters, including emojis.
     """
 
     return Interaction(
         role=Interaction.Role.ASSISTANT,
         title=self.name + "'s thoughts...",
-        subtitle=f"Feeling: {feelings}" if feelings else None,
+        subtitle=f"Feeling: {internal_state}" if internal_state else None,
         content=chain_of_thought,
         color="blue",
         emoji="thought_balloon",

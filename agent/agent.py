@@ -96,6 +96,7 @@ class Agent:
         message = await self.interface.get_input(
             message="Enter your message [enter to send, Ctrl+C to exit]:",
             qmark=">",
+            clear_line=True,
         )
         if isinstance(message, Interaction):
             self.status = Agent.Status.PROCESSING
@@ -147,15 +148,12 @@ class Agent:
 
             decoded_buffer = self.inference.engine.tokenizer.decode(buffer)
             decoded_structured = self.inference.engine.tokenizer.decode(structured)
-            decoded_output = decoded_buffer + "\n" + decoded_structured
-            self.interface.show_live_output(decoded_output)
+            self.interface.show_live_output(decoded_buffer, decoded_structured)
 
         self.interface.end_live_output()
         scratchpad = self.inference.engine.tokenizer.decode(buffer)
         structured_output = self.inference.engine.tokenizer.decode(structured)
         cast_output = self.inference.engine.cast_output(structured_output, output_type)
-        logger.debug(f"Scratchpad: {scratchpad}")
-        logger.debug(f"Structured Output: {cast_output or structured_output}")
         return scratchpad, cast_output
 
     async def take_action(self, scratchpad: str, tool_call: ToolCall | None) -> None:
@@ -167,12 +165,12 @@ class Agent:
         """
         if tool_call:
             if self.prefill:
-                scratchpad = (self.prefill or "") + "\n" + scratchpad
+                scratchpad = self.prefill + scratchpad
 
             action = Interaction(
                 role=Interaction.Role.ASSISTANT,
                 name=self.name,
-                scratchpad=scratchpad,
+                scratchpad=(self.prefill or "") + scratchpad,
             )
             self.prefill = None
             action.metadata["tool_call"] = tool_call
@@ -181,10 +179,7 @@ class Agent:
             await self.interface.show_output(action)
             self.hippocampus.append_to_history(action)
         elif not tool_call and scratchpad:
-            if self.prefill:
-                self.prefill = (self.prefill or "") + f"\n{scratchpad}..."
-            else:
-                self.prefill = f"{scratchpad}..."
+            self.prefill = scratchpad
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
@@ -349,13 +344,6 @@ class Agent:
         reminder += "Do not repeat yourself or hallucinate.\n"
         reminder += "Continue the interaction without mentioning this reminder, but integrate it's instructions.\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
-
-    def get_default_tool(self, intention: str, **kwargs) -> ToolCall:
-        return ToolCall(
-            name="metacognition",
-            arguments=kwargs,
-            intention=intention,
-        )
 
     def __repr__(self) -> str:
         return f"{self.name} ({self.status})"

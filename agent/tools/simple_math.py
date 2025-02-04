@@ -47,23 +47,21 @@ def simple_math(
 ) -> Interaction:
     """
     Perform precise mathematical operations between two numbers.
-
     This tool provides guaranteed accurate results for basic arithmetic
     and comparison operations. It's designed for:
     - Basic calculations
     - Numeric comparisons
-
     Best Practices:
     - Use for essential calculations only
     - Prefer this over execute_code for simple operations
     - Consider using execute_code for complex math or chained operations
 
     Args:
-        number_1: First operand in the calculation.
+        number_1 (float): First operand in the calculation.
             Must be a valid floating-point number.
-        number_2: Second operand in the calculation.
+        number_2 (float): Second operand in the calculation.
             Must be a valid floating-point number.
-        operation: The mathematical operation to perform.
+        operation (Operation): The mathematical operation to perform.
             Must be a member of the Operation enum:
             - ADDITION (+)
             - SUBTRACTION (-)

@@ -8,7 +8,7 @@ from agent.interaction import Interaction
 
 IMAGE_PATH = "/tmp/image.png"
 
-def visualize(
+def create_image(
     self: Agent,
     prompt: str,
     steps: int = 4,
@@ -38,6 +38,9 @@ def visualize(
             Lower values (<7) = more creative but may diverge from prompt
             Default: 8.0
     """
+    if not prompt:
+        raise ValueError("Prompt is required, cannot visualize an empty prompt.")
+
     flux = Flux1.from_alias(
         alias="schnell",
         quantize=8,
@@ -54,6 +57,7 @@ def visualize(
     )
     if os.path.exists(IMAGE_PATH):
         os.remove(IMAGE_PATH)
+
     image.save(path=IMAGE_PATH)
 
     return Interaction(

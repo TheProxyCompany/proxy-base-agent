@@ -165,7 +165,7 @@ class Tool:
             "type": "object",
             "description": self.description or self.name,
             "properties": {
-                "intention": {"type": "string", "description": "The reason or goal of the tool call."},
+                "intention": {"type": "string", "description": "The reason or goal of the tool call.", "minLength": 10},
                 "name": {"const": self.name},
                 "arguments": self.schema.get("parameters", {}),
             },
@@ -214,9 +214,9 @@ class ToolCall(BaseModel):
     @staticmethod
     def invocation_schema() -> str:
         schema = {
-            "intention": "Your intention, helps preclude confusion.",
-            "name": "The name of the tool to call.",
-            "arguments": "The arguments to pass to the tool.",
+            "intention": "the reason or goal of the tool call. Minimum 10 characters.",
+            "name": "the name of the tool to call.",
+            "arguments": "the arguments to pass to the tool.",
             "required": ["intention", "name", "arguments"],
         }
         return json.dumps(schema, indent=2)

@@ -5,30 +5,30 @@ from agent.agent import Agent
 from agent.interaction import Interaction
 
 
-def execute_code(self: Agent, code: str) -> Interaction:
+def execute_code(self: Agent, lines_of_code: list[str]) -> Interaction:
     """
-    Execute Python code in the agent's environment for computational tasks.
+    Execute Python code in the agent's environment.
     STDOUT is captured and returned as a string to the agent.
 
     This tool provides a sandboxed Python interpreter for performing operations
-    that are cumbersome or impossible to express in natural language. It's
-    particularly useful for:
-    - String manipulation and regex operations
-    - Complex mathematical calculations
-    - Logic validation and testing
+    that are cumbersome or impossible to express in natural language.
+    It should be used for:
+    - String manipulation
+    - Complex math
+    - Logic validation
 
     Security & Limitations:
     - Only the Python standard library is available
-    - No external imports are permitted
-    - Execution environment is isolated
+    - No imports are permitted
 
     Best Practices:
-    - Use meaningful variable names
-    - Add comments for complex operations
-    - Keep code blocks focused and concise
+    - Aim for one-liners; simple code is easier to parse and execute.
+    - Avoid unnecessary variables; keep code blocks focused and concise.
 
     Args:
-        code: Python code to execute. Must be valid Python 3.x syntax.
+        lines_of_code (list[str]):
+            Python code to execute. Must be valid Python 3.x syntax.
+            The code will be executed in the order provided.
     """
 
     # Capture stdout
@@ -37,8 +37,9 @@ def execute_code(self: Agent, code: str) -> Interaction:
 
     try:
         # Execute the code and capture any return value
+        code = compile("\n".join(lines_of_code), "<string>", "exec")
         exec_locals = {}
-        exec(code, {}, exec_locals)
+        exec(code, globals(), exec_locals)
         output = stdout.getvalue()
 
         # If there's a return value in the last expression, include it
@@ -46,13 +47,12 @@ def execute_code(self: Agent, code: str) -> Interaction:
             output += str(exec_locals["_"])
 
         if output:
-            result = f"```\n{code}\n```\n```\n{output}\n```"
+            result = f"Executed:\n{lines_of_code}\nOutput:\n{output}"
         else:
-            result = f"```\n{code}\n```\n*No output produced*"
+            result = f"Executed:\n{lines_of_code}\nOutput:\n*No output produced*"
 
     except Exception as e:
-        breakpoint()
-        result = f"```\n{code}\n```\nError running code: {e}"
+        result = f"Executed:\n{lines_of_code}\nError:\n{e}"
 
     finally:
         # Restore stdout

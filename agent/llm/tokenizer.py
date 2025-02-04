@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ class Tokenizer:
             tokenizer: The base Hugging Face tokenizer to wrap
             control_tokens: Optional control tokens - such as end-of-sequence or tool-use tokens
         """
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
         self._tokenizer = tokenizer
         self._control_tokens = control_tokens
 

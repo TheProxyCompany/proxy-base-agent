@@ -2,9 +2,10 @@ import logging
 import os
 import sys
 import traceback
-from typing import Any
 
 import questionary
+from rich.align import Align
+from rich.console import Group, RenderableType
 from rich.emoji import Emoji
 from rich.live import Live
 from rich.markdown import Markdown
@@ -17,8 +18,8 @@ from agent.tools import ToolCall
 logger = logging.getLogger(__name__)
 
 
-PANEL_WIDTH = 120
-PANEL_EXPAND = False
+PANEL_WIDTH = 100
+PANEL_EXPAND = True
 
 
 class CLIInterface(Interface):
@@ -34,25 +35,36 @@ class CLIInterface(Interface):
         self.live = None
 
     @staticmethod
-    def get_panel(content: Any, **panel_style) -> Panel:
-        if isinstance(content, list):
-            content = "\n\n".join(content)
+    def get_panel(interaction: Interaction, **panel_style) -> RenderableType:
+        if isinstance(interaction.content, list):
+            interaction.content = "\n\n".join(interaction.content)
 
         markdown = Markdown(
-            str(content),
+            str(interaction.content),
             justify="left",
             code_theme="monokai",
             inline_code_lexer="markdown",
             inline_code_theme="solarized-dark",
         )
 
-        return Panel(markdown, **panel_style)
+        panel = Panel(markdown, **panel_style)
+
+        if interaction.content:
+            if interaction.role == Interaction.Role.USER:
+                return Align.right(panel)
+            elif interaction.role == Interaction.Role.ASSISTANT:
+                return Align.left(panel)
+            else:
+                return Align.center(panel)
+
+        return panel
 
     async def get_input(self, **kwargs) -> Interaction:
         """
         Gets user input from the command line.
         """
         exit_phrases = ["exit", "quit", "q", "quit()", "exit()"]
+        clear_line = kwargs.pop("clear_line", False)
         default: str = kwargs.get("default", "")
         answer: str = default
 
@@ -64,6 +76,9 @@ class CLIInterface(Interface):
         if answer is None or answer.lower() in exit_phrases:
             await self.exit_program()
             sys.exit(0)
+
+        if clear_line:
+            print("\033[A\033[K", end="")
 
         return Interaction(
             content=answer,
@@ -92,16 +107,10 @@ class CLIInterface(Interface):
         panel_style = {
             "border_style": style["color"],
             "title": f"{emoji}{style['title'] or output.title}",
-            "title_align": "left",
-            "subtitle_align": "left",
             "expand": PANEL_EXPAND,
             "width": PANEL_WIDTH,
+            "padding": (1, 2)
         }
-
-        if output.scratchpad:
-            panel_style["title"] = f"{Emoji('notebook')} scratchpad"
-            panel_style["border_style"] = "dim white"
-            self.console.print(self.get_panel(output.scratchpad, **panel_style))
 
         if (subtitle := output.subtitle):
             panel_style["subtitle"] = subtitle
@@ -109,7 +118,7 @@ class CLIInterface(Interface):
             panel_style["subtitle"] = f"intention: {output.metadata['intention']}"
 
         if output.content:
-            self.console.print(self.get_panel(output.content, **panel_style))
+            self.console.print(self.get_panel(output, **panel_style))
 
         if output.tool_result and isinstance(output.tool_result, Interaction):
             await self.show_output(output.tool_result)
@@ -132,19 +141,50 @@ class CLIInterface(Interface):
         }
         self.console.print(Panel(markdown, **panel_style))
 
-    def show_live_output(self, output: object) -> None:
+    def show_live_output(self, buffer: object, structured: object) -> None:
         """Show partial output."""
+
+        assert isinstance(buffer, str)
+        assert isinstance(structured, str)
+
         if not self.live:
             self.live = Live(
                 console=self.console,
-                refresh_per_second=10,
+                refresh_per_second=15,
                 auto_refresh=True,
                 transient=True,
                 vertical_overflow="visible",
             )
             self.live.start()
 
-        self.live.update(Markdown(str(output)))
+        panels = []
+
+        if buffer and buffer.strip():
+            scratchpad_panel = Panel(
+                Markdown(buffer, inline_code_lexer="markdown", inline_code_theme="solarized-dark", style="bright white"),
+                title=f"{Emoji('notebook')} Scratchpad",
+                title_align="left",
+                border_style="dim white",
+                expand=PANEL_EXPAND,
+                width=int(PANEL_WIDTH * 0.6),
+                padding=(1, 2)
+            )
+            panels.append(scratchpad_panel)
+
+        if structured and structured.strip():
+            structured_panel = Panel(
+                Markdown(structured, inline_code_lexer="json", inline_code_theme="solarized-dark"),
+                title=f"{Emoji('gear')} Structured Output",
+                title_align="left",
+                border_style="cyan",
+                expand=PANEL_EXPAND,
+                width=int(PANEL_WIDTH * 0.8),
+                padding=(1, 2)
+            )
+            panels.append(structured_panel)
+
+        if panels:
+            self.live.update(Group(*panels))
 
     def end_live_output(self) -> None:
         """End live output."""
@@ -194,7 +234,7 @@ class CLIInterface(Interface):
         else:
             title = f"{Emoji('wave')} Goodbye"
             content = "*Program terminated.*"
-            border_style = "blue"
+            border_style = "white"
 
         markdown = Markdown(
             content,
@@ -208,8 +248,9 @@ class CLIInterface(Interface):
             title_align="left",
             border_style=border_style,
             expand=True,
+            padding=(1, 2)
         )
-        self.console.print(panel)
+        self.console.print(Align.center(panel))
 
     async def clear(self) -> None:
         """

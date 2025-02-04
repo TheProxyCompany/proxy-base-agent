@@ -10,7 +10,7 @@ def send_message(self: Agent, message: str) -> Interaction:
     It's designed to be the sole method of direct user communication.
 
     Args:
-        message: The content to send to the user. Should be clear, concise,
+        message (str): The content to send to the user. Should be clear, concise,
             and self-contained as this will be the only visible part of your
             thought process.
     """

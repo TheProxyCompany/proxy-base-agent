@@ -5,11 +5,9 @@ description = "An autonomous tool using agent powered by the Proxy Structuring E
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "discord>=2.3.2",
     "docstring-parser>=0.16",
     "mlx-proxy",
     "mlx>=0.22.0",
-    "neo4j>=5.27.0",
     "pse",
     "pydantic>=2.10.5",
     "python-dotenv>=1.0.1",
@@ -19,7 +17,6 @@ dependencies = [
     "imgcat>=0.6.0",
     "pillow>=11.1.0",
     "huggingface-hub>=0.28.1",
-    "f5-tts-mlx>=0.2.5",
     "mflux>=0.2.1",
 ]
 
