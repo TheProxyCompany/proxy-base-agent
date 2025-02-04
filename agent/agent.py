@@ -172,7 +172,7 @@ class Agent:
             action = Interaction(
                 role=Interaction.Role.ASSISTANT,
                 name=self.name,
-                scratchpad=(self.prefill or "") + scratchpad,
+                scratchpad=scratchpad,
             )
             self.prefill = None
             action.metadata["tool_call"] = tool_call
