@@ -132,12 +132,13 @@ class Agent:
         inference_config = {
             "prompt": [e.to_dict() for e in prompt or self.hippocampus.events.values()],
             "structure": [t.to_dict() for t in tools or self.tools.values()],
-            "output_type": output_type,
             "system_reminder": self.system_reminder,
-            "prefill": self.prefill or self.inference_kwargs.get("prefill", ""),
-            "buffer_length": -1 if self.prefill else self.inference_kwargs.get("buffer_length", 0),
             **self.inference_kwargs,
         }
+        if self.prefill:
+            inference_config["prefill"] = self.prefill
+            inference_config["buffer_length"] = -1
+
         for token_ids in self.inference(**inference_config):
             if self.inference.engine.is_within_value:
                 structured.append(token_ids)
@@ -165,10 +166,13 @@ class Agent:
         any tool calls.
         """
         if tool_call:
+            if self.prefill:
+                scratchpad = (self.prefill or "") + "\n" + scratchpad
+
             action = Interaction(
                 role=Interaction.Role.ASSISTANT,
                 name=self.name,
-                scratchpad= (self.prefill or "") + "\n" + scratchpad,
+                scratchpad=scratchpad,
             )
             self.prefill = None
             action.metadata["tool_call"] = tool_call
@@ -177,7 +181,10 @@ class Agent:
             await self.interface.show_output(action)
             self.hippocampus.append_to_history(action)
         elif not tool_call and scratchpad:
-            self.prefill = (self.prefill or "") + f"\n{scratchpad}...I need to use a tool."
+            if self.prefill:
+                self.prefill = (self.prefill or "") + f"\n{scratchpad}..."
+            else:
+                self.prefill = f"{scratchpad}..."
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.

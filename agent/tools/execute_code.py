@@ -7,16 +7,28 @@ from agent.interaction import Interaction
 
 def execute_code(self: Agent, code: str) -> Interaction:
     """
-    This tool can be used to execute arbitrary python code.
-    The code is executed in the same environment as the agent.
-    Use for character level string manipulation, complex arithmetic,
-    logic validation, and other tasks that are not easily expressed
-    in natural language.
+    Execute Python code in the agent's environment for computational tasks.
+    STDOUT is captured and returned as a string to the agent.
 
-    Use sparingly. Only the standard library is available, no imports.
+    This tool provides a sandboxed Python interpreter for performing operations
+    that are cumbersome or impossible to express in natural language. It's
+    particularly useful for:
+    - String manipulation and regex operations
+    - Complex mathematical calculations
+    - Logic validation and testing
 
-    Arguments:
-        code (str): The python code to execute.
+    Security & Limitations:
+    - Only the Python standard library is available
+    - No external imports are permitted
+    - Execution environment is isolated
+
+    Best Practices:
+    - Use meaningful variable names
+    - Add comments for complex operations
+    - Keep code blocks focused and concise
+
+    Args:
+        code: Python code to execute. Must be valid Python 3.x syntax.
     """
 
     # Capture stdout
@@ -39,6 +51,7 @@ def execute_code(self: Agent, code: str) -> Interaction:
             result = f"```\n{code}\n```\n*No output produced*"
 
     except Exception as e:
+        breakpoint()
         result = f"```\n{code}\n```\nError running code: {e}"
 
     finally:

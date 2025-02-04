@@ -39,21 +39,41 @@ class Operation(enum.Enum):
                 return ""
 
 
-def two_variable_math(
+def simple_math(
     self: Agent,
     number_1: float,
     number_2: float,
     operation: Operation,
 ) -> Interaction:
     """
-    Perform a mathematical operation on two numbers.
-    Do not use this tool for pointless operations.
-    The results of this tool are always correct.
+    Perform precise mathematical operations between two numbers.
+
+    This tool provides guaranteed accurate results for basic arithmetic
+    and comparison operations. It's designed for:
+    - Basic calculations
+    - Numeric comparisons
+
+    Best Practices:
+    - Use for essential calculations only
+    - Prefer this over execute_code for simple operations
+    - Consider using execute_code for complex math or chained operations
 
     Args:
-        number_1 (number): The first number to perform the operation on.
-        number_2 (number): The second number to perform the operation on.
-        operation (Operation): The operation to perform between the two numbers.
+        number_1: First operand in the calculation.
+            Must be a valid floating-point number.
+        number_2: Second operand in the calculation.
+            Must be a valid floating-point number.
+        operation: The mathematical operation to perform.
+            Must be a member of the Operation enum:
+            - ADDITION (+)
+            - SUBTRACTION (-)
+            - MULTIPLICATION (*)
+            - DIVISION (/)
+            - POWER (**)
+            - GREATER_THAN (>)
+            - LESS_THAN (<)
+            - GREATER_THAN_OR_EQUAL_TO (>=)
+            - LESS_THAN_OR_EQUAL_TO (<=)
     """
     operation = Operation(operation)
 
@@ -82,19 +102,27 @@ def two_variable_math(
     # If the operation yields a boolean result, display the comparison so that
     # the larger number comes first. This always shows a true statement.
     if isinstance(result, bool):
-        if number_1 == number_2:
-            content = f"{number_1} == {number_2} is True"
+        # For comparisons, show the original expression and its result
+        content = f"{number_1} {operation} {number_2} = {result}"
+
+        # Add a helpful explanation of why it's true/false
+        if result:
+            if number_1 == number_2:
+                content += f" (both numbers are equal to {number_1})"
+            else:
+                diff = abs(number_1 - number_2)
+                content += f" (difference of {diff})"
         else:
-            larger = max(number_1, number_2)
-            smaller = min(number_1, number_2)
-            content = f"{larger} > {smaller} is True"
+            diff = abs(number_1 - number_2)
+            content += f" (difference of {diff})"
     else:
-        content = f"{number_1} {operation.value} {number_2} = {result}"
+        # For calculations, show the full expression with operation symbol
+        content = f"{number_1} {operation} {number_2} = {result}"
 
     return Interaction(
         role=Interaction.Role.TOOL,
         title=self.name + "'s math",
-        subtitle=f"{number_1} {operation.value} {number_2}",
+        subtitle=f"{number_1} {operation} {number_2}",
         content=content,
         color="yellow",
         emoji="1234",

@@ -4,13 +4,15 @@ from agent.interaction import Interaction
 
 def send_message(self: Agent, message: str) -> Interaction:
     """
-    This tool is the only way for the agent to interact with the user.
-    Use this tool to summarize the agent's thoughts to the user.
+    Send a formatted message to the user - this is the primary communication channel.
 
-    Arguments:
-        message (str):
-            The message content to be sent to the recipient.
-            This is the only text that the recipient will receive from the agent.
+    This tool formats and delivers messages.
+    It's designed to be the sole method of direct user communication.
+
+    Args:
+        message: The content to send to the user. Should be clear, concise,
+            and self-contained as this will be the only visible part of your
+            thought process.
     """
 
     self.status = Agent.Status.SUCCESS
