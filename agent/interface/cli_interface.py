@@ -105,6 +105,8 @@ class CLIInterface(Interface):
 
         if (subtitle := output.subtitle):
             panel_style["subtitle"] = subtitle
+        elif output.metadata.get("intention"):
+            panel_style["subtitle"] = f"intention: {output.metadata['intention']}"
 
         if output.content:
             self.console.print(self.get_panel(output.content, **panel_style))

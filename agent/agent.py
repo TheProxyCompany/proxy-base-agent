@@ -165,9 +165,8 @@ class Agent:
         )
         if tool_call:
             action.metadata["tool_call"] = tool_call
-            action.metadata["tool_result"] = self.use_tool(tool_call)
         elif not tool_call and scratchpad:
-            tool_call = self.get_thinking_tool(scratchpad)
+            tool_call = self.get_thinking_tool(intention="I'll draft a response", chain_of_thought=scratchpad)
             action.metadata["tool_call"] = tool_call
             del action.metadata["scratchpad"]
 
@@ -175,7 +174,7 @@ class Agent:
             raise ValueError("No tool call or scratch pad provided")
 
         action.metadata["tool_result"] = self.use_tool(tool_call)
-
+        action.metadata["tool_result"].metadata["intention"] = tool_call.intention
         await self.interface.show_output(action)
         self.hippocampus.append_to_history(action)
 
@@ -334,23 +333,21 @@ class Agent:
 
     @property
     def system_reminder(self) -> dict | None:
-        if self.step_number % 5 != 0:
+        if len(self.hippocampus.events) % 5 != 0:
             return None
         reminder = self.tool_use_instructions
         reminder += "Maintain your sense of self and your place in the conversation.\n"
-        reminder += "Do not get distracted. Pause, think, and then act.\n"
-        reminder += "Stay focused on the present interaction.\n"
-        if (
-            delimiters
-            := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters()
-        ):
-            reminder += "You MUST use these delimiters to separate tool use from your scratch pad.\n"
-            reminder += f"Start of tool use delimiter: {delimiters[0]!r}\n"
-            reminder += f"End of tool use delimiter: {delimiters[1]!r}\n"
+        reminder += "Do not fall into a pattern when using tools; your actions should be based on the conversation at hand.\n"
+        reminder += "Do not repeat yourself or hallucinate.\n"
+        reminder += "Continue the interaction without mentioning this reminder, but integrate it's instructions.\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
 
-    def get_thinking_tool(self, scratchpad: str) -> ToolCall:
-        return ToolCall(name="internal_thoughts", arguments={"thoughts": scratchpad})
+    def get_thinking_tool(self, intention: str, **kwargs) -> ToolCall:
+        return ToolCall(
+            name="metacognition",
+            arguments=kwargs,
+            intention=intention,
+        )
 
     def __repr__(self) -> str:
         return f"{self.name} ({self.status})"

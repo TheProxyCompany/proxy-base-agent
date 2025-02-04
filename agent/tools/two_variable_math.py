@@ -41,52 +41,61 @@ class Operation(enum.Enum):
 
 def two_variable_math(
     self: Agent,
+    number_1: float,
+    number_2: float,
     operation: Operation,
-    a: float,
-    b: float,
 ) -> Interaction:
     """
     Perform a mathematical operation on two numbers.
-    The results of this tool should be considered correct.
+    Do not use this tool for pointless operations.
+    The results of this tool are always correct.
 
     Args:
-        a (number): The first number to perform the operation on.
-        b (number): The second number to perform the operation on.
+        number_1 (number): The first number to perform the operation on.
+        number_2 (number): The second number to perform the operation on.
         operation (Operation): The operation to perform between the two numbers.
     """
     operation = Operation(operation)
 
     match operation:
         case Operation.ADDITION:
-            result = a + b
+            result = number_1 + number_2
         case Operation.SUBTRACTION:
-            result = a - b
+            result = number_1 - number_2
         case Operation.MULTIPLICATION:
-            result = a * b
+            result = number_1 * number_2
         case Operation.DIVISION:
-            result = a / b
+            result = number_1 / number_2
         case Operation.GREATER_THAN:
-            result = a > b
+            result = number_1 > number_2
         case Operation.LESS_THAN:
-            result = a < b
+            result = number_1 < number_2
         case Operation.GREATER_THAN_OR_EQUAL_TO:
-            result = a >= b
+            result = number_1 >= number_2
         case Operation.LESS_THAN_OR_EQUAL_TO:
-            result = a <= b
+            result = number_1 <= number_2
         case Operation.POWER:
-            result = a**b
+            result = number_1**number_2
         case _:
             raise ValueError(f"Invalid operation: {operation}")
 
+    # If the operation yields a boolean result, display the comparison so that
+    # the larger number comes first. This always shows a true statement.
     if isinstance(result, bool):
-        content = f"{a} {operation} {b} is {str(result).lower()}"
+        if number_1 == number_2:
+            content = f"{number_1} == {number_2} is True"
+        else:
+            larger = max(number_1, number_2)
+            smaller = min(number_1, number_2)
+            content = f"{larger} > {smaller} is True"
     else:
-        content = f"{a} {operation} {b} = {result}"
+        content = f"{number_1} {operation.value} {number_2} = {result}"
 
     return Interaction(
         role=Interaction.Role.TOOL,
         title=self.name + "'s math",
+        subtitle=f"{number_1} {operation.value} {number_2}",
         content=content,
-        color="red",
+        color="yellow",
         emoji="1234",
     )

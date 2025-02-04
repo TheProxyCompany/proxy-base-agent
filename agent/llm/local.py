@@ -64,7 +64,7 @@ class LocalInference:
             **self.front_end.tokenizer.control_tokens.model_dump(),
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
-        logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
+        logger.debug(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
         for token_id in self.front_end(encoded_prompt, **inference_kwargs):
             logger.debug(f"generated token: {token_id}")
             encoded_prompt.append(token_id)

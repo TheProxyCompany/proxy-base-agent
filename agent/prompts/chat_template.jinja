@@ -35,14 +35,12 @@
         {{- interaction.tool_call | tojson(indent=2) | trim -}}
         {{- tool_use_end -}}
     {%- endif -%}
-
     {%- if interaction.tool_result and not interaction.tool_result.last -%}
-        {{- eom_token -}}
         {%- if interaction.tool_result.role == "tool" -%}
-            {{- tool_result_start -}}
+            {{ "\nResult:\n" }}
             {{- interaction.tool_result.content | safe -}}
-            {{- tool_result_end -}}
         {%- endif -%}
+        {{- eom_token -}}
     {%- else -%}
         {{- eos_token -}}
     {%- endif -%}

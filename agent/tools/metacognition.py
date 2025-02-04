@@ -5,7 +5,7 @@ from agent.interaction import Interaction
 def metacognition(
     self: Agent,
     chain_of_thought: list[str] | str,
-    feelings: str,
+    feelings: str | None = None,
 ) -> Interaction:
     """
     These are the agent's internal thoughts and are not visible to the user.
@@ -19,14 +19,14 @@ def metacognition(
         chain_of_thought (list[str] | str):
             Step by step thought, reasoning, and internal dialogue.
             Rich, introspective, and detailed.
-        feelings (str):
+        feelings (str | None):
             The agent's feelings and emotional state. Emojis are supported.
     """
 
     return Interaction(
         role=Interaction.Role.ASSISTANT,
         title=self.name + "'s thoughts...",
-        subtitle=f"Feeling: {feelings}",
+        subtitle=f"Feeling: {feelings}" if feelings else None,
         content=chain_of_thought,
         color="blue",
         emoji="thought_balloon",

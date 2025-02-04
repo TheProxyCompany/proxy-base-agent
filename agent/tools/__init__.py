@@ -165,10 +165,11 @@ class Tool:
             "type": "object",
             "description": self.description or self.name,
             "properties": {
+                "intention": {"type": "string", "description": "The reason or goal of the tool call."},
                 "name": {"const": self.name},
                 "arguments": self.schema.get("parameters", {}),
             },
-            "required": ["name", "arguments"],
+            "required": ["intention", "name", "arguments"],
         }
 
     def __getattribute__(self, name: str) -> Any:
@@ -197,6 +198,8 @@ class ToolCall(BaseModel):
     A tool call is an invocation of a tool.
     """
 
+    intention: str
+    """The intention of the tool call."""
     name: str
     """The name of the tool to call."""
     arguments: dict[str, Any]
@@ -211,8 +214,9 @@ class ToolCall(BaseModel):
     @staticmethod
     def invocation_schema() -> str:
         schema = {
-            "name": "string",
-            "arguments": "object",
-            "required": ["name", "arguments"],
+            "intention": "Your intention, helps preclude confusion.",
+            "name": "The name of the tool to call.",
+            "arguments": "The arguments to pass to the tool.",
+            "required": ["intention", "name", "arguments"],
         }
         return json.dumps(schema, indent=2)
