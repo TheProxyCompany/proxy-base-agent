@@ -137,8 +137,10 @@ class Agent:
             **self.inference_kwargs,
         }
         if self.prefill:
-            inference_config["prefill"] = self.prefill
+            # if the prefill is not empty, we need to set the buffer length to -1
+            # to force structured output to be generated
             inference_config["buffer_length"] = -1
+            inference_config["prefill"] = self.prefill
 
         for token_ids in self.inference(**inference_config):
             if self.inference.engine.is_within_value:

@@ -37,7 +37,6 @@
     {%- endif -%}
     {%- if interaction.tool_result and not interaction.tool_result.last -%}
         {%- if not interaction.tool_result.silent -%}
-            {{ "\nResult:\n" }}
             {{- interaction.tool_result.content | safe -}}
         {%- endif -%}
         {{- eom_token -}}
