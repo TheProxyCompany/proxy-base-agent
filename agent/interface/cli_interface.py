@@ -148,10 +148,11 @@ class CLIInterface(Interface):
 
     def end_live_output(self) -> None:
         """End live output."""
-        self.console.clear_live()
         if self.live:
+            self.console.print(self.live.renderable)
             self.live.stop()
             self.live = None
+            self.console.clear_live()
 
         self.console.print()
 

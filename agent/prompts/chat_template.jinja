@@ -36,7 +36,7 @@
         {{- tool_use_end -}}
     {%- endif -%}
     {%- if interaction.tool_result and not interaction.tool_result.last -%}
-        {%- if interaction.tool_result.role == "tool" -%}
+        {%- if not interaction.tool_result.silent -%}
             {{ "\nResult:\n" }}
             {{- interaction.tool_result.content | safe -}}
         {%- endif -%}

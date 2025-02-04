@@ -61,6 +61,7 @@ class Agent:
 
         self.system_prompt_name = system_prompt_name
         self.inference_kwargs = inference_kwargs
+        self.prefill = None
 
         self.tools: dict[str, Tool] = {}
         for tool in tools or Tool.load():
@@ -133,6 +134,7 @@ class Agent:
             "structure": [t.to_dict() for t in tools or self.tools.values()],
             "output_type": output_type,
             "system_reminder": self.system_reminder,
+            "prefill": self.prefill or self.inference_kwargs.get("prefill", ""),
             **self.inference_kwargs,
         }
         for token_ids in self.inference(**inference_config):
@@ -140,7 +142,10 @@ class Agent:
                 structured.append(token_ids)
             else:
                 buffer.append(token_ids)
-            decoded_output = self.inference.engine.tokenizer.decode(buffer + structured)
+
+            decoded_buffer = self.inference.engine.tokenizer.decode(buffer)
+            decoded_structured = self.inference.engine.tokenizer.decode(structured)
+            decoded_output = decoded_buffer + "\n" + decoded_structured
             self.interface.show_live_output(decoded_output)
 
         self.interface.end_live_output()
@@ -165,18 +170,12 @@ class Agent:
         )
         if tool_call:
             action.metadata["tool_call"] = tool_call
+            action.metadata["tool_result"] = self.use_tool(tool_call)
+            action.metadata["tool_result"].metadata["intention"] = tool_call.intention
+            await self.interface.show_output(action)
+            self.hippocampus.append_to_history(action)
         elif not tool_call and scratchpad:
-            tool_call = self.get_thinking_tool(intention="I'll draft a response", chain_of_thought=scratchpad)
-            action.metadata["tool_call"] = tool_call
-            del action.metadata["scratchpad"]
-
-        if not tool_call:
-            raise ValueError("No tool call or scratch pad provided")
-
-        action.metadata["tool_result"] = self.use_tool(tool_call)
-        action.metadata["tool_result"].metadata["intention"] = tool_call.intention
-        await self.interface.show_output(action)
-        self.hippocampus.append_to_history(action)
+            self.prefill = f"scratchpad: {scratchpad}\nI'll use the send_message tool now:"
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
@@ -342,7 +341,7 @@ class Agent:
         reminder += "Continue the interaction without mentioning this reminder, but integrate it's instructions.\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
 
-    def get_thinking_tool(self, intention: str, **kwargs) -> ToolCall:
+    def get_default_tool(self, intention: str, **kwargs) -> ToolCall:
         return ToolCall(
             name="metacognition",
             arguments=kwargs,

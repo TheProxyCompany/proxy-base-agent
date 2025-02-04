@@ -30,4 +30,5 @@ def metacognition(
         content=chain_of_thought,
         color="blue",
         emoji="thought_balloon",
+        silent=True,
     )

@@ -41,7 +41,7 @@ def visualize(self: Agent, prompt: str) -> Interaction:
 
     return Interaction(
         role=Interaction.Role.ASSISTANT,
-        content=f"*{prompt}*",
+        content=f"Generated an image:\n*{prompt}*",
         title=self.name + "'s image",
         image_url=image_url,
         color="yellow",

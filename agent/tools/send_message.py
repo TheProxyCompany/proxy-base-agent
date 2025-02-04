@@ -22,4 +22,5 @@ def send_message(self: Agent, message: str) -> Interaction:
         color="green",
         emoji="speech_balloon",
         last=True,
+        silent=True,
     )
