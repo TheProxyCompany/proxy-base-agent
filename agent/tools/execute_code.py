@@ -32,7 +32,7 @@ def execute_code(self: Agent, code: str | list[str]) -> Interaction:
     try:
         # Execute the code and capture any return value
         lines_of_code: str = code if isinstance(code, str) else "\n".join(code)
-        compiled_code = compile(lines_of_code, "<string>", "exec")
+        compiled_code = compile(lines_of_code.strip(), "<string>", "exec")
         exec_locals = {}
         exec(compiled_code, globals(), exec_locals)
         output = stdout.getvalue()

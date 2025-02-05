@@ -178,3 +178,4 @@ cython_debug/
 
 .DS_Store
 uv.lock
+agent/voice/models/*

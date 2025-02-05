@@ -15,6 +15,7 @@ from agent.llm.local import LocalInference
 from agent.memory import Hippocampus
 from agent.prompts import get_available_prompts, load_prompt
 from agent.tools import Tool, ToolCall
+from agent.voice import VoiceBox
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ class Agent:
         self.inference = inference
         self.interface = interface
         self.hippocampus = Hippocampus(self.system_prompt)
+        self.voicebox = VoiceBox()
 
     @property
     def can_act(self) -> bool:
@@ -133,7 +135,7 @@ class Agent:
         inference_config = {
             "prompt": [e.to_dict() for e in prompt or self.hippocampus.events.values()],
             "structure": [t.to_dict() for t in tools or self.tools.values()],
-            # "system_reminder": self.system_reminder,
+            "system_reminder": self.system_reminder,
             **self.inference_kwargs,
         }
         if self.prefill:
@@ -180,9 +182,9 @@ class Agent:
             self.hippocampus.append_to_history(action)
         elif not tool_call:
             if self.prefill:
-                self.prefill = self.prefill + scratchpad
+                self.prefill += f"...{scratchpad or 'I should use a tool to continue...'}"
             else:
-                self.prefill = scratchpad + "... "
+                self.prefill = f"{scratchpad or 'I should use a tool to continue...'}"
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
@@ -342,10 +344,10 @@ class Agent:
     def system_reminder(self) -> dict | None:
         if len(self.hippocampus.events) % 5 != 0:
             return None
-        reminder = self.tool_use_instructions
-        reminder += "Continue the interaction without mentioning this reminder.\n"
+        reminder = "Continue the interaction without mentioning this reminder.\n"
         reminder += "Your task is to interact with the user.\n"
         reminder += "Do not repeat yourself or hallucinate.\n"
+        reminder += "Use a diverse set of tools to interact with the user.\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
 
     def __repr__(self) -> str:
