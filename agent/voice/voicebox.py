@@ -45,7 +45,7 @@ class VoiceBox:
 
     def _clean_transcript(self, raw: str) -> Iterator[str]:
         """Clean message text for speech synthesis by removing unwanted characters."""
-        for chunk in raw.replace("\n", ". ").replace("! ", ". ").replace("? ", ". ").split(". "):
+        for chunk in raw.replace("\n", ". ").replace("! ", ". ").replace("? ", ". ").replace(", ", " ").split(". "):
             text = chunk.strip()
             text = " ".join(text.split())  # Collapse multiple spaces
             text = text.lstrip("-")  # Remove leading dashes
