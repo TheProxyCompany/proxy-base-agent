@@ -5,30 +5,24 @@ from agent.agent import Agent
 from agent.interaction import Interaction
 
 
-def execute_code(self: Agent, lines_of_code: list[str]) -> Interaction:
+def execute_code(self: Agent, code: str | list[str]) -> Interaction:
     """
-    Execute Python code in the agent's environment.
-    STDOUT is captured and returned as a string to the agent.
+    Execute Python code in the agent's environment. Only the Python standard library is available.
+    No imports are permitted. STDOUT is captured and returned as a string to the agent.
 
-    This tool provides a sandboxed Python interpreter for performing operations
-    that are cumbersome or impossible to express in natural language.
     It should be used for:
-    - String manipulation
-    - Complex math
+    - String manipulation and counting
+    - Math and Arithmetic
     - Logic validation
+    - Miscellaneous simple tasks
 
-    Security & Limitations:
-    - Only the Python standard library is available
-    - No imports are permitted
-
-    Best Practices:
-    - Aim for one-liners; simple code is easier to parse and execute.
-    - Avoid unnecessary variables; keep code blocks focused and concise.
+    Aim for one-liners; simple code is easier to parse and execute.
+    Avoid unnecessary variables; keep code blocks focused and concise.
 
     Args:
-        lines_of_code (list[str]):
+        code (str | list[str]):
             Python code to execute. Must be valid Python 3.x syntax.
-            The code will be executed in the order provided.
+            Simple scripts only.
     """
 
     # Capture stdout
@@ -37,9 +31,10 @@ def execute_code(self: Agent, lines_of_code: list[str]) -> Interaction:
 
     try:
         # Execute the code and capture any return value
-        code = compile("\n".join(lines_of_code), "<string>", "exec")
+        lines_of_code: str = code if isinstance(code, str) else "\n".join(code)
+        compiled_code = compile(lines_of_code, "<string>", "exec")
         exec_locals = {}
-        exec(code, globals(), exec_locals)
+        exec(compiled_code, globals(), exec_locals)
         output = stdout.getvalue()
 
         # If there's a return value in the last expression, include it
@@ -53,6 +48,8 @@ def execute_code(self: Agent, lines_of_code: list[str]) -> Interaction:
 
     except Exception as e:
         result = f"Executed:\n{lines_of_code}\nError:\n{e}"
+        sys.stdout = sys.__stdout__
+        breakpoint()
 
     finally:
         # Restore stdout

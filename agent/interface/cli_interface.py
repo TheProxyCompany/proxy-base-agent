@@ -51,10 +51,16 @@ class CLIInterface(Interface):
 
         if interaction.content:
             if interaction.role == Interaction.Role.USER:
+                panel.title_align = "right"
+                panel.subtitle_align = "right"
                 return Align.right(panel)
             elif interaction.role == Interaction.Role.ASSISTANT:
+                panel.title_align = "left"
+                panel.subtitle_align = "left"
                 return Align.left(panel)
             else:
+                panel.title_align = "center"
+                panel.subtitle_align = "center"
                 return Align.center(panel)
 
         return panel
@@ -247,10 +253,11 @@ class CLIInterface(Interface):
             title=title,
             title_align="left",
             border_style=border_style,
-            expand=True,
-            padding=(1, 2)
+            expand=False,
+            width=PANEL_WIDTH,
+            padding=(1, 2),
         )
-        self.console.print(Align.center(panel))
+        self.console.print(Align.left(panel))
 
     async def clear(self) -> None:
         """

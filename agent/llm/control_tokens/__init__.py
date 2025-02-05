@@ -13,23 +13,25 @@ class RoleTokens(BaseModel):
 
 class ControlTokens(BaseModel):
     template_type: str
-    bos_token: str
-    eos_token: str
-    eom_token: str
-    tool_use_start: str | None = None
-    tool_use_end: str | None = None
-    tool_result_start: str | None = None
-    tool_result_end: str | None = None
-    start_header_token: str
-    end_header_token: str
+    begin_of_text: str
+    end_of_message: str
+    end_of_sequence: str
+    user_start: str
+    user_end: str
+    assistant_header_start: str
+    assistant_header_end: str
+    tool_start: str
+    tool_end: str
+    tool_result_start: str
+    tool_result_end: str
     roles: RoleTokens
 
     def end_tokens(self) -> list[str]:
-        return [self.eos_token, self.eom_token]
+        return [self.end_of_sequence, self.end_of_message]
 
     def tool_use_delimiters(self) -> tuple[str, str] | None:
-        if self.tool_use_start and self.tool_use_end:
-            return self.tool_use_start, self.tool_use_end
+        if self.tool_start and self.tool_end:
+            return self.tool_start, self.tool_end
         return None
 
 
@@ -38,6 +40,8 @@ def get_control_tokens(model_type: str) -> ControlTokens:
     match model_type:
         case "llama":
             return _load_control_tokens("llama")
+        case "llama-deepseek":
+            return _load_control_tokens("llama-deepseek")
         case "mistral":
             return _load_control_tokens("mistral")
         case "deepseek":

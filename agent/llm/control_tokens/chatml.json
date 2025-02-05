@@ -1,17 +1,19 @@
 {
     "template_type": "chatml",
-    "bos_token": "<|im_start|>",
-    "eos_token": "<|im_end|>",
-    "eom_token": "",
-    "tool_use_start": "<tool_call>\n",
-    "tool_use_end": "\n</tool_call>",
-    "start_header_token": "<|im_start|>\n",
-    "end_header_token": "\n",
+    "begin_of_text": "",
+    "end_of_sequence": "<|im_end|>\n",
+    "end_of_message": "<|im_end|>\n",
+    "user_start": "<|im_start|>",
+    "user_end": "\n",
+    "assistant_header_start": "<|im_start|>",
+    "assistant_header_end": "\n",
+    "tool_start": "<tool_call>\n```json\n",
+    "tool_end": "\n```\n</tool_call>",
     "tool_result_start": "<tool_response>",
     "tool_result_end": "</tool_response>",
     "roles": {
         "system": "system",
-        "assistant": "agent",
+        "assistant": "assistant",
         "user": "user",
         "tool": "tool"
     }

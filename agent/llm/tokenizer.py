@@ -57,13 +57,14 @@ class Tokenizer:
             return set()
 
         # Get all end token IDs without special tokens to avoid duplicates
-        token_ids = [
-            self._tokenizer.encode(token, add_special_tokens=False)
-            for token in self._control_tokens.end_tokens()
-        ]
+        stop_tokens = set()
+        for stop_token in self._control_tokens.end_tokens():
+            stop_tokens.add(
+                self._tokenizer.encode(stop_token, add_special_tokens=False)[0]
+            )
 
         # Flatten and deduplicate token IDs into a set
-        return {id for ids in token_ids for id in ids}
+        return stop_tokens
 
     def decode(self, tokens: list[int], **kwargs) -> str:
         """Decode token IDs back to text.
@@ -132,7 +133,7 @@ class Tokenizer:
         """
         control_tokens = get_control_tokens(model_type)
         tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
-        tokenizer.chat_template = load_template()
+        tokenizer.chat_template = load_template(control_tokens.template_type)
         return Tokenizer(tokenizer, control_tokens)
 
     def __getattribute__(self, name: str) -> Any:

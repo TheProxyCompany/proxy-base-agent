@@ -184,11 +184,11 @@ class Tool:
     def __str__(self) -> str:
         tool = self.to_dict().get("properties", {})
         tool_str = f"---{self.name}---\n"
-        tool_str += f"{json.dumps(tool, indent=2)}\n"
         tool_str += f"{self.name} description: {self.description}\n"
+        tool_str += f"{json.dumps(tool, indent=2)}\n"
         args = self.schema.get("parameters", {})
         if required := args.get("required", []):
-            tool_str += f"required arguments: {required}\n"
+            tool_str += f"required: {required}\n"
         tool_str += "---------------\n"
         return tool_str
 

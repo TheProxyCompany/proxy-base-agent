@@ -133,14 +133,12 @@ class Agent:
         inference_config = {
             "prompt": [e.to_dict() for e in prompt or self.hippocampus.events.values()],
             "structure": [t.to_dict() for t in tools or self.tools.values()],
-            "system_reminder": self.system_reminder,
+            # "system_reminder": self.system_reminder,
             **self.inference_kwargs,
         }
         if self.prefill:
-            # if the prefill is not empty, we need to set the buffer length to -1
-            # to force structured output to be generated
-            inference_config["buffer_length"] = -1
             inference_config["prefill"] = self.prefill
+            inference_config["buffer_length"] = 1
 
         for token_ids in self.inference(**inference_config):
             if self.inference.engine.is_within_value:
@@ -180,8 +178,11 @@ class Agent:
             action.metadata["tool_result"].metadata["intention"] = tool_call.intention
             await self.interface.show_output(action)
             self.hippocampus.append_to_history(action)
-        elif not tool_call and scratchpad:
-            self.prefill = scratchpad
+        elif not tool_call:
+            if self.prefill:
+                self.prefill = self.prefill + scratchpad
+            else:
+                self.prefill = scratchpad + "... "
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
@@ -281,19 +282,20 @@ class Agent:
         available_models: dict[str, str] = {
             name: path for name, path, _ in get_available_models()
         }
-        if not available_models:
-            huggingface_model_name = await interface.get_input(
-                message="Download a model from HuggingFace:",
-                default="mlx-community/Meta-Llama-3.1-8B-Instruct-8bit",
-            )
-            return huggingface_model_name.content
-
+        available_models["Download a model from HuggingFace"] = ""
         model_name = await interface.get_input(
             message="Select a model for the agent:",
             choices=list(available_models.keys()),
             default=next(iter(available_models.keys())),
         )
         model_path = available_models[model_name.content]
+        if not model_path:
+            huggingface_model_name = await interface.get_input(
+                message="Download a model from HuggingFace:",
+                default="mlx-community/Meta-Llama-3.1-8B-Instruct-8bit",
+            )
+            return huggingface_model_name.content
+
         return model_path
 
     @property
@@ -331,7 +333,7 @@ class Agent:
         prompt = f"Standardized tool call schema:\n{ToolCall.invocation_schema()}\n"
         prompt += f"Available tools: [{', '.join(self.tools.keys())}]\n"
         if delimiters := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters():
-            prompt += "You MUST use these delimiters to separate tool use from your scratch pad.\n"
+            prompt += "You MUST use these delimiters to separate tool use from your scratchpad.\n"
             prompt += f"Start of tool use delimiter: {delimiters[0]!r}\n"
             prompt += f"End of tool use delimiter: {delimiters[1]!r}\n"
         return prompt
@@ -341,10 +343,9 @@ class Agent:
         if len(self.hippocampus.events) % 5 != 0:
             return None
         reminder = self.tool_use_instructions
-        reminder += "Maintain your sense of self and your place in the conversation.\n"
-        reminder += "Do not fall into a pattern when using tools; your actions should be based on the conversation at hand.\n"
+        reminder += "Continue the interaction without mentioning this reminder.\n"
+        reminder += "Your task is to interact with the user.\n"
         reminder += "Do not repeat yourself or hallucinate.\n"
-        reminder += "Continue the interaction without mentioning this reminder, but integrate it's instructions.\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
 
     def __repr__(self) -> str:
