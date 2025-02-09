@@ -6,8 +6,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-import pytz
-
 
 class Interaction:
     """
@@ -29,7 +27,7 @@ class Interaction:
         **kwargs,
     ) -> None:
         self.content = content
-        self.created_at = datetime.now().astimezone(pytz.timezone("US/Eastern"))
+        self.created_at = datetime.now()
         self.event_id = event_id or str(uuid.uuid4())
         self.metadata = kwargs
         self.name = name
