@@ -12,12 +12,18 @@ def send_message(
     This is the only method that should be used for direct user interaction.
 
     Args:
-        message (str): Message content to send to the user. Must be self-contained
-            and coherent since users will not see the internal reasoning process.
-            Keep messages clear and focused.
+        message (str):
+            Message content to send to the user. Must be self-contained
+            and coherent, as this will be the only content the user will see.
+            Keep messages clear and focused, written knowing that the user
+            will not see the internal reasoning process.
+
         spoken (str | bool | None):
-            If provided, the spoken message is spoken to the user as well as written.
-            If True, the written message is spoken.
+            Controls text-to-speech output:
+            - If a string is provided: Speaks that text aloud instead of the written message
+            - If True: Speaks the written message aloud
+            - If None/False: No speech output
+            For better user experience, spoken text should be more concise than written.
     """
     if spoken:
         if isinstance(spoken, bool) or bool(spoken):
@@ -25,7 +31,6 @@ def send_message(
         self.voicebox(spoken)
 
     self.status = Agent.Status.SUCCESS
-
     return Interaction(
         role=Interaction.Role.ASSISTANT,
         content=message,

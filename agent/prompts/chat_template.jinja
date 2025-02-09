@@ -18,7 +18,9 @@
         {{- interaction["scratchpad"] | safe -}}
     {%- endif -%}
     {{- interaction['content'] | safe -}}
-    {%- if interaction.tool_call -%}
+    {%- if interaction.tool_call is string -%}
+        {{- interaction.tool_call -}}
+    {%- elif interaction.tool_call -%}
         {{- tool_start }}
         {{- interaction.tool_call | tojson(indent=2) | trim -}}
         {{- tool_end -}}

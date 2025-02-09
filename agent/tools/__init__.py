@@ -9,7 +9,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from pse.structure.from_function import callable_to_schema
+from pse.json.schema_sources.from_function import callable_to_schema
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -199,7 +199,7 @@ class ToolCall(BaseModel):
     """
 
     intention: str
-    """The intention of the tool call."""
+    """The reason or goal of the tool call. Minimum 10 characters."""
     name: str
     """The name of the tool to call."""
     arguments: dict[str, Any]

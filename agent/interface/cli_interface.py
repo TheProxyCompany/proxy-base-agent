@@ -2,82 +2,115 @@ import logging
 import os
 import sys
 import traceback
+from typing import Any
 
 import questionary
+from rich import box
 from rich.align import Align
-from rich.console import Group, RenderableType
+from rich.console import Console, Group, RenderableType
 from rich.emoji import Emoji
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.style import Style
+from rich.text import Text
 
 from agent.interaction import Interaction
 from agent.interface import Interface
-from agent.tools import ToolCall
 
 logger = logging.getLogger(__name__)
 
-
-PANEL_WIDTH = 100
-PANEL_EXPAND = True
+# Enhanced styling constants
+PANEL_WIDTH = 90
+PANEL_PADDING = (1, 1)
 
 
 class CLIInterface(Interface):
-    """Command-line interface for interacting with the Brain agent.
+    """An elegant command-line interface for interacting with the Brain agent.
 
     This class implements the AgentInterface and provides methods for
-    displaying different message types with consistent formatting
+    displaying different message types with consistent, beautiful formatting
     using Rich library elements (Panels, Markdown, Emojis).
     """
 
-    def __init__(self):
-        super().__init__()
-        self.live = None
+    def __init__(self) -> None:
+        self.console = Console()
+        self.live: Live | None = None
 
     @staticmethod
-    def get_panel(interaction: Interaction, **panel_style) -> RenderableType:
-        if isinstance(interaction.content, list):
-            interaction.content = "\n\n".join(interaction.content)
+    def get_panel(interaction: Interaction, **panel_style: Any) -> RenderableType:
+        match interaction.content:
+            case list():
+                content = "\n\n".join(interaction.content)
+            case _:
+                content = str(interaction.content)
 
+        # Enhanced markdown styling
         markdown = Markdown(
-            str(interaction.content),
+            content,
             justify="left",
             code_theme="monokai",
             inline_code_lexer="markdown",
-            inline_code_theme="solarized-dark",
+            inline_code_theme="monokai",
+            style="bright_white",
         )
 
-        panel = Panel(markdown, **panel_style)
+        # Default box style based on role
+        box_style = (
+            box.SQUARE
+            if interaction.role == Interaction.Role.USER
+            else box.HEAVY
+            if interaction.role == Interaction.Role.ASSISTANT
+            else box.DOUBLE
+        )
 
-        if interaction.content:
-            if interaction.role == Interaction.Role.USER:
-                panel.title_align = "right"
-                panel.subtitle_align = "right"
-                return Align.right(panel)
-            elif interaction.role == Interaction.Role.ASSISTANT:
-                panel.title_align = "left"
-                panel.subtitle_align = "left"
-                return Align.left(panel)
-            else:
-                panel.title_align = "center"
-                panel.subtitle_align = "center"
-                return Align.center(panel)
+        panel = Panel(
+            markdown,
+            box=box_style,
+            style=Style(color=panel_style.get("style", "bright_white")),
+            **panel_style,
+        )
 
-        return panel
+        if not interaction.content:
+            return panel
 
-    async def get_input(self, **kwargs) -> Interaction:
-        """
-        Gets user input from the command line.
-        """
-        exit_phrases = ["exit", "quit", "q", "quit()", "exit()"]
-        clear_line = kwargs.pop("clear_line", False)
-        default: str = kwargs.get("default", "")
-        answer: str = default
-
-        if kwargs.get("choices"):
-            answer: str = await questionary.select(**kwargs).ask_async()
+        # Align panel based on role
+        if interaction.role == Interaction.Role.USER:
+            panel.title_align = panel.subtitle_align = "right"
+            return Align.right(panel)
+        elif interaction.role == Interaction.Role.ASSISTANT:
+            panel.title_align = panel.subtitle_align = "left"
+            return Align.left(panel)
         else:
-            answer: str = await questionary.text(**kwargs).ask_async()
+            panel.title_align = panel.subtitle_align = "center"
+            return Align.center(panel)
+
+    async def get_input(self, **kwargs: Any) -> Interaction:
+        """Gets user input with enhanced styling and validation."""
+        exit_phrases = frozenset({"exit", "quit", "q", "quit()", "exit()"})
+        clear_line = kwargs.pop("clear_line", False)
+
+        # Enhanced questionary styling
+        style = questionary.Style(
+            [
+                ("qmark", "fg:ansimagenta bold"),
+                ("question", "fg:ansicyan bold"),
+                ("answer", "fg:ansigreen bold"),
+                ("pointer", "fg:ansimagenta bold"),
+                ("highlighted", "fg:ansigreen bold"),
+                ("selected", "fg:ansigreen bold"),
+                ("separator", "fg:ansigray"),
+                ("instruction", "fg:ansigray"),
+            ]
+        )
+
+        kwargs["style"] = style
+
+        answer = await (
+            questionary.select(**kwargs).ask_async()
+            if kwargs.get("choices")
+            else questionary.text(**kwargs).ask_async()
+        )
 
         if answer is None or answer.lower() in exit_phrases:
             await self.exit_program()
@@ -92,64 +125,43 @@ class CLIInterface(Interface):
         )
 
     async def show_output(self, output: object | list[object]) -> None:
-        """Handles and displays different types of messages.
-
-        Args:
-            message: The `Message` object to be handled.
-        """
-
+        """Displays messages with enhanced visual styling."""
         if not isinstance(output, Interaction):
             return
 
         if output.image_url:
             await self.render_image(output.image_url)
 
-        style = output.styling
-        try:
-            emoji = f"{Emoji(style['emoji'])} "
-        except Exception:
-            emoji = ""
+        style = {
+            "color": output.styling.get("color", "info"),
+            "title": output.styling.get("title", "") or output.title,
+        }
+        if "emoji" in output.styling:
+            style["emoji"] = output.styling["emoji"]
+
+        emoji = f"{Emoji(style['emoji'])} " if "emoji" in style else ""
 
         panel_style = {
             "border_style": style["color"],
-            "title": f"{emoji}{style['title'] or output.title}",
-            "expand": PANEL_EXPAND,
-            "width": PANEL_WIDTH,
-            "padding": (1, 2)
+            "title": f"{emoji}{style['title']}",
+            "width": int(PANEL_WIDTH * 0.75),
+            "padding": PANEL_PADDING,
         }
 
-        if (subtitle := output.subtitle):
-            panel_style["subtitle"] = subtitle
-        elif output.metadata.get("intention"):
-            panel_style["subtitle"] = f"intention: {output.metadata['intention']}"
+        match output:
+            case Interaction(subtitle=subtitle) if subtitle:
+                panel_style["subtitle"] = subtitle
+            case Interaction(metadata={"intention": intention}):
+                panel_style["subtitle"] = f"intention: {intention}"
 
         if output.content:
             self.console.print(self.get_panel(output, **panel_style))
 
-        if output.tool_result and isinstance(output.tool_result, Interaction):
+        if isinstance(output.tool_result, Interaction):
             await self.show_output(output.tool_result)
 
-    async def show_tool_use(self, tool_call: ToolCall) -> None:
-        """Show a tool call."""
-        markdown = Markdown(
-            str(tool_call),
-            justify="left",
-            code_theme="monokai",
-            inline_code_lexer="json",
-            inline_code_theme="solarized-dark",
-        )
-        panel_style = {
-            "border_style": "blue",
-            "title": f"{Emoji('hammer')} {tool_call.name}",
-            "title_align": "left",
-            "expand": PANEL_EXPAND,
-            "width": PANEL_WIDTH,
-        }
-        self.console.print(Panel(markdown, **panel_style))
-
     def show_live_output(self, buffer: object, structured: object) -> None:
-        """Show partial output."""
-
+        """Show partial output with enhanced visual styling."""
         assert isinstance(buffer, str)
         assert isinstance(structured, str)
 
@@ -167,39 +179,53 @@ class CLIInterface(Interface):
 
         if buffer and buffer.strip():
             scratchpad_panel = Panel(
-                Markdown(buffer, inline_code_lexer="markdown", inline_code_theme="solarized-dark", style="bright white"),
+                Markdown(
+                    buffer,
+                    inline_code_lexer="markdown",
+                    inline_code_theme="monokai",
+                    style="bright_white",
+                ),
                 title=f"{Emoji('notebook')} Scratchpad",
                 title_align="left",
-                border_style="dim white",
-                expand=PANEL_EXPAND,
-                width=int(PANEL_WIDTH * 0.6),
-                padding=(1, 2)
+                border_style="white",
+                box=box.SQUARE,
+                width=int(PANEL_WIDTH * 0.75),
+                padding=(1, 2),
             )
-            panels.append(scratchpad_panel)
+            panels.append(Align.left(scratchpad_panel))
 
         if structured and structured.strip():
             structured_panel = Panel(
-                Markdown(structured, inline_code_lexer="json", inline_code_theme="solarized-dark"),
-                title=f"{Emoji('gear')} Structured Output",
-                title_align="left",
-                border_style="cyan",
-                expand=PANEL_EXPAND,
-                width=int(PANEL_WIDTH * 0.8),
-                padding=(1, 2)
+                Markdown(
+                    structured,
+                    inline_code_lexer="markdown",
+                    inline_code_theme="monokai",
+                    style="bright_white",
+                ),
+                title=f"{Emoji('zap')} Structured Output",
+                title_align="center",
+                subtitle=Text(
+                    "The Proxy Structuring Engine", style="bright_white italic"
+                ),
+                subtitle_align="center",
+                border_style="yellow",
+                box=box.HEAVY,
+                width=PANEL_WIDTH,
+                padding=(0, 0),
             )
-            panels.append(structured_panel)
+            panels.append(Align.center(structured_panel))
 
         if panels:
             self.live.update(Group(*panels))
 
     def end_live_output(self) -> None:
-        """End live output."""
+        """End live output with a smooth transition."""
         if self.live:
             self.console.print(self.live.renderable)
             self.live.stop()
-            self.live = None
+            self.live.update(Group())
             self.console.clear_live()
-
+            self.live = None
         self.console.print()
 
     async def show_error_message(
@@ -207,57 +233,96 @@ class CLIInterface(Interface):
         message: Interaction | None = None,
         e: Exception | None = None,
     ) -> None:
-        """Display an error message with a warning emoji."""
-        if not message or e:
+        """Display an error message with enhanced styling and helpful context."""
+        if not message and not e:
             return
 
-        error_message = message or Interaction(role="system", content=f"{e}")
-        await self.show_output(error_message)
+        error_message = message
+        if e:
+            error_content = [
+                f"*{e.__class__.__name__}*: {e}",
+                "",
+                "```python",
+                traceback.format_exc(),
+                "```",
+            ]
+            error_message = Interaction(
+                role=Interaction.Role.SYSTEM,
+                content="\n".join(error_content),
+                styling={"color": "error", "emoji": "warning"},
+            )
+
+        if error_message and error_message.content:
+            panel_style = {
+                "border_style": "red",
+                "title": f"{Emoji('warning')} Error Details",
+                "subtitle": "Please check the information below",
+                "padding": (1, 2),
+                "box": box.HEAVY,
+            }
+
+            self.console.print()
+            self.console.print(self.get_panel(error_message, **panel_style))
+            self.console.print()
 
     async def render_image(self, image_url: str) -> None:
-        """Displays an image from a URL, with optional caption and thoughts.
-
-        Args:
-            image_url: The URL of the image to be displayed.
-        """
-        from imgcat import imgcat
-        from PIL import Image
-
+        """Displays an image with enhanced error handling and loading states."""
         try:
+            from imgcat import imgcat
+            from PIL import Image
+
+            self.console.print(
+                Panel(
+                    "Loading image...",
+                    title=f"{Emoji('hourglass_flowing_sand')} Loading",
+                    border_style="blue",
+                    box=box.ROUNDED,
+                )
+            )
+
             img = Image.open(image_url)
             imgcat(img)
-        except Exception as error:
-            await self.show_error_message(e=error)
+        except ImportError:
+            await self.show_error_message(
+                Interaction(
+                    role=Interaction.Role.SYSTEM,
+                    content="Required packages 'imgcat' or 'Pillow' not found. Please install them to display images.",
+                    styling={"color": "error", "emoji": "warning"},
+                )
+            )
+        except Exception as e:
+            await self.show_error_message(e=e)
 
     async def exit_program(self, error: Exception | None = None) -> None:
-        """
-        Exits the program.
-        """
+        """Exits the program with a stylish goodbye message."""
         if error:
-            title = f"{Emoji(name='exclamation')} Error"
+            title = f"{Emoji('exclamation')} Error Occurred"
             content = f"```pytb\n{traceback.format_exc()}\n```"
             border_style = "red"
         else:
             title = f"{Emoji('wave')} Goodbye"
-            content = "*Program terminated.*"
-            border_style = "white"
-
+            content = "*See you again!*"
+            border_style = "blue"
         markdown = Markdown(
             content,
-            justify="left",
-            inline_code_theme="solarized-dark",
+            justify="center",
+            inline_code_theme="one-dark",
         )
 
         panel = Panel(
             markdown,
             title=title,
-            title_align="left",
+            title_align="center",
             border_style=border_style,
+            box=box.DOUBLE,
             expand=False,
             width=PANEL_WIDTH,
             padding=(1, 2),
         )
-        self.console.print(Align.left(panel))
+
+        self.console.print()
+        self.console.print(Align.center(panel))
+        self.console.print()
 
     async def clear(self) -> None:
         """

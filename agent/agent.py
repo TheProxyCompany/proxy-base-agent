@@ -23,8 +23,8 @@ MAX_SUB_STEPS: int = 10
 
 T = TypeVar("T")
 
-
 class Agent:
+
     class Status(Enum):
         # Core System States
         PROCESSING = "processing"
@@ -114,17 +114,16 @@ class Agent:
         while self.can_act:
             self.step_number += 1
             self.status = Agent.Status.PROCESSING
-            scratchpad, tool_call = await self.output(ToolCall)
-            await self.take_action(scratchpad, tool_call)
+            model_output = await self.output()
+            await self.process_output(*model_output)
 
         await self.loop()
 
     async def output(
         self,
-        output_type: type[T],
         prompt: list[Interaction] | None = None,
         tools: list[Tool] | None = None,
-    ) -> tuple[str, T | None]:
+    ) -> tuple[str, str]:
         """
         Use a language model to generate the agent's next output.
         Accepts a prompt and tools to use, and an expected output type.
@@ -140,7 +139,7 @@ class Agent:
         }
         if self.prefill:
             inference_config["prefill"] = self.prefill
-            inference_config["buffer_length"] = 1
+            inference_config["buffer_length"] = -1
 
         for token_ids in self.inference(**inference_config):
             if self.inference.engine.is_within_value:
@@ -155,36 +154,50 @@ class Agent:
         self.interface.end_live_output()
         scratchpad = self.inference.engine.tokenizer.decode(buffer)
         structured_output = self.inference.engine.tokenizer.decode(structured)
-        cast_output = self.inference.engine.cast_output(structured_output, output_type)
-        return scratchpad, cast_output
+        return scratchpad, structured_output
 
-    async def take_action(self, scratchpad: str, tool_call: ToolCall | None) -> None:
+    async def process_output(self, scratchpad: str, structured_output: str) -> None:
         """
         Take actions based on an event.
 
         This method handles the event, appends it to the history, and processes
         any tool calls.
         """
-        if tool_call:
-            if self.prefill:
-                scratchpad = self.prefill + scratchpad
+        output = Interaction(
+            role=Interaction.Role.ASSISTANT,
+            name=self.name,
+            scratchpad=(self.prefill or "") + scratchpad,
+        )
 
-            action = Interaction(
-                role=Interaction.Role.ASSISTANT,
-                name=self.name,
-                scratchpad=scratchpad,
-            )
-            self.prefill = None
-            action.metadata["tool_call"] = tool_call
-            action.metadata["tool_result"] = self.use_tool(tool_call)
-            action.metadata["tool_result"].metadata["intention"] = tool_call.intention
-            await self.interface.show_output(action)
-            self.hippocampus.append_to_history(action)
-        elif not tool_call:
-            if self.prefill:
-                self.prefill += f"...{scratchpad or 'I should use a tool to continue...'}"
-            else:
-                self.prefill = f"{scratchpad or 'I should use a tool to continue...'}"
+        match self.inference.engine.current_state:
+            case "scratchpad":
+                message = f"{scratchpad}..."
+                self.prefill = (self.prefill or "") + message
+                return
+
+            case "json":
+                tool_call = self.inference.engine.parse_structured_output(
+                    structured_output,
+                    ToolCall
+                )
+                assert isinstance(tool_call, ToolCall)
+                output.metadata["tool_call"] = tool_call
+                output.metadata["tool_result"] = self.use_tool(tool_call)
+                output.metadata["tool_result"].metadata["intention"] = (
+                    tool_call.intention
+                )
+            case "python":
+                from agent.tools.system.run_python_code import run_python_code
+                code = self.inference.engine.parse_structured_output(structured_output, str)
+                assert isinstance(code, str)
+                output.metadata["tool_call"] = structured_output
+                output.metadata["tool_result"] = await run_python_code(self, code)
+            case _:
+                raise ValueError(f"Unknown structured output: {structured_output}")
+
+        self.prefill = None
+        self.hippocampus.append_to_history(output)
+        await self.interface.show_output(output)
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
@@ -231,7 +244,7 @@ class Agent:
             agent_name,
             interface,
             inference,
-            system_prompt_name=system_prompt,
+            system_prompt,
             **inference_kwargs,
         )
 
@@ -307,11 +320,12 @@ class Agent:
             prompt = f"No System Prompt Found for {self.system_prompt_name}"
         else:
             try:
-                prompt = prompt.format(
+                formatted_prompt = prompt.format(
                     name=self.name,
-                    tool_use_instructions=self.tool_use_instructions,
                     tool_list=self.tool_list,
+                    tool_use_instructions=self.tool_use_instructions,
                 )
+                prompt = formatted_prompt
             except Exception:
                 pass
 
@@ -322,7 +336,7 @@ class Agent:
         """
         List of tools available to the agent.
         """
-        prompt = "---- Tool Definitions ----\n"
+        prompt = "Tool List:"
         for tool in self.tools.values():
             prompt += f"\n{tool}"
         return prompt

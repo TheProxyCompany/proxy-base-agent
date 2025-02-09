@@ -6,7 +6,7 @@ import mlx.core as mx
 from mlx_proxy.generate_step import generate_step
 from mlx_proxy.samplers import make_sampler
 from mlx_proxy.utils import load_model, set_max_reccomended_device_limit
-from pse.structure.engine import StructuringEngine
+from pse.engine.structuring_engine import StructuringEngine
 
 from agent.llm.frontend import Frontend
 from agent.llm.tokenizer import Tokenizer
@@ -51,7 +51,7 @@ class MLXInference(Frontend):
         for generated_tokens, _ in generate_step(
             prompt=mx.array(prompt),
             model=self.model,
-            logits_processors=[self.engine] if structured else None,
+            logits_processors=[self.engine.process_logits] if structured else None,
             sampler=self.make_sampler(structured, **kwargs),
             max_tokens=kwargs.get("max_tokens", 1000),
         ):
@@ -77,7 +77,9 @@ class MLXInference(Frontend):
         min_p = float(kwargs.get("min_p", 0.0))
         min_tokens_to_keep = int(kwargs.get("min_tokens_to_keep", 1))
         sampler = make_sampler(
-            temp=temp, min_p=min_p, min_tokens_to_keep=min_tokens_to_keep
+            temp=temp,
+            min_p=min_p,
+            min_tokens_to_keep=min_tokens_to_keep
         )
         if structured:
             return lambda x: self.engine.sample(x, sampler)

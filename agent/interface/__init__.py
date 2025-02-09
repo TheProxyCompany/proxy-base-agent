@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from rich.console import Console
 
 from agent.interaction import Interaction
-from agent.tools import ToolCall
 
 
 class Interface(ABC):
@@ -32,13 +31,6 @@ class Interface(ABC):
 
         Args:
             output (object): The output to be handled and displayed.
-        """
-        pass
-
-    @abstractmethod
-    async def show_tool_use(self, tool_call: ToolCall) -> None:
-        """
-        Show a tool call.
         """
         pass
 

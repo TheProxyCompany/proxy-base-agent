@@ -3,7 +3,7 @@ import time
 from collections.abc import Iterable
 from typing import Any
 
-from pse.structure import SchemaType
+from pse.json import JSONSchemaSource
 
 from agent.interaction import Interaction
 from agent.llm.frontend import Frontend
@@ -33,8 +33,9 @@ class LocalInference:
     def run_inference(
         self,
         prompt: str | list[dict[str, Any]] | list[Interaction],
-        structure: SchemaType | None = None,
+        structure: JSONSchemaSource | None = None,
         buffer_length: int = -1,
+        include_python: bool = True,
         **inference_kwargs,
     ) -> Iterable[int]:
         """
@@ -53,7 +54,12 @@ class LocalInference:
         tic = time.perf_counter()
         if structure:
             delimiters = self.front_end.tokenizer.control_tokens.tool_use_delimiters()
-            self.engine.configure(structure, delimiters, buffer_length)
+            self.engine.configure(
+                structure,
+                json_delimiters=delimiters,
+                min_buffer_length=buffer_length,
+                include_python=include_python,
+            )
             toc = time.perf_counter()
             setup_time = toc - tic
             logger.debug(f"Structuring Engine configured in {setup_time:.4f}s")
