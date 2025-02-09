@@ -150,8 +150,6 @@ class Agent:
             decoded_buffer = self.inference.engine.tokenizer.decode(buffer)
             decoded_structured = self.inference.engine.tokenizer.decode(structured)
             self.interface.show_live_output(decoded_buffer, decoded_structured)
-            self.interface.end_live_output()
-            breakpoint()
 
         self.interface.end_live_output()
         scratchpad = self.inference.engine.tokenizer.decode(buffer)
