@@ -19,7 +19,7 @@ from agent.voice import VoiceBox
 
 logger = logging.getLogger(__name__)
 
-MAX_SUB_STEPS: int = 10
+MAX_SUB_STEPS: int = 20
 
 T = TypeVar("T")
 
@@ -139,7 +139,7 @@ class Agent:
         }
         if self.prefill:
             inference_config["prefill"] = self.prefill
-            inference_config["buffer_length"] = -1
+            # inference_config["buffer_length"] = -1
 
         for token_ids in self.inference(**inference_config):
             if self.inference.engine.is_within_value:
@@ -171,7 +171,7 @@ class Agent:
 
         match self.inference.engine.current_state:
             case "scratchpad":
-                message = f"{scratchpad}..."
+                message = f"{scratchpad} oh wait I need to use a tool..."
                 self.prefill = (self.prefill or "") + message
                 return
 
@@ -356,7 +356,7 @@ class Agent:
 
     @property
     def system_reminder(self) -> dict | None:
-        if len(self.hippocampus.events) % 5 != 0:
+        if len(self.hippocampus.events) % 3 != 0:
             return None
         reminder = "Continue the interaction without mentioning this reminder.\n"
         reminder += "Your task is to interact with the user.\n"

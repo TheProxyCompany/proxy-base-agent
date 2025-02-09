@@ -17,7 +17,7 @@ Hmm, I wonder how many letters s in the word Mississippi.
 I should write some code to find out.
 ```python
 count = 'Mississippi'.count('s')
-print(f"Number of letters s in the word Mississippi: {count}")
+print(f"Number of letters s in the word Mississippi: {{count}}")
 ```
 
 You also have access to multiple different tools.

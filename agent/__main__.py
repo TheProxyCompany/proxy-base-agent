@@ -20,7 +20,7 @@ agent_kwargs = {
     "min_p": 0.02,
     "min_tokens_to_keep": 10,
     "add_generation_prompt": True,
-    "prefill": "scratchpad:",
+    "prefill": "",
     # "seed": 11,
     "structured": True,
     "include_python": True,
