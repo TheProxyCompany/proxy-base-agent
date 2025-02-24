@@ -5,30 +5,32 @@ from agent.interaction import Interaction
 def send_message(
     self: Agent,
     message: str,
-    spoken: str | bool | None = False,
+    spoken: str | bool | None = None,
 ) -> Interaction:
     """
-    Primary communication tool for interacting with users.
-    This is the only method that should be used for direct user interaction.
+    IMPORTANT: This is the ONLY method that should be used for sending messages to users.
+    Do not attempt to communicate with users through other means.
+
+    Purpose:
+        Sends a message to the user and optionally speaks it aloud.
+        Handles all formatting and delivery mechanics automatically.
 
     Args:
         message (str):
-            Message content to send to the user. Must be self-contained
-            and coherent, as this will be the only content the user will see.
-            Keep messages clear and focused, written knowing that the user
-            will not see the internal reasoning process.
+            The main message to display to the user.
+            Must be self-contained and complete - users only see this content.
+            Do not reference internal states or reasoning.
 
-        spoken (str | bool | None):
-            Controls text-to-speech output:
-            - If a string is provided: Speaks that text aloud instead of the written message
-            - If True: Speaks the written message aloud
-            - If None/False: No speech output
-            For better user experience, spoken text should be more concise than written.
+        spoken (str | bool | None, optional):
+            Speech behavior control:
+            - None (default): No speech output
+            - True: Speaks the message text
+            - str: Speaks this alternative text instead
+            Note: Spoken content should be more concise than written text.
     """
     if spoken:
-        if isinstance(spoken, bool) or bool(spoken):
-            spoken = message
-        self.voicebox(spoken)
+        speech_text = spoken if isinstance(spoken, str) else message
+        self.voicebox(speech_text)
 
     self.status = Agent.Status.SUCCESS
     return Interaction(

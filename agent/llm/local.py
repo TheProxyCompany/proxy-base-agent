@@ -3,7 +3,7 @@ import time
 from collections.abc import Iterable
 from typing import Any
 
-from pse.json import JSONSchemaSource
+from pse.types.json import JSONSchemaSource
 
 from agent.interaction import Interaction
 from agent.llm.frontend import Frontend

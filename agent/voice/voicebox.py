@@ -47,7 +47,7 @@ class VoiceBox:
                 sd.wait()
             except sd.PortAudioError as e:
                 logger.error(f"Fallback audio playback failed: {e}")
-                raise e
+                pass
 
     def _clean_transcript(self, raw: str) -> Iterator[str]:
         """Clean message text for speech synthesis by removing unwanted characters."""

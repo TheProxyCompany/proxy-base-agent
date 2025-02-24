@@ -52,6 +52,7 @@ class Agent:
         system_prompt_name: str | None,
         seed: int | None = None,
         tools: list[Tool] | list[str] | None = None,
+        include_python: bool = False,
         **inference_kwargs,
     ):
         """Initialize an agent."""
@@ -62,6 +63,7 @@ class Agent:
 
         self.system_prompt_name = system_prompt_name
         self.inference_kwargs = inference_kwargs
+        self.include_python = include_python
         self.prefill = None
 
         self.tools: dict[str, Tool] = {}
@@ -139,7 +141,7 @@ class Agent:
         }
         if self.prefill:
             inference_config["prefill"] = self.prefill
-            # inference_config["buffer_length"] = -1
+            inference_config["buffer_length"] = -1
 
         for token_ids in self.inference(**inference_config):
             if self.inference.engine.is_within_value:
@@ -324,6 +326,7 @@ class Agent:
                     name=self.name,
                     tool_list=self.tool_list,
                     tool_use_instructions=self.tool_use_instructions,
+                    python_interpreter=self.python_interpreter,
                 )
                 prompt = formatted_prompt
             except Exception:
@@ -363,6 +366,37 @@ class Agent:
         reminder += "Do not repeat yourself or hallucinate.\n"
         reminder += "Use a diverse set of tools to interact with the user.\n"
         return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
+
+    @property
+    def python_interpreter(self) -> str:
+        if not self.include_python:
+            return ""
+
+        instructions = """
+        You have access to a Python interpreter.
+        The Python 3.x standard library is available, imports are not.
+        The output of the python code is captured and is returned as a string.
+
+        This python interpreter can be used for:
+        - String manipulation and counting
+        - Math and Arithmetic
+        - Logic validation
+        - Miscellaneous simple tasks
+
+        Wrap your code in "```python\n" and "\n```" to execute it.
+        An example of your use of the python interpreter:
+        Hmm, I wonder how many letters s in the word Mississippi.
+        I should write some code to find out.
+        ```python
+        count = 'Mississippi'.count('s')
+        print(f"Number of letters s in the word Mississippi: {{count}}")
+        ```
+
+        Be purposeful with your use of the python interpreter.
+        Do not engage in tasks that are not related to the user's request.
+        Do not use the python interpreter to do things that can be done with other tools.
+        """
+        return instructions
 
     def __repr__(self) -> str:
         return f"{self.name} ({self.status})"

@@ -9,7 +9,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from pse.json.schema_sources.from_function import callable_to_schema
+from pse.types.json.schema_sources.from_function import callable_to_schema
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
