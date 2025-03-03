@@ -23,7 +23,6 @@ class LocalInference:
         - Setting up caches and data structures for efficient inference
         """
         self.front_end = Frontend.from_path(model_path, frontend)
-        self.engine = self.front_end.engine
 
     def run_inference(
         self,

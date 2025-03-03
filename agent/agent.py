@@ -24,7 +24,6 @@ MAX_SUB_STEPS: int = 20
 
 T = TypeVar("T")
 
-
 class Agent:
     class Status(Enum):
         # Core System States
@@ -58,6 +57,7 @@ class Agent:
         **inference_kwargs,
     ):
         """Initialize an agent."""
+
         self.seed = seed or randint(0, 1000000)
         self.name = name
         self.step_number = 0
@@ -77,15 +77,13 @@ class Agent:
 
         self.inference = inference
         self.interface = interface
-
         self.state_machine = AgentStateMachine(
             tools=[t.to_dict() for t in self.tools.values()],
             use_python=include_python,
             use_bash=include_bash,
             tool_delimiters=self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters(),
         )
-        self.inference.engine.configure(self.state_machine)
-
+        self.inference.front_end.engine.configure(self.state_machine)
         self.hippocampus = Hippocampus(self.system_prompt)
         self.voicebox = VoiceBox()
 
@@ -127,7 +125,19 @@ class Agent:
         while self.can_act:
             self.step_number += 1
             self.status = Agent.Status.PROCESSING
-            await self.act()
+            try:
+                await self.act()
+            except Exception as e:
+                logger.error(f"Error taking action: {e}")
+                self.status = Agent.Status.FAILED
+                await self.interface.show_output(
+                    Interaction(
+                        role=Interaction.Role.ASSISTANT,
+                        name=self.name,
+                        content=f"Error: {e}",
+                    )
+                )
+                return
 
         await self.loop()
 
@@ -139,15 +149,15 @@ class Agent:
         any tool calls.
         """
 
-        for _ in self.inference.run_inference(
+        for token_ids in self.inference.run_inference(
             prompt=[e.to_dict() for e in self.hippocampus.events.values()],
             **self.inference_kwargs,
         ):
-            # logger.debug(self.inference.engine.tokenizer.decode(token_ids))
-            pass
+            output = self.inference.front_end.tokenizer.decode([token_ids])
+            self.interface.show_live_output("", output)
 
-        breakpoint()
-        for state, output in self.inference.engine.get_structured_output():
+        self.interface.end_live_output()
+        for state, output in self.inference.front_end.engine.get_structured_output():
             match state:
                 case "scratchpad":
                     message = f"{output} oh wait I need to use a tool..."

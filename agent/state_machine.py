@@ -14,10 +14,9 @@ DEFAULT_DELIMITERS = {
     "thinking": ("```thinking\n", "\n```"),
     "scratchpad": ("```scratchpad\n", "\n```"),
     "tool": ("```json\n", "\n```"),
-    "bash": BashStateMachine.delimiters or ("```bash\n", "\n```"),
-    "python": PythonStateMachine.delimiters or ("```python\n", "\n```"),
+    "bash": ("```bash\n", "\n```"),
+    "python": ("```python\n", "\n```"),
 }
-
 
 class AgentStateMachine(StateMachine):
     """

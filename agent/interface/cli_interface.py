@@ -160,9 +160,18 @@ class CLIInterface(Interface):
         if isinstance(output.tool_result, Interaction):
             await self.show_output(output.tool_result)
 
+    @staticmethod
+    def debugbold(*args, **kwargs):
+        """Print debug messages in bold yellow."""
+        print("\033[1;33m", end="")
+        print(*args, **kwargs)
+        print("\033[0m", end="")
+
     def show_live_output(self, state: str, output: object) -> None:
         """Show partial output with enhanced visual styling."""
         assert isinstance(output, str)
+        self.debugbold(output, flush=True, end="")
+        return
 
         if not self.live:
             self.live = Live(
