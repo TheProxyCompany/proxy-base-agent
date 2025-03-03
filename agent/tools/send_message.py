@@ -10,10 +10,8 @@ def send_message(
     """
     IMPORTANT: This is the ONLY method that should be used for sending messages to users.
     Do not attempt to communicate with users through other means.
-
-    Purpose:
-        Sends a message to the user and optionally speaks it aloud.
-        Handles all formatting and delivery mechanics automatically.
+    Sends a message to the user and optionally speaks it aloud.
+    Handles delivery mechanics automatically.
 
     Args:
         message (str):

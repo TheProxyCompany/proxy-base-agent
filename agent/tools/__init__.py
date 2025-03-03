@@ -183,13 +183,12 @@ class Tool:
 
     def __str__(self) -> str:
         tool = self.to_dict().get("properties", {})
-        tool_str = f"---{self.name}---\n"
-        tool_str += f"{self.name} description: {self.description}\n"
-        tool_str += f"{json.dumps(tool, indent=2)}\n"
+        tool_str = f"\nTool: {self.name}\n"
+        tool_str += f"Tool Description:\n{self.description}\n"
+        tool_str += f"Tool Schema:\n{json.dumps(tool, indent=2)}\n"
         args = self.schema.get("parameters", {})
         if required := args.get("required", []):
-            tool_str += f"required: {required}\n"
-        tool_str += "---------------\n"
+            tool_str += f"Required Arguments:\n{required}\n"
         return tool_str
 
 
@@ -210,13 +209,3 @@ class ToolCall(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
-
-    @staticmethod
-    def invocation_schema() -> str:
-        schema = {
-            "intention": "the reason or goal of the tool call. Minimum 10 characters.",
-            "name": "the name of the tool to call.",
-            "arguments": "the arguments to pass to the tool.",
-            "required": ["intention", "name", "arguments"],
-        }
-        return json.dumps(schema, indent=2)

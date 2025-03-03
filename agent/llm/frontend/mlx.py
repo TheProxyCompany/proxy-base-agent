@@ -6,7 +6,7 @@ import mlx.core as mx
 from mlx_proxy.generate_step import generate_step
 from mlx_proxy.samplers import make_sampler
 from mlx_proxy.utils import load_model, set_max_reccomended_device_limit
-from pse.engine.structuring_engine import StructuringEngine
+from pse.structuring_engine import StructuringEngine
 
 from agent.llm.frontend import Frontend
 from agent.llm.tokenizer import Tokenizer
@@ -29,7 +29,7 @@ class MLXInference(Frontend):
         set_max_reccomended_device_limit()
         self.model, self.model_type = load_model(model_path)
         self.tokenizer = Tokenizer.load(model_path, self.model_type)
-        self.engine = StructuringEngine(self.tokenizer._tokenizer)
+        self.engine = StructuringEngine(self.tokenizer._tokenizer, multi_token_sampling=True)
 
     def inference(
         self,

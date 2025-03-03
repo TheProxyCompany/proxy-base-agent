@@ -160,10 +160,9 @@ class CLIInterface(Interface):
         if isinstance(output.tool_result, Interaction):
             await self.show_output(output.tool_result)
 
-    def show_live_output(self, buffer: object, structured: object) -> None:
+    def show_live_output(self, state: str, output: object) -> None:
         """Show partial output with enhanced visual styling."""
-        assert isinstance(buffer, str)
-        assert isinstance(structured, str)
+        assert isinstance(output, str)
 
         if not self.live:
             self.live = Live(
@@ -175,29 +174,10 @@ class CLIInterface(Interface):
             )
             self.live.start()
 
-        panels = []
-
-        if buffer and buffer.strip():
-            scratchpad_panel = Panel(
-                Markdown(
-                    buffer,
-                    inline_code_lexer="markdown",
-                    inline_code_theme="monokai",
-                    style="bright_white",
-                ),
-                title=f"{Emoji('notebook')} Scratchpad",
-                title_align="left",
-                border_style="white",
-                box=box.SQUARE,
-                width=int(PANEL_WIDTH * 0.75),
-                padding=(1, 2),
-            )
-            panels.append(Align.left(scratchpad_panel))
-
-        if structured and structured.strip():
+        if output and output.strip():
             structured_panel = Panel(
                 Markdown(
-                    structured,
+                    output,
                     inline_code_lexer="markdown",
                     inline_code_theme="monokai",
                     style="bright_white",
@@ -213,10 +193,7 @@ class CLIInterface(Interface):
                 width=PANEL_WIDTH,
                 padding=(0, 0),
             )
-            panels.append(Align.center(structured_panel))
-
-        if panels:
-            self.live.update(Group(*panels))
+            self.live.update(Align.center(structured_panel))
 
     def end_live_output(self) -> None:
         """End live output with a smooth transition."""

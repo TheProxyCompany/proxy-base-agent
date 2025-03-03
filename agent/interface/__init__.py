@@ -35,13 +35,13 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    def show_live_output(self, buffer: object, structured: object) -> None:
+    def show_live_output(self, state: str, output: object) -> None:
         """
         Show partial output.
 
         Args:
-            buffer (object): The buffer to be displayed.
-            structured (object): The structured output to be displayed.
+            state (str): The state of the output.
+            output (object): The output to be displayed.
         """
         pass
 

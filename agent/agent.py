@@ -14,6 +14,7 @@ from agent.llm import get_available_models
 from agent.llm.local import LocalInference
 from agent.memory import Hippocampus
 from agent.prompts import get_available_prompts, load_prompt
+from agent.state_machine import AgentStateMachine
 from agent.tools import Tool, ToolCall
 from agent.voice import VoiceBox
 
@@ -23,8 +24,8 @@ MAX_SUB_STEPS: int = 20
 
 T = TypeVar("T")
 
-class Agent:
 
+class Agent:
     class Status(Enum):
         # Core System States
         PROCESSING = "processing"
@@ -53,6 +54,7 @@ class Agent:
         seed: int | None = None,
         tools: list[Tool] | list[str] | None = None,
         include_python: bool = False,
+        include_bash: bool = False,
         **inference_kwargs,
     ):
         """Initialize an agent."""
@@ -75,6 +77,15 @@ class Agent:
 
         self.inference = inference
         self.interface = interface
+
+        self.state_machine = AgentStateMachine(
+            tools=[t.to_dict() for t in self.tools.values()],
+            use_python=include_python,
+            use_bash=include_bash,
+            tool_delimiters=self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters(),
+        )
+        self.inference.engine.configure(self.state_machine)
+
         self.hippocampus = Hippocampus(self.system_prompt)
         self.voicebox = VoiceBox()
 
@@ -116,88 +127,47 @@ class Agent:
         while self.can_act:
             self.step_number += 1
             self.status = Agent.Status.PROCESSING
-            model_output = await self.output()
-            await self.process_output(*model_output)
+            await self.act()
 
         await self.loop()
 
-    async def output(
-        self,
-        prompt: list[Interaction] | None = None,
-        tools: list[Tool] | None = None,
-    ) -> tuple[str, str]:
-        """
-        Use a language model to generate the agent's next output.
-        Accepts a prompt and tools to use, and an expected output type.
-        """
-
-        buffer: list[int] = []
-        structured: list[int] = []
-        inference_config = {
-            "prompt": [e.to_dict() for e in prompt or self.hippocampus.events.values()],
-            "structure": [t.to_dict() for t in tools or self.tools.values()],
-            "system_reminder": self.system_reminder,
-            **self.inference_kwargs,
-        }
-        if self.prefill:
-            inference_config["prefill"] = self.prefill
-            inference_config["buffer_length"] = -1
-
-        for token_ids in self.inference(**inference_config):
-            if self.inference.engine.is_within_value:
-                structured.append(token_ids)
-            else:
-                buffer.append(token_ids)
-
-            decoded_buffer = self.inference.engine.tokenizer.decode(buffer)
-            decoded_structured = self.inference.engine.tokenizer.decode(structured)
-            self.interface.show_live_output(decoded_buffer, decoded_structured)
-
-        self.interface.end_live_output()
-        scratchpad = self.inference.engine.tokenizer.decode(buffer)
-        structured_output = self.inference.engine.tokenizer.decode(structured)
-        return scratchpad, structured_output
-
-    async def process_output(self, scratchpad: str, structured_output: str) -> None:
+    async def act(self) -> None:
         """
         Take actions based on an event.
 
         This method handles the event, appends it to the history, and processes
         any tool calls.
         """
+
+        for _ in self.inference.run_inference(
+            prompt=[e.to_dict() for e in self.hippocampus.events.values()],
+            **self.inference_kwargs,
+        ):
+            # logger.debug(self.inference.engine.tokenizer.decode(token_ids))
+            pass
+
+        breakpoint()
+        for state, output in self.inference.engine.get_structured_output():
+            match state:
+                case "scratchpad":
+                    message = f"{output} oh wait I need to use a tool..."
+                    self.prefill = (self.prefill or "") + message
+                    return
+                case "thinking":
+                    pass
+                case "tool_call":
+                    pass
+                case "python":
+                    pass
+                case "bash":
+                    pass
+                case _:
+                    raise ValueError(f"Unknown structured output: {output}")
+
         output = Interaction(
             role=Interaction.Role.ASSISTANT,
             name=self.name,
-            scratchpad=(self.prefill or "") + scratchpad,
         )
-
-        match self.inference.engine.current_state:
-            case "scratchpad":
-                message = f"{scratchpad} oh wait I need to use a tool..."
-                self.prefill = (self.prefill or "") + message
-                return
-
-            case "json":
-                tool_call = self.inference.engine.parse_structured_output(
-                    structured_output,
-                    ToolCall
-                )
-                assert isinstance(tool_call, ToolCall)
-                output.metadata["tool_call"] = tool_call
-                output.metadata["tool_result"] = self.use_tool(tool_call)
-                output.metadata["tool_result"].metadata["intention"] = (
-                    tool_call.intention
-                )
-            case "python":
-                from agent.tools.system.run_python_code import run_python_code
-                code = self.inference.engine.parse_structured_output(structured_output, str)
-                assert isinstance(code, str)
-                output.metadata["tool_call"] = structured_output
-                output.metadata["tool_result"] = await run_python_code(self, code)
-            case _:
-                raise ValueError(f"Unknown structured output: {structured_output}")
-
-        self.prefill = None
         self.hippocampus.append_to_history(output)
         await self.interface.show_output(output)
 
@@ -319,18 +289,17 @@ class Agent:
     def system_prompt(self) -> Interaction:
         prompt = load_prompt(self.system_prompt_name)
         if prompt is None:
-            prompt = f"No System Prompt Found for {self.system_prompt_name}"
-        else:
-            try:
-                formatted_prompt = prompt.format(
-                    name=self.name,
-                    tool_list=self.tool_list,
-                    tool_use_instructions=self.tool_use_instructions,
-                    python_interpreter=self.python_interpreter,
-                )
-                prompt = formatted_prompt
-            except Exception:
-                pass
+            raise ValueError(f"No System Prompt Found for {self.system_prompt_name}")
+
+        try:
+            formatted_prompt = prompt.format(
+                name=self.name,
+                tool_list=self.tool_list,
+                state_prompt=self.state_machine.state_prompt,
+            )
+            prompt = formatted_prompt
+        except Exception:
+            pass
 
         return Interaction(role=Interaction.Role.SYSTEM, content=prompt)
 
@@ -339,64 +308,7 @@ class Agent:
         """
         List of tools available to the agent.
         """
-        prompt = "Tool List:"
-        for tool in self.tools.values():
-            prompt += f"\n{tool}"
-        return prompt
-
-    @property
-    def tool_use_instructions(self) -> str:
-        """
-        Instructions on how to use tools.
-        """
-        prompt = f"Standardized tool call schema:\n{ToolCall.invocation_schema()}\n"
-        prompt += f"Available tools: [{', '.join(self.tools.keys())}]\n"
-        if delimiters := self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters():
-            prompt += "You MUST use these delimiters to separate tool use from your scratchpad.\n"
-            prompt += f"Start of tool use delimiter: {delimiters[0]!r}\n"
-            prompt += f"End of tool use delimiter: {delimiters[1]!r}\n"
-        return prompt
-
-    @property
-    def system_reminder(self) -> dict | None:
-        if len(self.hippocampus.events) % 3 != 0:
-            return None
-        reminder = "Continue the interaction without mentioning this reminder.\n"
-        reminder += "Your task is to interact with the user.\n"
-        reminder += "Do not repeat yourself or hallucinate.\n"
-        reminder += "Use a diverse set of tools to interact with the user.\n"
-        return Interaction(content=reminder, role=Interaction.Role.SYSTEM).to_dict()
-
-    @property
-    def python_interpreter(self) -> str:
-        if not self.include_python:
-            return ""
-
-        instructions = """
-        You have access to a Python interpreter.
-        The Python 3.x standard library is available, imports are not.
-        The output of the python code is captured and is returned as a string.
-
-        This python interpreter can be used for:
-        - String manipulation and counting
-        - Math and Arithmetic
-        - Logic validation
-        - Miscellaneous simple tasks
-
-        Wrap your code in "```python\n" and "\n```" to execute it.
-        An example of your use of the python interpreter:
-        Hmm, I wonder how many letters s in the word Mississippi.
-        I should write some code to find out.
-        ```python
-        count = 'Mississippi'.count('s')
-        print(f"Number of letters s in the word Mississippi: {{count}}")
-        ```
-
-        Be purposeful with your use of the python interpreter.
-        Do not engage in tasks that are not related to the user's request.
-        Do not use the python interpreter to do things that can be done with other tools.
-        """
-        return instructions
+        return "\n---\n".join([str(tool) for tool in self.tools.values()])
 
     def __repr__(self) -> str:
         return f"{self.name} ({self.status})"

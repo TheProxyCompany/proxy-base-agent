@@ -1,3 +1,7 @@
+"""Metacognition tools for monitoring and reflecting on the agent's internal state."""
+
+from typing import Any, cast
+
 from agent.agent import Agent
 from agent.interaction import Interaction
 
@@ -44,4 +48,73 @@ def metacognition(
         color="blue",
         emoji="thought_balloon",
         silent=True,
+    )
+
+
+def get_state_machine_info(self: Agent, **kwargs: Any) -> Interaction:
+    """
+    Get detailed information about the agent's state machine.
+    
+    This tool allows the agent to examine its own state machine structure,
+    providing visibility into:
+    - Current state with explanation
+    - State diagram and transitions
+    - Available delimiters for each state
+    
+    Arguments:
+        None
+        
+    Returns:
+        Information about the state machine architecture and current state.
+    """
+    if not hasattr(self, "get_state_machine_info"):
+        return Interaction(
+            role=Interaction.Role.TOOL,
+            content="State machine information not available.",
+        )
+    
+    state_info = self.get_state_machine_info()
+    return Interaction(
+        role=Interaction.Role.TOOL,
+        content=state_info,
+    )
+
+
+def get_state_history(self: Agent, **kwargs: Any) -> Interaction:
+    """
+    Get the history of states the agent has traversed.
+    
+    Provides insight into the agent's internal processing by returning
+    the sequence of states it has moved through during generation.
+    
+    Arguments:
+        None
+        
+    Returns:
+        A chronological list of states traversed during the last generation cycle.
+    """
+    if not hasattr(self, "_last_state_history"):
+        return Interaction(
+            role=Interaction.Role.TOOL,
+            content="State history not available. The agent hasn't completed a generation cycle yet.",
+        )
+    
+    history = cast(list[str], self._last_state_history)
+    if not history:
+        return Interaction(
+            role=Interaction.Role.TOOL,
+            content="No state transitions recorded in the last generation cycle.",
+        )
+    
+    content = "## State Transition History\n\n"
+    content += "The agent moved through the following states:\n\n"
+    
+    for i, state in enumerate(history):
+        content += f"{i+1}. {state}\n"
+    
+    content += "\nThis history can help diagnose generation issues and understand the agent's internal processing."
+    
+    return Interaction(
+        role=Interaction.Role.TOOL,
+        content=content,
     )
