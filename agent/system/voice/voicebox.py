@@ -8,7 +8,7 @@ from kokoro_onnx import Kokoro
 logger = logging.getLogger(__name__)
 class VoiceBox:
     def __init__(self):
-        from agent.voice import MODEL_PATH, VOICES_PATH
+        from agent.system.voice import MODEL_PATH, VOICES_PATH
 
         if not MODEL_PATH or not VOICES_PATH:
             download_path = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"

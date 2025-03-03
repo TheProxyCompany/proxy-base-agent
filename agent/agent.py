@@ -15,8 +15,8 @@ from agent.llm.local import LocalInference
 from agent.memory import Hippocampus
 from agent.prompts import get_available_prompts, load_prompt
 from agent.state_machine import AgentStateMachine
+from agent.system.voice import VoiceBox
 from agent.tools import Tool, ToolCall
-from agent.voice import VoiceBox
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class Agent:
             use_bash=include_bash,
             tool_delimiters=self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters(),
         )
-        self.inference.front_end.engine.configure(self.state_machine)
+        self.inference.engine.configure(self.state_machine)
         self.hippocampus = Hippocampus(self.system_prompt)
         self.voicebox = VoiceBox()
 
@@ -157,19 +157,25 @@ class Agent:
             self.interface.show_live_output("", output)
 
         self.interface.end_live_output()
-        for state, output in self.inference.front_end.engine.get_structured_output():
+        for state, output in self.inference.engine.get_structured_output():
+            breakpoint()
             match state:
-                case "scratchpad":
-                    message = f"{output} oh wait I need to use a tool..."
-                    self.prefill = (self.prefill or "") + message
-                    return
-                case "thinking":
+                case "scratchpad", "thinking":
+                    print(output)
                     pass
                 case "tool_call":
+                    interaction = self.use_tool(output)
+                    print(interaction)
                     pass
                 case "python":
+                    from agent.system.run_python_code import run_python_code
+                    interaction = await run_python_code(self, output)
+                    print(interaction)
                     pass
                 case "bash":
+                    from agent.system.run_bash_code import run_bash_code
+                    interaction = await run_bash_code(self, output)
+                    print(interaction)
                     pass
                 case _:
                     raise ValueError(f"Unknown structured output: {output}")

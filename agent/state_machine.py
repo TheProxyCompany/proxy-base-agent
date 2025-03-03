@@ -129,32 +129,27 @@ class AgentStateMachine(StateMachine):
         }
 
         if tools:
-            _, tools_sm = json_schema_state_machine(
+            _, tool_state_machine = json_schema_state_machine(
                 tools, delimiters=delimiters["tool"]
             )
-            state_graph["take_action"].append((tools_sm, "done"))
+            tool_state_machine.identifier = "tool_call"
+            state_graph["take_action"].append((tool_state_machine, "done"))
 
         if use_python:
-            state_graph["take_action"].append(
-                (
-                    EncapsulatedStateMachine(
-                        state_machine=PythonStateMachine,
-                        delimiters=delimiters["python"],
-                    ),
-                    "done",
-                )
+            python_state_machine = EncapsulatedStateMachine(
+                state_machine=PythonStateMachine,
+                delimiters=delimiters["python"],
             )
+            python_state_machine.identifier = "python"
+            state_graph["take_action"].append((python_state_machine, "done"))
 
         if use_bash:
-            state_graph["take_action"].append(
-                (
-                    EncapsulatedStateMachine(
-                        state_machine=BashStateMachine,
-                        delimiters=delimiters["bash"],
-                    ),
-                    "done",
-                )
+            bash_state_machine = EncapsulatedStateMachine(
+                state_machine=BashStateMachine,
+                delimiters=delimiters["bash"],
             )
+            bash_state_machine.identifier = "bash"
+            state_graph["take_action"].append((bash_state_machine, "done"))
 
         return state_graph
 
@@ -178,6 +173,7 @@ class AgentStateMachine(StateMachine):
         explanation = f"""
         The tool state represents a tool call.
         You should wrap the tool call in {self.delimiters["tool"][0]!r} and {self.delimiters["tool"][1]!r} tags.
+        The tool call should be a valid JSON object matching the schema of the tool.
         """
         return explanation
 
@@ -186,16 +182,17 @@ class AgentStateMachine(StateMachine):
         The bash state represents a a bash terminal, where the agent can run commands.
         You should wrap the bash command in {self.delimiters["bash"][0]!r} and {self.delimiters["bash"][1]!r} tags.
         The agent should use this like a human would use a bash terminal.
-        Do not do anything with the bash terminal that you would not do with a real bash terminal.
+        Do not use bash to call tools or interact with the user, use the tool state for that.
         """
         return explanation
 
     def python_explanation(self) -> str:
         explanation = f"""
         The python state represents a python interpreter, where the agent can run python code.
-        You should wrap the python code in {self.delimiters["python"][0]!r} and {self.delimiters["python"][1]!r} tags.
-        The agent should use this like a human would use a python interpreter.
         No imports are available, and assume Python 3.10+ syntax.
+        You should wrap the python code in {self.delimiters["python"][0]!r} and {self.delimiters["python"][1]!r} tags.
+        The agent should use this like a human would use a python interpreter to run small snippets of code.
+        Do not use python to call tools or interact with the user, use the tool state for that.
         """
         return explanation
 

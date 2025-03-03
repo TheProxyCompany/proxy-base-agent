@@ -7,16 +7,12 @@
 } -%}
 {%- set add_generation_prompt = add_generation_prompt or true -%}
 {%- set prefill = prefill or none -%}
-{%- set system_reminder = system_reminder or none -%}
 {# ------------------------------------------------------------------------ #}
 {# Macro to render individual interactions                                  #}
 {# ------------------------------------------------------------------------ #}
 {%- macro render_interaction(interaction) -%}
     {%- set role = roles.get(interaction['role'], interaction['role']) -%}
     {{- assistant_header_start + role + assistant_header_end -}}
-    {%- if interaction["scratchpad"] -%}
-        {{- interaction["scratchpad"] | safe -}}
-    {%- endif -%}
     {{- interaction['content'] | safe -}}
     {%- if interaction.tool_call is string -%}
         {{- interaction.tool_call -}}
@@ -39,9 +35,6 @@
 {%- for interaction in interactions -%}
     {{ render_interaction(interaction) -}}
 {%- endfor -%}
-{%- if system_reminder is not none -%}
-    {{ render_interaction(system_reminder) }}
-{%- endif -%}
 {%- if add_generation_prompt -%}
     {{- assistant_header_start + roles.assistant + assistant_header_end -}}
 {%- endif -%}

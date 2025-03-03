@@ -2,6 +2,8 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
+from pse.structuring_engine import StructuringEngine
+
 from agent.interaction import Interaction
 from agent.llm.frontend import Frontend
 
@@ -23,6 +25,7 @@ class LocalInference:
         - Setting up caches and data structures for efficient inference
         """
         self.front_end = Frontend.from_path(model_path, frontend)
+        self.engine = StructuringEngine(self.front_end.tokenizer._tokenizer, multi_token_sampling=True)
 
     def run_inference(
         self,
@@ -48,7 +51,9 @@ class LocalInference:
             **self.front_end.tokenizer.control_tokens.model_dump(),
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
+
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-        for token_id in self.front_end(encoded_prompt, **inference_kwargs):
+
+        for token_id in self.front_end.inference(encoded_prompt, self.engine, **inference_kwargs):
             encoded_prompt.append(token_id)
             yield token_id

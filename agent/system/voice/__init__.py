@@ -1,6 +1,6 @@
 import os
 
-from agent.voice.voicebox import VoiceBox
+from agent.system.voice.voicebox import VoiceBox
 
 try:
     MODEL_PATH = os.path.join(os.path.dirname(__file__), "models/kokoro-v1.0.onnx")

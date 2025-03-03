@@ -19,10 +19,10 @@ def send_message(
             Must be self-contained and complete - users only see this content.
             Do not reference internal states or reasoning.
 
-        spoken (str | bool | None, optional):
+        spoken (str | bool | null):
             Speech behavior control:
-            - None (default): No speech output
-            - True: Speaks the message text
+            - null (default): No speech output
+            - true: Speaks the message text
             - str: Speaks this alternative text instead
             Note: Spoken content should be more concise than written text.
     """

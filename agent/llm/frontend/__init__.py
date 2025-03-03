@@ -16,7 +16,6 @@ class Frontend(ABC):
     Abstract base class for front-ends.
     """
 
-    engine: StructuringEngine
     tokenizer: Tokenizer
 
     @staticmethod
@@ -32,7 +31,7 @@ class Frontend(ABC):
         return self.inference(prompt, **kwargs)
 
     @abstractmethod
-    def inference(self, prompt: list[int], **kwargs: Any) -> Iterator[int]:
+    def inference(self, prompt: list[int], engine: StructuringEngine, **kwargs: Any) -> Iterator[int]:
         pass
 
     @abstractmethod

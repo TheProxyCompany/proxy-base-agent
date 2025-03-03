@@ -29,12 +29,11 @@ class MLXInference(Frontend):
         set_max_reccomended_device_limit()
         self.model, self.model_type = load_model(model_path)
         self.tokenizer = Tokenizer.load(model_path, self.model_type)
-        self.engine = StructuringEngine(self.tokenizer._tokenizer, multi_token_sampling=True)
 
     def inference(
         self,
         prompt: list[int],
-        structured: bool = True,
+        engine: StructuringEngine,
         **kwargs,
     ) -> Iterator[int]:
         """
@@ -51,8 +50,8 @@ class MLXInference(Frontend):
         for generated_tokens, _ in generate_step(
             prompt=mx.array(prompt),
             model=self.model,
-            logits_processors=[self.engine.process_logits] if structured else None,
-            sampler=self.make_sampler(structured, **kwargs),
+            logits_processors=[engine.process_logits],
+            sampler=self.make_sampler(engine, **kwargs),
             max_tokens=kwargs.get("max_tokens", 1000),
         ):
             assert isinstance(generated_tokens, mx.array)
@@ -64,10 +63,10 @@ class MLXInference(Frontend):
                     return
                 yield token_id
 
-            if self.engine.has_reached_accept_state:
+            if engine.has_reached_accept_state:
                 break
 
-    def make_sampler(self, structured: bool, **kwargs) -> Callable[..., Any]:
+    def make_sampler(self, engine: StructuringEngine, **kwargs) -> Callable[..., Any]:
         """
         Return a sampler function.
         If structured is True, use the structured sampler.
@@ -81,7 +80,4 @@ class MLXInference(Frontend):
             min_p=min_p,
             min_tokens_to_keep=min_tokens_to_keep
         )
-        if structured:
-            return lambda x: self.engine.sample(x, sampler)
-        else:
-            return sampler
+        return lambda x: engine.sample(x, sampler)
