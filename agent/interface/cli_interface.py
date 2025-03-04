@@ -36,6 +36,7 @@ class CLIInterface(Interface):
     def __init__(self) -> None:
         self.console = Console()
         self.live: Live | None = None
+        self.current_state = None
 
     @staticmethod
     def get_panel(interaction: Interaction, **panel_style: Any) -> RenderableType:
@@ -160,18 +161,13 @@ class CLIInterface(Interface):
         if isinstance(output.tool_result, Interaction):
             await self.show_output(output.tool_result)
 
-    @staticmethod
-    def debugbold(*args, **kwargs):
-        """Print debug messages in bold yellow."""
-        print("\033[1;33m", end="")
-        print(*args, **kwargs)
-        print("\033[0m", end="")
-
-    def show_live_output(self, state: str, output: object) -> None:
+    def show_live_output(self, state: str | None, output: object) -> None:
         """Show partial output with enhanced visual styling."""
-        assert isinstance(output, str)
-        self.debugbold(output, flush=True, end="")
-        return
+
+        if state != self.current_state:
+            if self.current_state is not None:
+                self.end_live_output()
+            self.current_state = state
 
         if not self.live:
             self.live = Live(
@@ -183,26 +179,28 @@ class CLIInterface(Interface):
             )
             self.live.start()
 
-        if output and output.strip():
+        string_output = str(output).strip()
+        title = self.current_state.title() if self.current_state else "Structured Output"
+        if string_output:
             structured_panel = Panel(
                 Markdown(
-                    output,
-                    inline_code_lexer="markdown",
+                    string_output,
                     inline_code_theme="monokai",
                     style="bright_white",
                 ),
-                title=f"{Emoji('zap')} Structured Output",
+                title=f"{Emoji('zap')} {title}",
                 title_align="center",
                 subtitle=Text(
-                    "The Proxy Structuring Engine", style="bright_white italic"
+                    "Powered by: The Proxy Structuring Engine",
+                    style="bright_white italic"
                 ),
-                subtitle_align="center",
+                subtitle_align="left",
                 border_style="yellow",
                 box=box.HEAVY,
                 width=PANEL_WIDTH,
-                padding=(0, 0),
+                padding=(1, 2),
             )
-            self.live.update(Align.center(structured_panel))
+            self.live.update(Align.left(structured_panel))
 
     def end_live_output(self) -> None:
         """End live output with a smooth transition."""
@@ -212,7 +210,9 @@ class CLIInterface(Interface):
             self.live.update(Group())
             self.console.clear_live()
             self.live = None
-        self.console.print()
+        elif self.current_state:
+            self.current_state = None
+            self.console.print()
 
     async def show_error_message(
         self,

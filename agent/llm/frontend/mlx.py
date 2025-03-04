@@ -60,7 +60,7 @@ class MLXInference(Frontend):
             assert isinstance(tokens, list)
             for token_id in tokens:
                 if token_id in self.tokenizer.stop_tokens:
-                    return
+                    break
                 yield token_id
 
             if engine.has_reached_accept_state:

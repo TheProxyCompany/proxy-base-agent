@@ -27,9 +27,6 @@ class Frontend(ABC):
         else:
             raise ValueError(f"Invalid front-end type: {frontend:}")
 
-    def __call__(self, prompt: list[int], **kwargs) -> Iterator[int]:
-        return self.inference(prompt, **kwargs)
-
     @abstractmethod
     def inference(self, prompt: list[int], engine: StructuringEngine, **kwargs: Any) -> Iterator[int]:
         pass

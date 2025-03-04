@@ -35,7 +35,7 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    def show_live_output(self, state: str, output: object) -> None:
+    def show_live_output(self, state: str | None, output: object) -> None:
         """
         Show partial output.
 

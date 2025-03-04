@@ -1,22 +1,10 @@
-from collections.abc import Sequence
-from typing import Any
-
 from pse.types.base.any import AnyStateMachine
-from pse.types.base.encapsulated import EncapsulatedStateMachine
 from pse.types.base.loop import LoopStateMachine
-from pse.types.grammar import BashStateMachine, PythonStateMachine
-from pse.types.json import json_schema_state_machine
-from pse.types.misc.fenced_freeform import FencedFreeformStateMachine
-from pse_core import StateGraph
 from pse_core.state_machine import StateMachine
 
-DEFAULT_DELIMITERS = {
-    "thinking": ("```thinking\n", "\n```"),
-    "scratchpad": ("```scratchpad\n", "\n```"),
-    "tool": ("```json\n", "\n```"),
-    "bash": ("```bash\n", "\n```"),
-    "python": ("```python\n", "\n```"),
-}
+from agent.state import AgentState, Bash, Python, Scratchpad, Thinking, ToolCallState
+from agent.tools import Tool
+
 
 class AgentStateMachine(StateMachine):
     """
@@ -56,173 +44,76 @@ class AgentStateMachine(StateMachine):
 
     def __init__(
         self,
-        tools: Sequence[dict[str, Any]] | None = None,
+        tools: list[Tool] | None = None,
         use_python: bool = False,
         use_bash: bool = False,
         force_planning: bool = True,
         max_planning_loops: int = 3,
-        thinking_delimiters: tuple[str, str] | None = None,
-        scratchpad_delimiters: tuple[str, str] | None = None,
-        tool_delimiters: tuple[str, str] | None = None,
-        bash_delimiters: tuple[str, str] | None = None,
-        python_delimiters: tuple[str, str] | None = None,
     ) -> None:
-        self.delimiters = {
-            "thinking": thinking_delimiters or DEFAULT_DELIMITERS["thinking"],
-            "scratchpad": scratchpad_delimiters or DEFAULT_DELIMITERS["scratchpad"],
-            "tool": tool_delimiters or DEFAULT_DELIMITERS["tool"],
-            "bash": bash_delimiters or DEFAULT_DELIMITERS["bash"],
-            "python": python_delimiters or DEFAULT_DELIMITERS["python"],
-        }
+        self.states = {}
+
+        thinking_state = Thinking()
+        self.states[thinking_state.name] = thinking_state
+
+        scratchpad_state = Scratchpad()
+        self.states[scratchpad_state.name] = scratchpad_state
+
+        action_states: list[AgentState] = []
+        if tools:
+            tool_state = ToolCallState(tools)
+            self.states[tool_state.name] = tool_state
+            action_states.append(tool_state)
+
+        if use_python:
+            python_state = Python()
+            self.states[python_state.name] = python_state
+            action_states.append(python_state)
+
+        if use_bash:
+            bash_state = Bash()
+            self.states[bash_state.name] = bash_state
+            action_states.append(bash_state)
 
         super().__init__(
-            state_graph=self.build_state_graph(
-                tools=tools,
-                use_python=use_python,
-                use_bash=use_bash,
-                force_planning=force_planning,
-                max_planning_loops=max_planning_loops,
-                delimiters=self.delimiters,
-            ),
+            {
+                "plan": [
+                    (
+                        LoopStateMachine(
+                            AnyStateMachine(
+                                [
+                                    Thinking().state_machine,
+                                    Scratchpad().state_machine,
+                                ]
+                            ),
+                            min_loop_count=int(force_planning),
+                            max_loop_count=max_planning_loops,
+                        ),
+                        "take_action",
+                    )
+                ],
+                "take_action": [
+                    (action.state_machine, "done") for action in action_states
+                ],
+            },
             start_state="plan",
             end_states=["done"],
         )
 
-    def build_state_graph(
-        self,
-        tools: Sequence[dict[str, Any]] | None,
-        use_python: bool,
-        use_bash: bool,
-        force_planning: bool,
-        max_planning_loops: int,
-        delimiters: dict[str, tuple[str, str]],
-    ) -> StateGraph:
-        """Construct the agent's state graph."""
-
-        state_graph: StateGraph = {
-            "plan": [
-                (
-                    LoopStateMachine(
-                        AnyStateMachine(
-                            [
-                                FencedFreeformStateMachine(
-                                    "thinking",
-                                    delimiters["thinking"],
-                                    char_min=50,
-                                    char_max=1000,
-                                ),
-                                FencedFreeformStateMachine(
-                                    "scratchpad",
-                                    delimiters["scratchpad"],
-                                    char_min=50,
-                                    char_max=1000,
-                                ),
-                            ]
-                        ),
-                        min_loop_count=int(force_planning),
-                        max_loop_count=max_planning_loops,
-                    ),
-                    "take_action",
-                )
-            ],
-            "take_action": [],
-        }
-
-        if tools:
-            _, tool_state_machine = json_schema_state_machine(
-                tools, delimiters=delimiters["tool"]
-            )
-            tool_state_machine.identifier = "tool_call"
-            state_graph["take_action"].append((tool_state_machine, "done"))
-
-        if use_python:
-            python_state_machine = EncapsulatedStateMachine(
-                state_machine=PythonStateMachine,
-                delimiters=delimiters["python"],
-            )
-            python_state_machine.identifier = "python"
-            state_graph["take_action"].append((python_state_machine, "done"))
-
-        if use_bash:
-            bash_state_machine = EncapsulatedStateMachine(
-                state_machine=BashStateMachine,
-                delimiters=delimiters["bash"],
-            )
-            bash_state_machine.identifier = "bash"
-            state_graph["take_action"].append((bash_state_machine, "done"))
-
-        return state_graph
-
-    def thinking_explanation(self) -> str:
-        explanation = f"""
-        The thinking state represents the agent's internal thoughts and plans.
-        The agent should use this like a human would think aloud.
-        You should wrap the thinking in {self.delimiters["thinking"][0]!r} and {self.delimiters["thinking"][1]!r} tags.
-        """
-        return explanation
-
-    def scratchpad_explanation(self) -> str:
-        explanation = f"""
-        The scratchpad state represents a "scratchpad" where the agent can scribble down ideas, thoughts, and plans.
-        The agent should use this like a human might use a physical scratchpad with pen and paper.
-        You should wrap the scratchpad in {self.delimiters["scratchpad"][0]!r} and {self.delimiters["scratchpad"][1]!r} tags.
-        """
-        return explanation
-
-    def tool_explanation(self) -> str:
-        explanation = f"""
-        The tool state represents a tool call.
-        You should wrap the tool call in {self.delimiters["tool"][0]!r} and {self.delimiters["tool"][1]!r} tags.
-        The tool call should be a valid JSON object matching the schema of the tool.
-        """
-        return explanation
-
-    def bash_explanation(self) -> str:
-        explanation = f"""
-        The bash state represents a a bash terminal, where the agent can run commands.
-        You should wrap the bash command in {self.delimiters["bash"][0]!r} and {self.delimiters["bash"][1]!r} tags.
-        The agent should use this like a human would use a bash terminal.
-        Do not use bash to call tools or interact with the user, use the tool state for that.
-        """
-        return explanation
-
-    def python_explanation(self) -> str:
-        explanation = f"""
-        The python state represents a python interpreter, where the agent can run python code.
-        No imports are available, and assume Python 3.10+ syntax.
-        You should wrap the python code in {self.delimiters["python"][0]!r} and {self.delimiters["python"][1]!r} tags.
-        The agent should use this like a human would use a python interpreter to run small snippets of code.
-        Do not use python to call tools or interact with the user, use the tool state for that.
-        """
-        return explanation
-
     @property
-    def state_prompt(self) -> str:
+    def prompt(self) -> str:
         explanation = f"""
-        The agent follows a sequence of steps.
-        First, the agent plans. During planning, it can "think" or use a "scratchpad."
-        "Thinking" is like thinking quietly to itself. The "scratchpad" is like writing notes.
-        The agent can switch back and forth between thinking and using the scratchpad.
-        After planning, the agent acts. It can use a tool, write Python code, or use bash commands (if available).
+        An agentic system operates through a sequence of states to interact with its environment.
 
-        The agent has different states it can be in:
+        State Transitions:
+        - Move between states using delimiters to indicate the start and end of a state.
+        - Each transition should be purposeful and advance toward an underlying goal
+        - Do not be overly verbose or repetitive
 
-        - Thinking:
-        {self.thinking_explanation()}
-
-        - Scratchpad:
-        {self.scratchpad_explanation()}
-
-        - Tool Use:
-        {self.tool_explanation()}
-
-        - Python Code:
-        {self.python_explanation()}
-
-        - Bash Commands:
-        {self.bash_explanation()}
-
-        The agent moves between these modes depending on what it outputs.
-        Make sure to always use the correct tags around your output to show which mode you are in.
+        Available States:
+        {
+            "\n        ".join(str(state) for state in self.states.values())
+        }
+        Encapsulate all outputs with the correct delimiters corresponding to your current state.
+        When operating in any state, embody the state's intended purpose rather than verbally confirming your state.
         """
         return explanation

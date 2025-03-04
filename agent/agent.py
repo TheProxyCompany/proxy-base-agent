@@ -54,19 +54,21 @@ class Agent:
         tools: list[Tool] | list[str] | None = None,
         include_python: bool = False,
         include_bash: bool = False,
+        max_planning_loops: int = 3,
+        force_planning: bool = True,
         **inference_kwargs,
     ):
         """Initialize an agent."""
 
         self.seed = seed or randint(0, 1000000)
         self.name = name
-        self.step_number = 0
         self.status = Agent.Status.IDLE
+        self.step_number = 0
+        self.prefill = None
 
         self.system_prompt_name = system_prompt_name
         self.inference_kwargs = inference_kwargs
-        self.include_python = include_python
-        self.prefill = None
+        self.inference_kwargs["seed"] = self.seed
 
         self.tools: dict[str, Tool] = {}
         for tool in tools or Tool.load():
@@ -78,10 +80,11 @@ class Agent:
         self.inference = inference
         self.interface = interface
         self.state_machine = AgentStateMachine(
-            tools=[t.to_dict() for t in self.tools.values()],
+            tools=list(self.tools.values()),
             use_python=include_python,
             use_bash=include_bash,
-            tool_delimiters=self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters(),
+            max_planning_loops=max_planning_loops,
+            force_planning=force_planning,
         )
         self.inference.engine.configure(self.state_machine)
         self.hippocampus = Hippocampus(self.system_prompt)
@@ -125,67 +128,76 @@ class Agent:
         while self.can_act:
             self.step_number += 1
             self.status = Agent.Status.PROCESSING
-            try:
-                await self.act()
-            except Exception as e:
-                logger.error(f"Error taking action: {e}")
-                self.status = Agent.Status.FAILED
-                await self.interface.show_output(
-                    Interaction(
-                        role=Interaction.Role.ASSISTANT,
-                        name=self.name,
-                        content=f"Error: {e}",
-                    )
-                )
-                return
+            await self.run_inference()
 
         await self.loop()
 
-    async def act(self) -> None:
+    async def run_inference(self) -> None:
         """
         Take actions based on an event.
 
         This method handles the event, appends it to the history, and processes
         any tool calls.
         """
-
-        for token_ids in self.inference.run_inference(
+        self.inference.engine.reset()
+        for token_id in self.inference.run_inference(
             prompt=[e.to_dict() for e in self.hippocampus.events.values()],
             **self.inference_kwargs,
         ):
-            output = self.inference.front_end.tokenizer.decode([token_ids])
-            self.interface.show_live_output("", output)
+            logger.debug("Generated token: %s", self.inference.engine.tokenizer.decode(token_id))
+            if live_output := self.inference.engine.get_live_structured_output():
+                if live_output[0] == "tool_call":
+                    breakpoint()
+                self.interface.show_live_output(*live_output)
+            else:
+                self.interface.end_live_output()
 
         self.interface.end_live_output()
-        for state, output in self.inference.engine.get_structured_output():
-            breakpoint()
+        await self.take_action()
+
+    async def take_action(self) -> None:
+        """
+        Take actions based on an event.
+
+        This method handles the event, appends it to the history, and processes
+        any tool calls.
+        """
+        action = Interaction(
+            role=Interaction.Role.ASSISTANT,
+            name=self.name,
+            content=[],
+        )
+        for state, output in self.inference.engine.get_stateful_structured_output():
             match state:
-                case "scratchpad", "thinking":
-                    print(output)
+                case "scratchpad" | "thinking":
+                    action.content.append(output)
                     pass
+
                 case "tool_call":
-                    interaction = self.use_tool(output)
-                    print(interaction)
+                    tool_call = ToolCall(**output)
+                    interaction = self.use_tool(tool_call)
+                    await self.interface.show_output(interaction)
+                    action.metadata["tool_call"] = tool_call.to_dict()
+                    action.metadata["tool_result"] = interaction.to_dict()
                     pass
+
                 case "python":
                     from agent.system.run_python_code import run_python_code
                     interaction = await run_python_code(self, output)
-                    print(interaction)
+                    action.metadata["tool_result"] = interaction.to_dict()
                     pass
+
                 case "bash":
                     from agent.system.run_bash_code import run_bash_code
                     interaction = await run_bash_code(self, output)
-                    print(interaction)
+                    action.metadata["tool_result"] = interaction.to_dict()
                     pass
+
                 case _:
                     raise ValueError(f"Unknown structured output: {output}")
 
-        output = Interaction(
-            role=Interaction.Role.ASSISTANT,
-            name=self.name,
-        )
-        self.hippocampus.append_to_history(output)
-        await self.interface.show_output(output)
+        self.hippocampus.append_to_history(action)
+        await self.interface.show_output(action)
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
@@ -310,21 +322,13 @@ class Agent:
         try:
             formatted_prompt = prompt.format(
                 name=self.name,
-                tool_list=self.tool_list,
-                state_prompt=self.state_machine.state_prompt,
+                state_prompt=self.state_machine.prompt,
             )
             prompt = formatted_prompt
         except Exception:
             pass
 
         return Interaction(role=Interaction.Role.SYSTEM, content=prompt)
-
-    @property
-    def tool_list(self) -> str:
-        """
-        List of tools available to the agent.
-        """
-        return "\n---\n".join([str(tool) for tool in self.tools.values()])
 
     def __repr__(self) -> str:
         return f"{self.name} ({self.status})"

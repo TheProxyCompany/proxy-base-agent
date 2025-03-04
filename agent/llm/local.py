@@ -25,25 +25,15 @@ class LocalInference:
         - Setting up caches and data structures for efficient inference
         """
         self.front_end = Frontend.from_path(model_path, frontend)
-        self.engine = StructuringEngine(self.front_end.tokenizer._tokenizer, multi_token_sampling=True)
+        self.engine = StructuringEngine(self.front_end.tokenizer._tokenizer, multi_token_sampling=False)
 
-    def run_inference(
-        self,
-        prompt: str | list[dict[str, Any]] | list[Interaction],
-        **inference_kwargs,
-    ) -> Iterable[int]:
+    def run_inference(self, prompt: str | list[dict[str, Any]] | list[Interaction], **inference_kwargs) -> Iterable[int]:
         """
         Generate a completion for the given prompt.
 
         Args:
             prompt (str | list[dict[str, Any]] | list[Event]): The input prompt for completion.
-            structure (StructuringEngine.StructureType | None): schema to constrain the output.
-            buffer_length (int): The length of the buffer to use for inference.
-            max_tokens (int): The maximum number of tokens to generate.
             **inference_kwargs: Additional keyword arguments to use for inference.
-
-        Returns:
-            Iterable[ModelOutput]: The output from the model, each element are sampled tokens & logprobs
         """
         tokenizer_config = {
             "prompt": prompt,
@@ -51,9 +41,5 @@ class LocalInference:
             **self.front_end.tokenizer.control_tokens.model_dump(),
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
-
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-
-        for token_id in self.front_end.inference(encoded_prompt, self.engine, **inference_kwargs):
-            encoded_prompt.append(token_id)
-            yield token_id
+        yield from self.front_end.inference(encoded_prompt, self.engine, **inference_kwargs)

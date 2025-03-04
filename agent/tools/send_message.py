@@ -26,6 +26,14 @@ def send_message(
             - str: Speaks this alternative text instead
             Note: Spoken content should be more concise than written text.
     """
+
+    if isinstance(spoken, str):
+        spoken_lower = spoken.lower()
+        if spoken_lower == "true":
+            spoken = True
+        elif spoken_lower in ("none", "null", "false"):
+            spoken = None
+
     if spoken:
         speech_text = spoken if isinstance(spoken, str) else message
         self.voicebox(speech_text)
