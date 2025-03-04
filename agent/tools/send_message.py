@@ -1,5 +1,5 @@
 from agent.agent import Agent
-from agent.interaction import Interaction
+from agent.system.interaction import Interaction
 
 
 def send_message(
@@ -43,8 +43,8 @@ def send_message(
         role=Interaction.Role.ASSISTANT,
         content=message,
         title=self.name,
-        color="green",
-        emoji="speech_balloon",
+        color="cyan",
+        emoji="alien",
         last=True,
         silent=True,
     )

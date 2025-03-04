@@ -15,8 +15,9 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from agent.interaction import Interaction
 from agent.interface import Interface
+from agent.state import AgentState
+from agent.system.interaction import Interaction
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class CLIInterface(Interface):
     def __init__(self) -> None:
         self.console = Console()
         self.live: Live | None = None
-        self.current_state = None
+        self.current_state: AgentState | None = None
 
     @staticmethod
     def get_panel(interaction: Interaction, **panel_style: Any) -> RenderableType:
@@ -161,7 +162,7 @@ class CLIInterface(Interface):
         if isinstance(output.tool_result, Interaction):
             await self.show_output(output.tool_result)
 
-    def show_live_output(self, state: str | None, output: object) -> None:
+    def show_live_output(self, state: AgentState | None, output: object) -> None:
         """Show partial output with enhanced visual styling."""
 
         if state != self.current_state:
@@ -169,34 +170,34 @@ class CLIInterface(Interface):
                 self.end_live_output()
             self.current_state = state
 
-        if not self.live:
-            self.live = Live(
-                console=self.console,
-                refresh_per_second=15,
-                auto_refresh=True,
-                transient=True,
-                vertical_overflow="visible",
-            )
-            self.live.start()
+        if not self.current_state:
+            return
 
-        string_output = str(output).strip()
-        title = self.current_state.title() if self.current_state else "Structured Output"
-        if string_output:
+        if string_output := str(output).strip():
+            if not self.live:
+                self.live = Live(
+                    console=self.console,
+                    refresh_per_second=15,
+                    auto_refresh=True,
+                    transient=True,
+                    vertical_overflow="visible",
+                )
+                self.live.start()
+
             structured_panel = Panel(
                 Markdown(
-                    string_output,
+                    self.current_state.format(string_output),
                     inline_code_theme="monokai",
                     style="bright_white",
                 ),
-                title=f"{Emoji('zap')} {title}",
-                title_align="center",
+                title=f"{Emoji(self.current_state.emoji)} {self.current_state.name.title()}",
+                title_align="left",
                 subtitle=Text(
                     "Powered by: The Proxy Structuring Engine",
-                    style="bright_white italic"
+                    style="bright_white italic",
                 ),
                 subtitle_align="left",
-                border_style="yellow",
-                box=box.HEAVY,
+                border_style=self.current_state.color,
                 width=PANEL_WIDTH,
                 padding=(1, 2),
             )

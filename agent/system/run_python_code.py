@@ -4,7 +4,7 @@ import sys
 import tempfile
 
 from agent.agent import Agent
-from agent.interaction import Interaction
+from agent.system.interaction import Interaction
 
 DEFAULT_TIMEOUT_SECONDS = 30
 

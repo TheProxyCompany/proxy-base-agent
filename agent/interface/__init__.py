@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 
 from rich.console import Console
 
-from agent.interaction import Interaction
+from agent.state import AgentState
+from agent.system.interaction import Interaction
 
 
 class Interface(ABC):
@@ -35,7 +36,7 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    def show_live_output(self, state: str | None, output: object) -> None:
+    def show_live_output(self, state: AgentState | None, output: object) -> None:
         """
         Show partial output.
 

@@ -10,7 +10,8 @@ class Bash(AgentState):
         super().__init__(
             name="Bash",
             delimiters=("```bash\n", "\n```"),
-            color="yellow"
+            color="yellow",
+            emoji="laptop",
         )
 
     @property
@@ -25,8 +26,8 @@ class Bash(AgentState):
     @property
     def state_prompt(self) -> str:
         return f"""
-        The bash state represents a bash terminal, where the agent can run commands.
-        You should wrap the bash command in {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
-        The agent should use this like a human would use a bash terminal.
-        Do not use bash to call tools or interact with the user, use the tool state for that.
+The bash state represents a bash terminal, where the agent can run commands.
+You should wrap the bash command in {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
+The agent should use this like a human would use a bash terminal.
+Do not use bash to call tools or interact with the user, use the tool state for that.
         """

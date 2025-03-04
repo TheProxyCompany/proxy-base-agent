@@ -10,7 +10,8 @@ class ToolCallState(AgentState):
         super().__init__(
             name="Tool_Call",
             delimiters=("```json\n", "\n```"),
-            color="dim_white"
+            color="dim yellow",
+            emoji="wrench",
         )
         self.tools = tools
 
@@ -26,18 +27,16 @@ class ToolCallState(AgentState):
     @property
     def state_prompt(self) -> str:
         return f"""
-        The tool_call state represents your interface for invoking external tools or APIs.
-        You should use this state to call tools or interact with the user.
+The tool_call state represents your interface for invoking external tools or APIs.
+You should use this state to call tools or interact with the user.
 
-        Core Capabilities:
-            - Purposeful Tool Selection: Thoughtfully choose the most appropriate tool based on the current task and context.
-            - Structured Interaction: Clearly format tool calls as valid JSON objects matching the specified schema.
-            - Outcome Anticipation: Internally anticipate the results and usefulness of invoking the chosen tool.
+Core Capabilities:
+    - Purposeful Tool Selection: Thoughtfully choose the most appropriate tool based on the current task and context.
+    - Structured Interaction: Clearly format tool calls as valid JSON objects matching the specified schema.
+    - Outcome Anticipation: Internally anticipate the results and usefulness of invoking the chosen tool.
 
-        Integrated Psychological Frameworks:
-            1. Instrumental Rationality: Optimize your actions by selecting tools most likely to achieve your goals efficiently.
-            2. Resourcefulness: Employ tools strategically to expand your problem-solving capabilities beyond internal reasoning alone.
-            3. Decision Justification: Reflect internally on the rationale for selecting a particular tool, ensuring alignment with your broader objectives.
-
-        Always encapsulate your tool calls within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags, ensuring your calls match the expected schema precisely.
+The following tools are available:
+{"\n---\n".join(str(tool) for tool in self.tools)}
+No other tools are available, and these tools are not available in any other state.
+Always encapsulate your tool calls within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
         """

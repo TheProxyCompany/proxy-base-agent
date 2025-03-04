@@ -4,7 +4,7 @@ from mflux.config.config import Config
 from mflux.flux.flux import Flux1
 
 from agent.agent import Agent
-from agent.interaction import Interaction
+from agent.system.interaction import Interaction
 
 IMAGE_PATH = "/tmp/image.png"
 
@@ -65,6 +65,6 @@ def create_image(
         content=f"Generated an image:\n*{prompt}*",
         title=self.name + "'s image",
         image_url=IMAGE_PATH,
-        color="yellow",
+        color="brown",
         emoji="camera",
     )

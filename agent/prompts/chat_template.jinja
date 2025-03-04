@@ -15,6 +15,7 @@
     {{- assistant_header_start + role + assistant_header_end -}}
     {{- interaction['content'] | safe -}}
     {%- if interaction.tool_call is string -%}
+        {{- tool_start }}
         {{- interaction.tool_call -}}
     {%- elif interaction.tool_call -%}
         {{- tool_start }}

@@ -165,7 +165,11 @@ class Tool:
             "type": "object",
             "description": self.description or self.name,
             "properties": {
-                "intention": {"type": "string", "description": "The reason or goal of the tool call.", "minLength": 10},
+                "intention": {
+                    "type": "string",
+                    "description": "Your reason for using this specific tool, and intended outcome.",
+                    "minLength": 10,
+                },
                 "name": {"const": self.name},
                 "arguments": self.schema.get("parameters", {}),
             },
@@ -183,12 +187,9 @@ class Tool:
 
     def __str__(self) -> str:
         tool = self.to_dict().get("properties", {})
-        tool_str = f"\nTool: {self.name}\n"
-        tool_str += f"Tool Description:\n{self.description}\n"
-        tool_str += f"Tool Schema:\n{json.dumps(tool, indent=2)}\n"
-        args = self.schema.get("parameters", {})
-        if required := args.get("required", []):
-            tool_str += f"Required Arguments:\n{required}\n"
+        tool_str = f'\nTool name: "{self.name}"'
+        tool_str += f'\nTool description:\n{self.description}'
+        tool_str += f'\nTool schema:\n{json.dumps(tool, indent=2)}'
         return tool_str
 
 

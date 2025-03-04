@@ -4,8 +4,8 @@ from typing import Any
 
 from pse.structuring_engine import StructuringEngine
 
-from agent.interaction import Interaction
 from agent.llm.frontend import Frontend
+from agent.system.interaction import Interaction
 
 logger = logging.getLogger(__name__)
 

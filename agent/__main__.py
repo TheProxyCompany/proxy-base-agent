@@ -15,7 +15,7 @@ logging.basicConfig(
 
 agent_kwargs = {
     "max_tokens": 1000,
-    "temp": 1.2,
+    "temp": 0.75,
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
     "add_generation_prompt": True,

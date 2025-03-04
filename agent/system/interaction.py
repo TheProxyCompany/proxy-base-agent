@@ -87,7 +87,7 @@ class Interaction:
             elif isinstance(value, str):
                 dict[key] = value
             else:
-                dict[key] = json.dumps(value)
+                dict[key] = value
 
         if self.role == Interaction.Role.TOOL:
             dict["tool_call_id"] = str(self.event_id)  # openai

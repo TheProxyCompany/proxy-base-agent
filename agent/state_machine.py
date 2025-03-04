@@ -50,7 +50,7 @@ class AgentStateMachine(StateMachine):
         force_planning: bool = True,
         max_planning_loops: int = 3,
     ) -> None:
-        self.states = {}
+        self.states: dict[str, AgentState] = {}
 
         thinking_state = Thinking()
         self.states[thinking_state.name] = thinking_state
@@ -102,18 +102,16 @@ class AgentStateMachine(StateMachine):
     @property
     def prompt(self) -> str:
         explanation = f"""
-        An agentic system operates through a sequence of states to interact with its environment.
+An agentic system operates through a sequence of states to interact with its environment.
 
-        State Transitions:
-        - Move between states using delimiters to indicate the start and end of a state.
-        - Each transition should be purposeful and advance toward an underlying goal
-        - Do not be overly verbose or repetitive
+State Transitions:
+- Move between states using delimiters to indicate the start and end of a state.
+- Each transition should be purposeful and advance toward an underlying goal
+- Do not be overly verbose or repetitive
 
-        Available States:
-        {
-            "\n        ".join(str(state) for state in self.states.values())
-        }
-        Encapsulate all outputs with the correct delimiters corresponding to your current state.
-        When operating in any state, embody the state's intended purpose rather than verbally confirming your state.
+Available States:
+{ "\n".join(str(state) for state in self.states.values()) }
+Encapsulate all outputs with the correct delimiters corresponding to your current state.
+When operating in any state, embody the state's intended purpose rather than verbally confirming your state.
         """
         return explanation

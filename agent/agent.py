@@ -8,13 +8,13 @@ from enum import Enum
 from random import randint
 from typing import TypeVar
 
-from agent.interaction import Interaction
 from agent.interface import CLIInterface, Interface
 from agent.llm import get_available_models
 from agent.llm.local import LocalInference
-from agent.memory import Hippocampus
 from agent.prompts import get_available_prompts, load_prompt
 from agent.state_machine import AgentStateMachine
+from agent.system.interaction import Interaction
+from agent.system.memory import Hippocampus
 from agent.system.voice import VoiceBox
 from agent.tools import Tool, ToolCall
 
@@ -25,6 +25,7 @@ MAX_SUB_STEPS: int = 20
 T = TypeVar("T")
 
 class Agent:
+
     class Status(Enum):
         # Core System States
         PROCESSING = "processing"
@@ -86,6 +87,7 @@ class Agent:
             max_planning_loops=max_planning_loops,
             force_planning=force_planning,
         )
+        self.states = self.state_machine.states
         self.inference.engine.configure(self.state_machine)
         self.hippocampus = Hippocampus(self.system_prompt)
         self.voicebox = VoiceBox()
@@ -140,15 +142,15 @@ class Agent:
         any tool calls.
         """
         self.inference.engine.reset()
-        for token_id in self.inference.run_inference(
+        for _ in self.inference.run_inference(
             prompt=[e.to_dict() for e in self.hippocampus.events.values()],
             **self.inference_kwargs,
         ):
-            logger.debug("Generated token: %s", self.inference.engine.tokenizer.decode(token_id))
             if live_output := self.inference.engine.get_live_structured_output():
-                if live_output[0] == "tool_call":
-                    breakpoint()
-                self.interface.show_live_output(*live_output)
+                self.interface.show_live_output(
+                    self.states.get(live_output[0].lower()),
+                    live_output[1]
+                )
             else:
                 self.interface.end_live_output()
 
@@ -165,13 +167,16 @@ class Agent:
         action = Interaction(
             role=Interaction.Role.ASSISTANT,
             name=self.name,
-            content=[],
         )
         for state, output in self.inference.engine.get_stateful_structured_output():
-            match state:
+            agent_state = self.states.get(state)
+            if not agent_state:
+                logger.warning(f"Unknown state: {state}")
+                continue
+
+            match agent_state.name:
                 case "scratchpad" | "thinking":
-                    action.content.append(output)
-                    pass
+                    action.content += agent_state.format(output.strip()) + "\n"
 
                 case "tool_call":
                     tool_call = ToolCall(**output)
@@ -197,7 +202,7 @@ class Agent:
                     raise ValueError(f"Unknown structured output: {output}")
 
         self.hippocampus.append_to_history(action)
-        await self.interface.show_output(action)
+        # await self.interface.show_output(action)
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
