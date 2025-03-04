@@ -65,6 +65,6 @@ def create_image(
         content=f"Generated an image:\n*{prompt}*",
         title=self.name + "'s image",
         image_url=IMAGE_PATH,
-        color="brown",
+        color="bright yellow",
         emoji="camera",
     )
