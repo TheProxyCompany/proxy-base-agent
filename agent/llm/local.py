@@ -27,11 +27,13 @@ class LocalInference:
         self.engine = StructuringEngine(
             self.front_end.tokenizer._tokenizer,
             whitelist_control_tokens=self.front_end.tokenizer.whitelist_control_tokens,
-            multi_token_sampling=False,
+            multi_token_sampling=True,
         )
 
     def run_inference(
-        self, prompt: str | list[dict[str, Any]] | list[Interaction], **inference_kwargs
+        self,
+        prompt: str | list[dict[str, Any]] | list[Interaction],
+        **inference_kwargs,
     ) -> Iterable[int]:
         """
         Generate a completion for the given prompt.
