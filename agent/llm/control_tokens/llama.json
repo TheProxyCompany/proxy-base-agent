@@ -11,7 +11,7 @@
         "tool": "ipython",
         "user": "user"
     },
-    "tool_start": "```json\n",
+    "tool_start": "```tool\n",
     "tool_end": "\n```",
     "tool_result_start": "<|start_header_id|>ipython<|end_header_id|>\n\n",
     "tool_result_end": "<|eot_id|>",

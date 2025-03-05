@@ -50,5 +50,7 @@ class LocalInference:
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
         yield from self.front_end.inference(
-            encoded_prompt, self.engine, **inference_kwargs
+            encoded_prompt,
+            self.engine,
+            **inference_kwargs,
         )

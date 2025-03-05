@@ -17,7 +17,7 @@ class ToolCallState(AgentState):
         super().__init__(
             identifier="tool_call",
             readable_name="External Tool Use",
-            delimiters=delimiters or ("```json\n", "\n```"),
+            delimiters=delimiters or ("```tool\n", "\n```"),
             color="dim yellow",
             emoji="wrench",
         )

@@ -9,7 +9,7 @@
     "assistant_header_end": "\n",
     "tool_list_start": "```tool_list\n",
     "tool_list_end": "\n```",
-    "tool_start": "```json\n",
+    "tool_start": "```tool\n",
     "tool_end": "\n```",
     "tool_result_start": "<tool_response>\n",
     "tool_result_end": "\n</tool_response>",
