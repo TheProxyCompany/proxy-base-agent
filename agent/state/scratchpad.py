@@ -5,10 +5,10 @@ from agent.state import AgentState
 
 
 class Scratchpad(AgentState):
-    def __init__(self):
+    def __init__(self, delimiters: tuple[str, str] | None = None):
         super().__init__(
             name="Scratchpad",
-            delimiters=("```scratchpad\n", "\n```"),
+            delimiters=delimiters or ("```scratchpad\n", "\n```"),
             color="dim white",
             emoji="pencil",
         )

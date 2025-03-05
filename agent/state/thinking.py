@@ -5,10 +5,10 @@ from agent.state import AgentState
 
 
 class Thinking(AgentState):
-    def __init__(self):
+    def __init__(self, delimiters: tuple[str, str] | None = None):
         super().__init__(
             name="Thinking",
-            delimiters=("```thinking\n", "\n```"),
+            delimiters=delimiters or ("```thinking\n", "\n```"),
             color="dim cyan",
             emoji="brain",
         )

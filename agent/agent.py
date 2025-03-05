@@ -8,7 +8,7 @@ from enum import Enum
 from random import randint
 from typing import TypeVar
 
-from agent.interface import CLIInterface, Interface
+from agent.interface import Interface
 from agent.llm import get_available_models
 from agent.llm.local import LocalInference
 from agent.state_machine import AgentStateMachine
@@ -48,9 +48,9 @@ class Agent:
     def __init__(
         self,
         name: str,
+        system_prompt_name: str,
         interface: Interface,
         inference: LocalInference,
-        system_prompt_name: str | None,
         seed: int | None = None,
         tools: list[Tool] | list[str] | None = None,
         include_python: bool = False,
@@ -86,6 +86,9 @@ class Agent:
             use_bash=include_bash,
             max_planning_loops=max_planning_loops,
             force_planning=force_planning,
+            thinking_delimiters=self.inference.front_end.tokenizer.control_tokens.thinking_delimiters,
+            scratchpad_delimiters=self.inference.front_end.tokenizer.control_tokens.scratchpad_delimiters,
+            tool_call_delimiters=self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters,
         )
         self.states = self.state_machine.states
         self.inference.engine.configure(self.state_machine)
@@ -173,7 +176,6 @@ class Agent:
             if not agent_state:
                 logger.warning(f"Unknown state: {state}")
                 continue
-
             match agent_state.name:
                 case "scratchpad" | "thinking":
                     action.content += agent_state.format(output.strip()) + "\n"
@@ -189,6 +191,7 @@ class Agent:
                 case "python":
                     from agent.system.run_python_code import run_python_code
                     interaction = await run_python_code(self, output)
+                    await self.interface.show_output(interaction)
                     action.metadata["tool_result"] = interaction.to_dict()
                     pass
 
@@ -222,36 +225,6 @@ class Agent:
                 role=Interaction.Role.TOOL,
                 content=f"Tool call failed: {e}",
             )
-
-    @staticmethod
-    async def create(
-        interface: Interface | None = None,
-        inference: LocalInference | None = None,
-        **inference_kwargs,
-    ) -> Agent:
-        """
-        Create an agent.
-
-        Args:
-            interface: Interface for I/O operations
-            inference: Inference engine
-            inference_kwargs: kwargs used when inferencing the agent
-        """
-        interface = interface or CLIInterface()
-        await interface.clear()
-        if inference is None:
-            model_path = await Agent.get_model_path(interface)
-            with interface.console.status("[yellow]Loading model..."):
-                inference = LocalInference(model_path, frontend="torch")
-        agent_name = await Agent.get_agent_name(interface)
-        system_prompt = await Agent.get_agent_prompt(interface)
-        return Agent(
-            agent_name,
-            interface,
-            inference,
-            system_prompt,
-            **inference_kwargs,
-        )
 
     @staticmethod
     async def get_agent_name(interface: Interface) -> str:

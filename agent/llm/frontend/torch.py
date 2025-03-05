@@ -1,16 +1,17 @@
+import threading
 from collections.abc import Iterator
 from typing import Any
 
 import torch
 from pse.structuring_engine import StructuringEngine
 from pse.util.torch_mixin import PSETorchMixin
-from transformers import PreTrainedModel, TextStreamer
+from transformers import LlamaForCausalLM, TextIteratorStreamer
 
 from agent.llm.frontend import Frontend
 from agent.llm.tokenizer import Tokenizer
 
 
-class PSE_Torch(PSETorchMixin, PreTrainedModel):
+class PSE_Torch(PSETorchMixin, LlamaForCausalLM):
     pass
 
 
@@ -26,25 +27,39 @@ class TorchInference(Frontend):
         Args:
             model_path (str): The path to the model.
         """
+        # Load the model from the specified path
         self.model = PSE_Torch.from_pretrained(model_path)
-        assert isinstance(self.model, PreTrainedModel)
-        self.model_type = self.model.config.model_type
-        self.tokenizer = Tokenizer.load(model_path, self.model_type)
-        self.model.config.pad_token_id = self.model.config.eos_token_id[0]
+        assert isinstance(self.model, LlamaForCausalLM)
+
+        # Initialize tokenizer with appropriate model type
+        self.tokenizer = Tokenizer.load(model_path)
+
+        # Configure padding token to match EOS token
+        self.model.config.pad_token_id = self.model.config.eos_token_id
+
+        # Apply the same padding configuration to generation config if it exists
         if self.model.generation_config:
-            self.model.generation_config.pad_token_id = self.model.config.eos_token_id[0]
+            self.model.generation_config.pad_token_id = self.model.config.eos_token_id
 
     def inference(self, prompt: list[int], engine: StructuringEngine, **kwargs: Any) -> Iterator[str]:
+        assert isinstance(self.model, PSE_Torch)
         self.model.engine = engine
         if seed := kwargs.get("seed", None):
             torch.random.manual_seed(seed)
+
         tensor = torch.tensor(prompt)
-        tensor = tensor.to(self.model.device)
-        yield from self.model.generate(
-            tensor,
-            do_sample=True,
-            max_new_tokens=200,
-            top_k=10,
-            top_p=None,
-            streamer=TextStreamer(self.tokenizer._tokenizer),  # type: ignore [reportArgumentType]
-        )
+        tensor = tensor.unsqueeze(0).to(self.model.device)
+
+        streamer = TextIteratorStreamer(self.tokenizer._tokenizer, skip_prompt=True) # type: ignore [reportArgumentType]
+        generate_kwargs = {
+            "inputs": tensor,
+            "do_sample": True,
+            "streamer": streamer,
+            "max_new_tokens": kwargs.get("max_tokens", None),
+            "top_k": kwargs.get("top_k", 10),
+            "top_p": kwargs.get("top_p", None),
+            "temperature": kwargs.get("temp", 0.7),
+        }
+        thread = threading.Thread(target=self.model.generate, kwargs=generate_kwargs)
+        thread.start()
+        yield from streamer

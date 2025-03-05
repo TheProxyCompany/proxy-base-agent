@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 from pathlib import Path
@@ -116,22 +117,28 @@ class Tokenizer:
             raise ValueError(f"Unsupported prompt format: {templated}")
 
     @staticmethod
-    def load(
-        model_path: str | Path,
-        model_type: str,
-        **kwargs,
-    ) -> Tokenizer:
+    def load(model_path: str | Path, **kwargs) -> Tokenizer:
         """Create a TokenizerWrapper by loading a Hugging Face tokenizer.
 
         Args:
             model_path: Path to the model/tokenizer
-            model_type: Type of model for control token selection
             **kwargs: Additional args passed to AutoTokenizer.from_pretrained()
 
         Returns:
             Configured TokenizerWrapper instance
         """
-        control_tokens = get_control_tokens(model_type)
+        # Convert string path to Path object for consistent handling
+        model_path = Path(model_path) if isinstance(model_path, str) else model_path
+
+        # Load tokenizer configuration and determine appropriate control tokens
+        try:
+            with open(model_path / "tokenizer_config.json") as f:
+                tokenizer_config = json.load(f)
+                control_tokens = get_control_tokens(str(model_path), tokenizer_config)
+        except FileNotFoundError:
+            logger.warning(f"Tokenizer config not found at {model_path}, using default control tokens")
+            control_tokens = get_control_tokens(str(model_path), {})
+
         tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
         tokenizer.chat_template = load_template(control_tokens.template_type)
         return Tokenizer(tokenizer, control_tokens)

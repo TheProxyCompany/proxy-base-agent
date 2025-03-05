@@ -27,8 +27,8 @@ class MLXInference(Frontend):
             model_path (str): The path to the model.
         """
         set_max_reccomended_device_limit()
-        self.model, self.model_type = load_model(model_path)
-        self.tokenizer = Tokenizer.load(model_path, self.model_type)
+        self.model, _ = load_model(model_path)
+        self.tokenizer = Tokenizer.load(model_path)
 
     def inference(
         self,

@@ -32,7 +32,7 @@ async def run_python_code(
                 capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
-                check=False,  # Let us process non-zero exits as needed
+                check=True,  # Let us process non-zero exits as needed
             )
             output = result.stdout + result.stderr
         except subprocess.TimeoutExpired:

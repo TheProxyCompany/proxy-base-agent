@@ -49,18 +49,21 @@ class AgentStateMachine(StateMachine):
         use_bash: bool = False,
         force_planning: bool = True,
         max_planning_loops: int = 3,
+        thinking_delimiters: tuple[str, str] | None = None,
+        scratchpad_delimiters: tuple[str, str] | None = None,
+        tool_call_delimiters: tuple[str, str] | None = None,
     ) -> None:
         self.states: dict[str, AgentState] = {}
 
-        thinking_state = Thinking()
+        thinking_state = Thinking(thinking_delimiters)
         self.states[thinking_state.name] = thinking_state
 
-        scratchpad_state = Scratchpad()
+        scratchpad_state = Scratchpad(scratchpad_delimiters)
         self.states[scratchpad_state.name] = scratchpad_state
 
         action_states: list[AgentState] = []
         if tools:
-            tool_state = ToolCallState(tools)
+            tool_state = ToolCallState(tools, tool_call_delimiters)
             self.states[tool_state.name] = tool_state
             action_states.append(tool_state)
 

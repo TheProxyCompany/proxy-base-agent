@@ -5,6 +5,7 @@ import sys
 
 from agent.agent import Agent
 from agent.interface.cli_interface import CLIInterface
+from agent.llm.local import LocalInference
 
 # Set up logging
 logging.basicConfig(
@@ -25,12 +26,29 @@ agent_kwargs = {
     "include_bash": False,
     "max_planning_loops": 3,
     "force_planning": False,
+    "thinking_tokens": ("```thinking\n", "\n```"),
+    "scratchpad_tokens": ("```scratchpad\n", "\n```"),
+    "tool_call_tokens": ("```json\n", "\n```"),
 }
 
 async def main():
     interface = CLIInterface()
+    await interface.clear()
+
+    agent_name = await Agent.get_agent_name(interface)
+    system_prompt_name = await Agent.get_agent_prompt(interface)
+
+    model_path = await Agent.get_model_path(interface)
+    with interface.console.status("[yellow]Loading model..."):
+        inference = LocalInference(model_path, frontend="mlx")
     try:
-        agent = await Agent.create(interface, **agent_kwargs)
+        agent = Agent(
+            agent_name,
+            system_prompt_name,
+            interface,
+            inference,
+            **agent_kwargs,
+        )
         await agent.loop()
     except Exception as error:
         await interface.exit_program(error)

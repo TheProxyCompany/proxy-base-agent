@@ -1,5 +1,5 @@
 {
-    "template_type": "chatml",
+    "template_type": "hermes",
     "begin_of_text": "",
     "end_of_sequence": "<|im_end|>\n",
     "end_of_message": "<|im_end|>\n",

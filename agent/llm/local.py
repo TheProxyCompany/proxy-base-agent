@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class LocalInference:
-
     def __init__(self, model_path: str, frontend: str | None = "mlx"):
         """
         Initialize the Inference class.
@@ -25,9 +24,15 @@ class LocalInference:
         - Setting up caches and data structures for efficient inference
         """
         self.front_end = Frontend.from_path(model_path, frontend)
-        self.engine = StructuringEngine(self.front_end.tokenizer._tokenizer, multi_token_sampling=False)
+        self.engine = StructuringEngine(
+            self.front_end.tokenizer._tokenizer,
+            control_tokens=self.front_end.tokenizer.control_tokens.get_primary_control_tokens(),
+            multi_token_sampling=False,
+        )
 
-    def run_inference(self, prompt: str | list[dict[str, Any]] | list[Interaction], **inference_kwargs) -> Iterable[int]:
+    def run_inference(
+        self, prompt: str | list[dict[str, Any]] | list[Interaction], **inference_kwargs
+    ) -> Iterable[int]:
         """
         Generate a completion for the given prompt.
 
@@ -42,4 +47,6 @@ class LocalInference:
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-        yield from self.front_end.inference(encoded_prompt, self.engine, **inference_kwargs)
+        yield from self.front_end.inference(
+            encoded_prompt, self.engine, **inference_kwargs
+        )

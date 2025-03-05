@@ -9,6 +9,10 @@
     "assistant_header_end": "<|end_header_id|>\n\n",
     "tool_start": "```json\n",
     "tool_end": "\n```",
+    "thinking_start": "```thinking\n",
+    "thinking_end": "\n```",
+    "scratchpad_start": "```scratchpad\n",
+    "scratchpad_end": "\n```",
     "tool_result_start": "<|start_header_id|>ipython<|end_header_id|>\n\n",
     "tool_result_end": "<|eot_id|>",
     "roles": {
