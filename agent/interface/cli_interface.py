@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Enhanced styling constants
 PANEL_WIDTH = 90
-PANEL_PADDING = (1, 1)
+PANEL_PADDING = (0, 1)
 
 
 class CLIInterface(Interface):
@@ -47,13 +47,10 @@ class CLIInterface(Interface):
             case _:
                 content = str(interaction.content)
 
-        # Enhanced markdown styling
         markdown = Markdown(
             content,
             justify="left",
             code_theme="monokai",
-            inline_code_lexer="markdown",
-            inline_code_theme="monokai",
             style="bright_white",
         )
 
@@ -189,6 +186,7 @@ class CLIInterface(Interface):
                     self.current_state.readable_format(string_output),
                     inline_code_theme="monokai",
                     style="bright_white",
+                    justify="left",
                 ),
                 title=f"{Emoji(self.current_state.emoji)} {self.current_state.readable_name.title()}",
                 title_align="left",
