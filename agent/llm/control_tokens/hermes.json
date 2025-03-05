@@ -1,24 +1,22 @@
 {
     "template_type": "hermes",
     "begin_of_text": "",
-    "end_of_sequence": "<|im_end|>\n",
-    "end_of_message": "<|im_end|>\n",
-    "user_start": "<|im_start|>",
-    "user_end": "\n",
     "assistant_header_start": "<|im_start|>",
     "assistant_header_end": "\n",
-    "thinking_start": "```thinking\n",
-    "thinking_end": "\n```",
-    "scratchpad_start": "```scratchpad\n",
-    "scratchpad_end": "\n```",
-    "tool_start": "<tool_call>\n",
-    "tool_end": "\n</tool_call>",
-    "tool_result_start": "<tool_response>\n",
-    "tool_result_end": "\n</tool_response>",
+    "end_of_message": "<|im_end|>\n",
+    "end_of_sequence": "<|im_end|>\n",
     "roles": {
-        "system": "system",
         "assistant": "assistant",
-        "user": "user",
-        "tool": "tool"
-    }
+        "system": "system",
+        "tool": "tool",
+        "user": "user"
+    },
+    "tool_start": "<tool_call>",
+    "tool_end": "</tool_call>",
+    "tool_list_start": "<tools>",
+    "tool_list_end": "</tools>",
+    "tool_result_start": "<tool_response>",
+    "tool_result_end": "</tool_response>",
+    "user_start": "<|im_start|>",
+    "user_end": "\n"
 }

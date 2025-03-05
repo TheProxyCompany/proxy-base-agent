@@ -26,7 +26,7 @@ class LocalInference:
         self.front_end = Frontend.from_path(model_path, frontend)
         self.engine = StructuringEngine(
             self.front_end.tokenizer._tokenizer,
-            control_tokens=self.front_end.tokenizer.control_tokens.get_primary_control_tokens(),
+            whitelist_control_tokens=self.front_end.tokenizer.whitelist_control_tokens,
             multi_token_sampling=False,
         )
 

@@ -8,7 +8,8 @@ from agent.state import AgentState
 class Python(AgentState):
     def __init__(self):
         super().__init__(
-            name="Python",
+            identifier="python",
+            readable_name="Python Interpreter",
             delimiters=("```python\n", "\n```"),
             color="yellow",
             emoji="snake",
@@ -20,7 +21,7 @@ class Python(AgentState):
             state_machine=PythonStateMachine,
             delimiters=self.delimiters,
         )
-        python_state_machine.identifier = "python"
+        python_state_machine.identifier = self.identifier
         return python_state_machine
 
     @property
@@ -32,3 +33,6 @@ You should wrap the python code in {self.delimiters[0]!r} and {self.delimiters[1
 The agent should use this like a human would use a python interpreter to run small snippets of code.
 Do not use python to call tools or interact with the user, use the tool state for that.
         """
+
+    def readable_format(self, string: str) -> str:
+        return f"```python\n{string}\n```"

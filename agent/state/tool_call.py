@@ -8,13 +8,20 @@ from agent.tools import Tool
 
 
 class ToolCallState(AgentState):
-    def __init__(self, tools: list[Tool], delimiters: tuple[str, str] | None = None):
+    def __init__(
+        self,
+        tools: list[Tool],
+        delimiters: tuple[str, str] | None = None,
+        list_delimiters: tuple[str, str] | None = None,
+    ):
         super().__init__(
-            name="Tool_Call",
+            identifier="tool_call",
+            readable_name="External Tool Use",
             delimiters=delimiters or ("```json\n", "\n```"),
             color="dim yellow",
             emoji="wrench",
         )
+        self.list_delimiters = list_delimiters or ("```tool_list", "```")
         self.tools = tools
 
     @property
@@ -23,7 +30,7 @@ class ToolCallState(AgentState):
             [tool.to_dict() for tool in self.tools],
             delimiters=self.delimiters
         )
-        state_machine.identifier = "tool_call"
+        state_machine.identifier = self.identifier
         return state_machine
 
     @property
@@ -33,7 +40,13 @@ class ToolCallState(AgentState):
     You should use this state to call tools or interact with the user.
 
     The following tools are available:
-    {"\n---\n".join(textwrap.indent(str(tool), "    ") for tool in self.tools)}
+    {self.list_delimiters[0]}
+    {"\n    ----------".join(textwrap.indent(str(tool), "    ") for tool in self.tools)}
+    {self.list_delimiters[1]}
+
     No other tools are available, and these tools are not available in any other state.
     Always encapsulate your tool calls within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
         """
+
+    def readable_format(self, string: str) -> str:
+        return f"```json\n{string}\n```"

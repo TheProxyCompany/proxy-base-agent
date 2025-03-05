@@ -186,11 +186,11 @@ class CLIInterface(Interface):
 
             structured_panel = Panel(
                 Markdown(
-                    self.current_state.format(string_output),
+                    self.current_state.readable_format(string_output),
                     inline_code_theme="monokai",
                     style="bright_white",
                 ),
-                title=f"{Emoji(self.current_state.emoji)} {self.current_state.name.title()}",
+                title=f"{Emoji(self.current_state.emoji)} {self.current_state.readable_name.title()}",
                 title_align="left",
                 subtitle=Text(
                     "Powered by: The Proxy Structuring Engine",

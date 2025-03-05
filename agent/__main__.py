@@ -24,11 +24,8 @@ agent_kwargs = {
     "seed": 11,
     "include_python": False,
     "include_bash": False,
-    "max_planning_loops": 3,
+    "max_planning_loops": 5,
     "force_planning": False,
-    "thinking_tokens": ("```thinking\n", "\n```"),
-    "scratchpad_tokens": ("```scratchpad\n", "\n```"),
-    "tool_call_tokens": ("```json\n", "\n```"),
 }
 
 async def main():

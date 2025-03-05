@@ -8,7 +8,8 @@ from agent.state import AgentState
 class Bash(AgentState):
     def __init__(self):
         super().__init__(
-            name="Bash",
+            identifier="bash",
+            readable_name="Terminal Commands (Bash Syntax)",
             delimiters=("```bash\n", "\n```"),
             color="yellow",
             emoji="laptop",
@@ -20,7 +21,7 @@ class Bash(AgentState):
             state_machine=BashStateMachine,
             delimiters=self.delimiters,
         )
-        bash_state_machine.identifier = "bash"
+        bash_state_machine.identifier = self.identifier
         return bash_state_machine
 
     @property
@@ -31,3 +32,6 @@ You should wrap the bash command in {self.delimiters[0]!r} and {self.delimiters[
 The agent should use this like a human would use a bash terminal.
 Do not use bash to call tools or interact with the user, use the tool state for that.
         """
+
+    def readable_format(self, string: str) -> str:
+        return f"```bash\n{string}\n```"

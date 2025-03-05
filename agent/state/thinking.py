@@ -7,7 +7,8 @@ from agent.state import AgentState
 class Thinking(AgentState):
     def __init__(self, delimiters: tuple[str, str] | None = None):
         super().__init__(
-            name="Thinking",
+            identifier="thinking",
+            readable_name="Metacognitive Thinking",
             delimiters=delimiters or ("```thinking\n", "\n```"),
             color="dim cyan",
             emoji="brain",
@@ -16,7 +17,7 @@ class Thinking(AgentState):
     @property
     def state_machine(self) -> StateMachine:
         return FencedFreeformStateMachine(
-            self.name.lower(),
+            self.identifier,
             self.delimiters,
             char_min=50,
             char_max=1000,

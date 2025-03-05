@@ -47,6 +47,15 @@ class Tokenizer:
         return self._control_tokens
 
     @property
+    def whitelist_control_tokens(self) -> list[str]:
+        """Get the whitelist of control tokens.
+
+        Returns:
+            List of control tokens
+        """
+        return self.control_tokens.get_whitelist_control_tokens()
+
+    @property
     def stop_tokens(self) -> set[int]:
         """Get the set of token IDs that indicate stopping generation.
 
@@ -66,6 +75,15 @@ class Tokenizer:
 
         # Flatten and deduplicate token IDs into a set
         return stop_tokens
+
+    @property
+    def delimiters(self) -> dict[str, tuple[str, str] | None]:
+        """Get the delimiters for the control tokens.
+
+        Returns:
+            Dictionary of control token names to their delimiters
+        """
+        return self.control_tokens.delimiters()
 
     def decode(self, tokens: list[int], **kwargs) -> str:
         """Decode token IDs back to text.

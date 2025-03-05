@@ -5,9 +5,11 @@ from agent.state import AgentState
 
 
 class Scratchpad(AgentState):
+
     def __init__(self, delimiters: tuple[str, str] | None = None):
         super().__init__(
-            name="Scratchpad",
+            identifier="scratchpad",
+            readable_name="Disposable Scratchpad",
             delimiters=delimiters or ("```scratchpad\n", "\n```"),
             color="dim white",
             emoji="pencil",
@@ -16,7 +18,7 @@ class Scratchpad(AgentState):
     @property
     def state_machine(self) -> StateMachine:
         return FencedFreeformStateMachine(
-            self.name.lower(),
+            self.identifier,
             self.delimiters,
             char_min=50,
             char_max=1000,

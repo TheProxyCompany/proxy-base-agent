@@ -86,9 +86,7 @@ class Agent:
             use_bash=include_bash,
             max_planning_loops=max_planning_loops,
             force_planning=force_planning,
-            thinking_delimiters=self.inference.front_end.tokenizer.control_tokens.thinking_delimiters,
-            scratchpad_delimiters=self.inference.front_end.tokenizer.control_tokens.scratchpad_delimiters,
-            tool_call_delimiters=self.inference.front_end.tokenizer.control_tokens.tool_use_delimiters,
+            delimiters_kwargs=self.inference.front_end.tokenizer.delimiters,
         )
         self.states = self.state_machine.states
         self.inference.engine.configure(self.state_machine)
@@ -174,10 +172,11 @@ class Agent:
         for state, output in self.inference.engine.get_stateful_structured_output():
             agent_state = self.states.get(state)
             if not agent_state:
+                breakpoint()
                 logger.warning(f"Unknown state: {state}")
                 continue
-            match agent_state.name:
-                case "scratchpad" | "thinking":
+            match agent_state.identifier:
+                case "scratchpad" | "thinking" | "reasoning" | "inner_monologue":
                     action.content += agent_state.format(output.strip()) + "\n"
 
                 case "tool_call":

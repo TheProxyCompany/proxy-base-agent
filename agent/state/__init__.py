@@ -6,12 +6,14 @@ from pse_core.state_machine import StateMachine
 class AgentState(ABC):
     def __init__(
         self,
-        name: str,
+        identifier: str,
+        readable_name: str,
         delimiters: tuple[str, str],
         color: str,
         emoji: str,
     ):
-        self.name = name.lower()
+        self.identifier = identifier
+        self.readable_name = readable_name
         self.delimiters = delimiters
         self.color = color
         self.emoji = emoji
@@ -29,14 +31,27 @@ class AgentState(ABC):
     def format(self, string: str) -> str:
         return f"{self.delimiters[0]}{string}{self.delimiters[1]}"
 
+    def readable_format(self, string: str) -> str:
+        return f"```markdown\n{string}\n```"
+
     def __str__(self) -> str:
-        return f"- {self.name.title()}:{self.state_prompt}"
+        return f"{self.readable_name.title()}: {self.state_prompt}"
 
 
 from agent.state.bash import Bash  # noqa: E402
+from agent.state.inner_monologue import InnerMonologue  # noqa: E402
 from agent.state.python import Python  # noqa: E402
+from agent.state.reasoning import Reasoning  # noqa: E402
 from agent.state.scratchpad import Scratchpad  # noqa: E402
 from agent.state.thinking import Thinking  # noqa: E402
 from agent.state.tool_call import ToolCallState  # noqa: E402
 
-__all__ = ["Bash", "Python", "Scratchpad", "Thinking", "ToolCallState"]
+__all__ = [
+    "Bash",
+    "InnerMonologue",
+    "Python",
+    "Reasoning",
+    "Scratchpad",
+    "Thinking",
+    "ToolCallState",
+]

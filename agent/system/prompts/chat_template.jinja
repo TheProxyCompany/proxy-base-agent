@@ -14,19 +14,18 @@
     {%- set role = roles.get(interaction['role'], interaction['role']) -%}
     {{- assistant_header_start + role + assistant_header_end -}}
     {{- interaction['content'] | safe -}}
-    {%- if interaction.tool_call is string -%}
-        {{- tool_start }}
-        {{- interaction.tool_call -}}
-    {%- elif interaction.tool_call -%}
+    {%- if interaction.tool_call -%}
         {{- tool_start }}
         {{- interaction.tool_call | tojson(indent=2) | trim -}}
         {{- tool_end -}}
     {%- endif -%}
+
     {%- if interaction.tool_result and not interaction.tool_result.last and not interaction.tool_result.silent -%}
         {{- end_of_message -}}
         {{- assistant_header_start + roles.tool + assistant_header_end -}}
         {{- interaction.tool_result.content | safe -}}
     {%- endif -%}
+
     {{- end_of_sequence -}}
 {%- endmacro -%}
 {# ------------------------------------------------------------------------ #}
