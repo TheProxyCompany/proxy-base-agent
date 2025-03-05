@@ -80,12 +80,12 @@ class CLIInterface(Interface):
         if interaction.role == Interaction.Role.USER:
             panel.title_align = panel.subtitle_align = "right"
             return Align.right(panel)
-        elif interaction.role == Interaction.Role.ASSISTANT:
-            panel.title_align = panel.subtitle_align = "left"
-            return Align.left(panel)
-        else:
+        elif interaction.role == Interaction.Role.SYSTEM:
             panel.title_align = panel.subtitle_align = "center"
             return Align.center(panel)
+        else:
+            panel.title_align = panel.subtitle_align = "left"
+            return Align.left(panel)
 
     async def get_input(self, **kwargs: Any) -> Interaction:
         """Gets user input with enhanced styling and validation."""
@@ -146,7 +146,7 @@ class CLIInterface(Interface):
         panel_style = {
             "border_style": style["color"],
             "title": f"{emoji}{style['title']}",
-            "width": int(PANEL_WIDTH * 0.75),
+            "width": PANEL_WIDTH,
             "padding": PANEL_PADDING,
         }
 
@@ -199,7 +199,7 @@ class CLIInterface(Interface):
                 subtitle_align="left",
                 border_style=self.current_state.color,
                 width=PANEL_WIDTH,
-                padding=(1, 2),
+                padding=(0, 0),
             )
             self.live.update(Align.left(structured_panel))
 
@@ -244,7 +244,7 @@ class CLIInterface(Interface):
                 "border_style": "red",
                 "title": f"{Emoji('warning')} Error Details",
                 "subtitle": "Please check the information below",
-                "padding": (1, 2),
+                "padding": (0, 0),
                 "box": box.HEAVY,
             }
 
@@ -253,19 +253,10 @@ class CLIInterface(Interface):
             self.console.print()
 
     async def render_image(self, image_url: str) -> None:
-        """Displays an image with enhanced error handling and loading states."""
+        """Displays an image with enhanced error handling."""
         try:
             from imgcat import imgcat
             from PIL import Image
-
-            self.console.print(
-                Panel(
-                    "Loading image...",
-                    title=f"{Emoji('hourglass_flowing_sand')} Loading",
-                    border_style="blue",
-                    box=box.ROUNDED,
-                )
-            )
 
             img = Image.open(image_url)
             imgcat(img)
@@ -304,7 +295,7 @@ class CLIInterface(Interface):
             box=box.DOUBLE,
             expand=False,
             width=PANEL_WIDTH,
-            padding=(1, 2),
+            padding=(0, 0),
         )
 
         self.console.print()

@@ -7,20 +7,20 @@ requires-python = ">=3.12"
 dependencies = [
     "docstring-parser>=0.16",
     "mlx-proxy",
-    "mlx>=0.22.0",
+    "mlx",
     "pse",
     "pydantic>=2.10.5",
     "python-dotenv>=1.0.1",
     "questionary>=2.1.0",
-    "rich>=13.9.4",
-    "ruff>=0.9.3",
+    "rich",
+    "ruff",
     "imgcat>=0.6.0",
-    "pillow>=11.1.0",
+    "pillow",
     "huggingface-hub>=0.28.1",
-    "mflux>=0.2.1",
-    "sounddevice>=0.5.1",
-    "kokoro-onnx>=0.4.0",
-    "numpy<=2.1.0",
+    "mflux @ git+https://github.com/filipstrand/mflux.git",
+    "sounddevice",
+    "kokoro-onnx",
+    "numpy",
 ]
 
 [tool.ruff.lint]

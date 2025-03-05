@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from typing import Any, TypeVar
 
 from pse.structuring_engine import StructuringEngine
@@ -24,13 +24,13 @@ class Frontend(ABC):
             from agent.llm.frontend.mlx import MLXInference
 
             return MLXInference(model_path)
+        elif frontend == "torch":
+            from agent.llm.frontend.torch import TorchInference
+
+            return TorchInference(model_path)
         else:
-            raise ValueError(f"Invalid front-end type: {frontend:}")
+            raise ValueError(f"Invalid front-end type: {frontend!r}")
 
     @abstractmethod
-    def inference(self, prompt: list[int], engine: StructuringEngine, **kwargs: Any) -> Iterator[int]:
-        pass
-
-    @abstractmethod
-    def make_sampler(self, structured: bool, **kwargs) -> Callable[..., Any]:
+    def inference(self, prompt: list[int], engine: StructuringEngine, **kwargs: Any) -> Iterator[Any]:
         pass

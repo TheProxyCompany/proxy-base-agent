@@ -242,7 +242,7 @@ class Agent:
         if inference is None:
             model_path = await Agent.get_model_path(interface)
             with interface.console.status("[yellow]Loading model..."):
-                inference = LocalInference(model_path)
+                inference = LocalInference(model_path, frontend="torch")
         agent_name = await Agent.get_agent_name(interface)
         system_prompt = await Agent.get_agent_prompt(interface)
         return Agent(

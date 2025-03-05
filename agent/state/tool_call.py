@@ -30,11 +30,6 @@ class ToolCallState(AgentState):
 The tool_call state represents your interface for invoking external tools or APIs.
 You should use this state to call tools or interact with the user.
 
-Core Capabilities:
-    - Purposeful Tool Selection: Thoughtfully choose the most appropriate tool based on the current task and context.
-    - Structured Interaction: Clearly format tool calls as valid JSON objects matching the specified schema.
-    - Outcome Anticipation: Internally anticipate the results and usefulness of invoking the chosen tool.
-
 The following tools are available:
 {"\n---\n".join(str(tool) for tool in self.tools)}
 No other tools are available, and these tools are not available in any other state.

@@ -1,6 +1,8 @@
 import os
+import time
 
 from mflux.config.config import Config
+from mflux.config.model_config import ModelConfig
 from mflux.flux.flux import Flux1
 
 from agent.agent import Agent
@@ -41,8 +43,11 @@ def create_image(
     if not prompt:
         raise ValueError("Prompt is required, cannot visualize an empty prompt.")
 
-    flux = Flux1.from_alias(
-        alias="schnell",
+    tic = time.time()
+    model_config = ModelConfig.schnell()
+
+    flux = Flux1(
+        model_config=model_config,
         quantize=8,
     )
     image = flux.generate_image(
@@ -50,8 +55,8 @@ def create_image(
         prompt=prompt + " pixelated, low resolution, 8-bit, 16x16, retro style.",
         config=Config(
             num_inference_steps=steps,
-            height=512,
-            width=512,
+            height=1024,
+            width=1024,
             guidance=guidance,
         ),
     )
@@ -59,12 +64,15 @@ def create_image(
         os.remove(IMAGE_PATH)
 
     image.save(path=IMAGE_PATH)
+    toc = time.time()
 
+    total_time = f"{toc - tic:.2f} seconds"
+    result = f"Generated an image based on the prompt: {prompt} in {total_time}. The image was displayed to the user."
     return Interaction(
-        role=Interaction.Role.ASSISTANT,
-        content=f"Generated an image:\n*{prompt}*",
+        role=Interaction.Role.TOOL,
+        content=result,
         title=self.name + "'s image",
         image_url=IMAGE_PATH,
-        color="bright yellow",
+        color="bright_yellow",
         emoji="camera",
     )
