@@ -199,7 +199,7 @@ class CLIInterface(Interface):
                 subtitle_align="left",
                 border_style=self.current_state.color,
                 width=PANEL_WIDTH,
-                padding=(0, 0),
+                padding=(0, 1),
             )
             self.live.update(Align.left(structured_panel))
 
