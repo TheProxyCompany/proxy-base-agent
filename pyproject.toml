@@ -1,7 +1,7 @@
 [project]
 name = "Agent"
-version = "0.5"
-description = "An autonomous tool using agent powered by the Proxy Structuring Engine."
+version = "1.0.0"
+description = "A simple agent powered by the Proxy Structuring Engine."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
