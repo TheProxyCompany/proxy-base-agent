@@ -25,26 +25,33 @@ async def run_python_code(
     if not code.endswith("\n"):
         code += "\n"
 
-
     with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as temp_script:
         temp_script.write(code.encode())
         temp_script.flush()
+        script_path = temp_script.name
 
-        try:
-            result = subprocess.run(
-                [sys.executable, temp_script.name],
-                capture_output=True,
-                text=True,
-                timeout=timeout_seconds,
-                check=True,  # Let us process non-zero exits as needed
-            )
-            output = result.stdout + result.stderr
-        except subprocess.TimeoutExpired:
-            output = f"Execution timed out after {timeout_seconds} seconds"
-        except Exception as e:
-            output = f"Execution failed with error: {e}"
-        finally:
-            os.remove(temp_script.name)
+    try:
+        # Don't use check=True so we can capture stderr from failed executions
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+        # Combine stdout and stderr, regardless of exit code
+        output = result.stdout
+        if result.stderr:
+            if output:
+                output += "\n"
+            output += result.stderr
+    except subprocess.TimeoutExpired:
+        output = f"Execution timed out after {timeout_seconds} seconds"
+    except Exception as e:
+        output = f"Execution failed with error: {e}"
+    finally:
+        # Ensure cleanup happens even if there's an exception
+        if os.path.exists(script_path):
+            os.remove(script_path)
 
     return Interaction(
         role=Interaction.Role.TOOL,

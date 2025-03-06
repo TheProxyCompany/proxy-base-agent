@@ -160,10 +160,3 @@ class Tokenizer:
         tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
         tokenizer.chat_template = load_template(control_tokens.template_type)
         return Tokenizer(tokenizer, control_tokens)
-
-    def __getattribute__(self, name: str) -> Any:
-        """Forward attribute lookups to the underlying tokenizer if not found on wrapper."""
-        try:
-            return object.__getattribute__(self, name)
-        except AttributeError:
-            return getattr(object.__getattribute__(self, "_tokenizer"), name)

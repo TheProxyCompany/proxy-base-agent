@@ -22,7 +22,7 @@ agent_kwargs = {
     "add_generation_prompt": True,
     "prefill": "",
     "seed": 11,
-    "include_python": False,
+    "include_python": True,
     "include_bash": False,
     "max_planning_loops": 5,
     "force_planning": True,
