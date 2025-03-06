@@ -176,11 +176,9 @@ class Agent:
 
             match agent_state.identifier:
                 case "scratchpad" | "thinking" | "reasoning" | "inner_monologue":
-                    logger.info(f"Agent {self.name} is in state: {agent_state.identifier}")
                     action.content += agent_state.format(output.strip()) + "\n"
 
                 case "tool_call":
-                    logger.info(f"Agent {self.name} is using a tool")
                     tool_call = ToolCall(**output)
                     interaction = self.use_tool(tool_call)
                     await self.interface.show_output(interaction)
@@ -188,7 +186,6 @@ class Agent:
                     action.metadata["tool_result"] = interaction.to_dict()
 
                 case "python":
-                    logger.info(f"Agent {self.name} is running python code")
                     from agent.system.run_python_code import run_python_code
                     interaction = await run_python_code(self, output)
                     await self.interface.show_output(interaction)
@@ -196,7 +193,6 @@ class Agent:
                     action.metadata["tool_result"] = interaction.to_dict()
 
                 case "bash":
-                    logger.info(f"Agent {self.name} is running bash code")
                     from agent.system.run_bash_code import run_bash_code
                     interaction = await run_bash_code(self, output)
                     await self.interface.show_output(interaction)
@@ -207,7 +203,6 @@ class Agent:
                     raise ValueError(f"Unknown structured output: {output}")
 
         self.hippocampus.append_to_history(action)
-        # await self.interface.show_output(action)
 
     def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
