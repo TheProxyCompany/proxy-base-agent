@@ -172,9 +172,9 @@ class Agent:
         for state, output in self.inference.engine.get_stateful_structured_output():
             agent_state = self.states.get(state)
             if not agent_state:
-                breakpoint()
                 logger.warning(f"Unknown state: {state}")
                 continue
+
             match agent_state.identifier:
                 case "scratchpad" | "thinking" | "reasoning" | "inner_monologue":
                     action.content += agent_state.format(output.strip()) + "\n"
