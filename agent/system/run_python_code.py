@@ -22,6 +22,10 @@ async def run_python_code(
     Returns:
         Interaction containing execution results or error message
     """
+    if not code.endswith("\n"):
+        code += "\n"
+
+
     with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as temp_script:
         temp_script.write(code.encode())
         temp_script.flush()
@@ -37,6 +41,8 @@ async def run_python_code(
             output = result.stdout + result.stderr
         except subprocess.TimeoutExpired:
             output = f"Execution timed out after {timeout_seconds} seconds"
+        except Exception as e:
+            output = f"Execution failed with error: {e}"
         finally:
             os.remove(temp_script.name)
 

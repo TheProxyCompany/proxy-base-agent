@@ -15,17 +15,17 @@ logging.basicConfig(
 )
 
 agent_kwargs = {
-    "max_tokens": 1000,
+    "max_tokens": 2400,
     "temp": 1.0,
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
     "add_generation_prompt": True,
     "prefill": "",
     "seed": 11,
-    "include_python": True,
+    "include_python": False,
     "include_bash": False,
     "max_planning_loops": 5,
-    "force_planning": False,
+    "force_planning": True,
 }
 
 async def main():
