@@ -15,9 +15,13 @@
     {{- assistant_header_start + role + assistant_header_end -}}
     {{- interaction['content'] | safe -}}
     {%- if interaction.tool_call -%}
-        {{- tool_start }}
-        {{- interaction.tool_call | tojson(indent=2) | trim -}}
-        {{- tool_end -}}
+        {%- if interaction.tool_call is string -%}
+            {{- interaction.tool_call | trim -}}
+        {%- else -%}
+            {{- tool_start }}
+            {{- interaction.tool_call | tojson(indent=2) | trim -}}
+            {{- tool_end -}}
+        {%- endif -%}
     {%- endif -%}
 
     {%- if interaction.tool_result and not interaction.tool_result.last and not interaction.tool_result.silent -%}

@@ -25,7 +25,7 @@ agent_kwargs = {
     "include_python": True,
     "include_bash": False,
     "max_planning_loops": 5,
-    "force_planning": True,
+    "force_planning": False,
 }
 
 async def main():

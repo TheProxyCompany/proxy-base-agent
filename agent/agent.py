@@ -11,10 +11,10 @@ from typing import TypeVar
 from agent.interface import Interface
 from agent.llm import get_available_models
 from agent.llm.local import LocalInference
+from agent.llm.prompts import get_available_prompts, load_prompt
 from agent.state_machine import AgentStateMachine
 from agent.system.interaction import Interaction
 from agent.system.memory import Hippocampus
-from agent.system.prompts import get_available_prompts, load_prompt
 from agent.system.voice import VoiceBox
 from agent.tools import Tool, ToolCall
 
@@ -131,16 +131,15 @@ class Agent:
         while self.can_act:
             self.step_number += 1
             self.status = Agent.Status.PROCESSING
-            await self.run_inference()
+            await self.generate_action()
 
         await self.loop()
 
-    async def run_inference(self) -> None:
+    async def generate_action(self) -> None:
         """
-        Take actions based on an event.
+        Generate an action based on the current state of the agent.
 
-        This method handles the event, appends it to the history, and processes
-        any tool calls.
+        This method generates an action based on the current state of the agent.
         """
         self.inference.engine.reset()
         for _ in self.inference.run_inference(
@@ -177,28 +176,32 @@ class Agent:
 
             match agent_state.identifier:
                 case "scratchpad" | "thinking" | "reasoning" | "inner_monologue":
+                    logger.info(f"Agent {self.name} is in state: {agent_state.identifier}")
                     action.content += agent_state.format(output.strip()) + "\n"
 
                 case "tool_call":
+                    logger.info(f"Agent {self.name} is using a tool")
                     tool_call = ToolCall(**output)
                     interaction = self.use_tool(tool_call)
                     await self.interface.show_output(interaction)
                     action.metadata["tool_call"] = tool_call.to_dict()
                     action.metadata["tool_result"] = interaction.to_dict()
-                    pass
 
                 case "python":
+                    logger.info(f"Agent {self.name} is running python code")
                     from agent.system.run_python_code import run_python_code
                     interaction = await run_python_code(self, output)
                     await self.interface.show_output(interaction)
+                    action.metadata["tool_call"] = agent_state.format(output.strip())
                     action.metadata["tool_result"] = interaction.to_dict()
-                    pass
 
                 case "bash":
+                    logger.info(f"Agent {self.name} is running bash code")
                     from agent.system.run_bash_code import run_bash_code
                     interaction = await run_bash_code(self, output)
+                    await self.interface.show_output(interaction)
+                    action.metadata["tool_call"] = agent_state.format(output.strip())
                     action.metadata["tool_result"] = interaction.to_dict()
-                    pass
 
                 case _:
                     raise ValueError(f"Unknown structured output: {output}")
@@ -306,6 +309,3 @@ class Agent:
             pass
 
         return Interaction(role=Interaction.Role.SYSTEM, content=prompt)
-
-    def __repr__(self) -> str:
-        return f"{self.name} ({self.status})"
