@@ -5,7 +5,7 @@ from agent.state import AgentState
 
 
 class Reasoning(AgentState):
-    def __init__(self, delimiters: tuple[str, str] | None = None):
+    def __init__(self, delimiters: tuple[str, str] | None = None, character_max: int = 2000):
         super().__init__(
             identifier="reasoning",
             readable_name="Logical Reasoning",
@@ -13,6 +13,7 @@ class Reasoning(AgentState):
             color="dim yellow",
             emoji="bulb",
         )
+        self.character_max = character_max
 
     @property
     def state_machine(self) -> StateMachine:
@@ -20,7 +21,7 @@ class Reasoning(AgentState):
             self.identifier,
             self.delimiters,
             char_min=100,
-            char_max=2000,
+            char_max=self.character_max,
         )
 
     @property

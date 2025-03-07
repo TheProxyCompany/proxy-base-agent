@@ -6,7 +6,7 @@ from agent.state import AgentState
 
 class Scratchpad(AgentState):
 
-    def __init__(self, delimiters: tuple[str, str] | None = None):
+    def __init__(self, delimiters: tuple[str, str] | None = None, character_max: int = 1000):
         super().__init__(
             identifier="scratchpad",
             readable_name="Disposable Scratchpad",
@@ -14,6 +14,7 @@ class Scratchpad(AgentState):
             color="dim white",
             emoji="pencil",
         )
+        self.character_max = character_max
 
     @property
     def state_machine(self) -> StateMachine:
@@ -21,7 +22,7 @@ class Scratchpad(AgentState):
             self.identifier,
             self.delimiters,
             char_min=50,
-            char_max=1000,
+            char_max=self.character_max,
         )
 
     @property

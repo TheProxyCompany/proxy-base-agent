@@ -57,6 +57,7 @@ class Agent:
         include_bash: bool = False,
         max_planning_loops: int = 3,
         force_planning: bool = True,
+        character_max: int | None = None,
         **inference_kwargs,
     ):
         """Initialize an agent."""
@@ -87,6 +88,7 @@ class Agent:
             max_planning_loops=max_planning_loops,
             force_planning=force_planning,
             delimiters_kwargs=self.inference.front_end.tokenizer.delimiters,
+            character_max=character_max,
         )
         self.states = self.state_machine.states
         self.inference.engine.configure(self.state_machine)

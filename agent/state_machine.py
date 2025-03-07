@@ -60,10 +60,11 @@ class AgentStateMachine(StateMachine):
         force_planning: bool = True,
         max_planning_loops: int = 3,
         delimiters_kwargs: dict[str, tuple[str, str] | None] | None = None,
+        character_max: int | None = None,
     ) -> None:
         self.states: dict[str, AgentState] = {}
         delimiters = delimiters_kwargs or {}
-        planning_states = self.create_planning_states(**delimiters)
+        planning_states = self.create_planning_states(character_max=character_max, **delimiters)
         action_states = self.create_action_states(
             tools=tools, use_python=use_python, use_bash=use_bash, **delimiters
         )
@@ -87,17 +88,17 @@ class AgentStateMachine(StateMachine):
             end_states=["done"],
         )
 
-    def create_planning_states(self, **delimiters: tuple[str, str] | None) -> list[StateMachine]:
-        thinking_state = Thinking(delimiters.get("thinking"))
+    def create_planning_states(self, character_max=None, **delimiters: tuple[str, str] | None) -> list[StateMachine]:
+        thinking_state = Thinking(delimiters.get("thinking"), character_max=character_max)
         self.states[thinking_state.identifier] = thinking_state
 
-        scratchpad_state = Scratchpad(delimiters.get("scratchpad"))
+        scratchpad_state = Scratchpad(delimiters.get("scratchpad"), character_max=character_max)
         self.states[scratchpad_state.identifier] = scratchpad_state
 
-        inner_monologue_state = InnerMonologue(delimiters.get("inner_monologue"))
+        inner_monologue_state = InnerMonologue(delimiters.get("inner_monologue"), character_max=character_max)
         self.states[inner_monologue_state.identifier] = inner_monologue_state
 
-        reasoning_state = Reasoning(delimiters.get("reasoning"))
+        reasoning_state = Reasoning(delimiters.get("reasoning"), character_max=character_max)
         self.states[reasoning_state.identifier] = reasoning_state
 
         return [

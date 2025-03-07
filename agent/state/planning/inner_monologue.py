@@ -5,7 +5,7 @@ from agent.state import AgentState
 
 
 class InnerMonologue(AgentState):
-    def __init__(self, delimiters: tuple[str, str] | None = None):
+    def __init__(self, delimiters: tuple[str, str] | None = None, character_max: int = 1500):
         super().__init__(
             identifier="inner_monologue",
             readable_name="Inner Monologue",
@@ -13,6 +13,7 @@ class InnerMonologue(AgentState):
             color="dim magenta",
             emoji="speech_balloon",
         )
+        self.character_max = character_max
 
     @property
     def state_machine(self) -> StateMachine:
@@ -20,7 +21,7 @@ class InnerMonologue(AgentState):
             self.identifier,
             self.delimiters,
             char_min=50,
-            char_max=1500,
+            char_max=self.character_max,
         )
 
     @property
