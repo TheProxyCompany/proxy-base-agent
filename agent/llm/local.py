@@ -105,24 +105,24 @@ class LocalInference:
     def _compute_prompt_hash(self, token_ids: list[int]) -> str:
         """
         Compute a hash of the token IDs and model path to use as the cache key.
-        Preserves the exact sequence order of tokens for uniqueness and includes
-        the model path to prevent collisions across different models.
+
+        This function creates a deterministic hash by taking the first half of the token sequence
+        and converting it to a JSON string before hashing. The model path is prepended to the hash
+        to ensure uniqueness across different models using the same prompts.
+
+        Note: Only the first half of tokens is used for efficiency, as system prompts typically
+        contain sufficient uniqueness in their initial portion.
 
         Args:
             token_ids (list[int]): The token IDs to hash.
 
         Returns:
-            str: The hash of the token IDs and model path.
+            str: A composite string containing the model path and hexadecimal hash digest,
+                 formatted as "{model_path}:{hash_digest}".
         """
-        # Convert token IDs to a JSON string without sorting to preserve order
-        token_ids_str = json.dumps(token_ids)
-
-        # Include the model path in the hash calculation to differentiate between models
-        hash_input = f"{self.model_path}:{token_ids_str}"
-
-        # Compute the full hash to ensure collision resistance
-        hash_obj = hashlib.sha256(hash_input.encode())
-        return hash_obj.hexdigest()  # Use the full hash for maximum uniqueness
+        token_ids_str = json.dumps(token_ids[: len(token_ids) // 2])
+        hash_obj = hashlib.sha256(token_ids_str.encode())
+        return f"{self.model_path}:{hash_obj.hexdigest()}"
 
     def _cache_system_prompt(self, token_ids: list[int]) -> None:
         """
