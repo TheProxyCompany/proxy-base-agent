@@ -5,20 +5,29 @@ from agent.llm.local import LocalInference
 
 # Default agent configuration
 DEFAULT_AGENT_KWARGS = {
+    # Generation parameters
     "max_tokens": 5000,
     "temp": 1.0,
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
+    "character_max": 2500,
+
+    # Prompt configuration
     "add_generation_prompt": True,
     "prefill": "",
     # "seed": 11,
+
+    # Feature toggles
     "include_python": False,
     "include_bash": False,
+
+    # Planning behavior
     "max_planning_loops": 5,
     "force_planning": False,
+
+    # Caching options
     "reuse_prompt_cache": True,
     "cache_system_prompt": True,
-    "character_max": 2500,
 }
 
 async def get_boolean_option(
@@ -74,27 +83,13 @@ async def show_section_header(interface: Interface, title: str):
     # Clean formatting that will work with the CLI interface
     await interface.show_output(f"\n--- {title} ---\n")
 
-async def setup_agent(interface: Interface) -> Agent:
-    """
-    Run an interactive setup wizard to configure and initialize an agent.
-
-    Args:
-        interface: The interface to use for the setup wizard
-
-    Returns:
-        A configured and initialized Agent instance
-    """
-    await interface.clear()
-
-    await interface.show_output("=== PROXY AGENT CONFIGURATION ===\n")
-
-    # Get agent configuration
-    await show_section_header(interface, "AGENT IDENTITY")
+async def configure_basic_options(interface: Interface) -> tuple[str, str, str, str]:
+    """Configure basic agent identity and model options."""
+    # Get agent identity
     agent_name = await Agent.get_agent_name(interface)
     system_prompt_name = await Agent.get_agent_prompt(interface)
 
-    # Configure model
-    await show_section_header(interface, "MODEL CONFIGURATION")
+    # Get model information
     model_path = await Agent.get_model_path(interface)
     frontend_response = await interface.get_input(
         message="Inference Backend",
@@ -103,73 +98,103 @@ async def setup_agent(interface: Interface) -> Agent:
     )
     chosen_frontend: str = frontend_response.content
 
-    # Configure key options
+    return agent_name, system_prompt_name, model_path, chosen_frontend
+
+async def setup_agent(interface: Interface) -> Agent:
+    """
+    Run an interactive setup wizard to configure and initialize an agent.
+
+    This wizard groups configuration options into logical sections and guides
+    the user through the setup process step by step.
+
+    Args:
+        interface: The interface to use for the setup wizard
+
+    Returns:
+        A configured and initialized Agent instance
+    """
+    await interface.clear()
+    await interface.show_output("=== PROXY AGENT CONFIGURATION ===\n")
+
+    # ----- Basic Configuration -----
+    await show_section_header(interface, "ESSENTIAL SETTINGS")
+    agent_name, system_prompt_name, model_path, chosen_frontend = await configure_basic_options(interface)
+
+    # Start with default configuration
     agent_kwargs = DEFAULT_AGENT_KWARGS.copy()
 
-    # Tool options
-    await show_section_header(interface, "CAPABILITIES")
-    agent_kwargs["include_python"] = await get_boolean_option(
-        interface, "Python execution", DEFAULT_AGENT_KWARGS["include_python"]
+    # Ask for configuration mode (simple vs. advanced)
+    config_mode_response = await interface.get_input(
+        message="Configuration Mode",
+        choices=["Simple", "Advanced"],
+        default="Simple",
     )
-    agent_kwargs["include_bash"] = await get_boolean_option(
-        interface, "Bash execution", DEFAULT_AGENT_KWARGS["include_bash"]
-    )
+    config_mode = config_mode_response.content if hasattr(config_mode_response, "content") else config_mode_response
 
-    # Planning options
-    await show_section_header(interface, "PLANNING BEHAVIOR")
-    agent_kwargs["force_planning"] = await get_boolean_option(
-        interface, "Force planning phase", DEFAULT_AGENT_KWARGS["force_planning"]
-    )
-    agent_kwargs["max_planning_loops"] = await get_numeric_option(
-        interface, "maximum planning loops", DEFAULT_AGENT_KWARGS["max_planning_loops"],
-        min_value=1, max_value=10
-    )
-
-    # Performance options
-    await show_section_header(interface, "PERFORMANCE")
-    agent_kwargs["reuse_prompt_cache"] = await get_boolean_option(
-        interface, "Reuse prompt cache", DEFAULT_AGENT_KWARGS["reuse_prompt_cache"]
-    )
-
-    # Ask if they want to configure advanced options
-    if await get_boolean_option(interface, "Configure advanced options", False):
-        await show_section_header(interface, "ADVANCED OPTIONS")
-
-        # Inference options
-        agent_kwargs["temp"] = await get_numeric_option(
-            interface,
-            "temperature",
-            DEFAULT_AGENT_KWARGS["temp"],
-            min_value=0.0,
-            max_value=2.0,
-            float_type=True,
+    if config_mode == "Simple":
+        # Simple configuration - just ask for capabilities
+        await show_section_header(interface, "CAPABILITIES")
+        agent_kwargs["include_python"] = await get_boolean_option(
+            interface, "Python execution", DEFAULT_AGENT_KWARGS["include_python"]
         )
-        agent_kwargs["min_p"] = await get_numeric_option(
-            interface,
-            "minimum p",
-            DEFAULT_AGENT_KWARGS["min_p"],
-            min_value=0.0,
-            max_value=1.0,
-            float_type=True,
+        agent_kwargs["include_bash"] = await get_boolean_option(
+            interface, "Bash execution", DEFAULT_AGENT_KWARGS["include_bash"]
         )
-        agent_kwargs["max_tokens"] = await get_numeric_option(
-            interface,
-            "maximum tokens",
-            DEFAULT_AGENT_KWARGS["max_tokens"],
-            min_value=100,
-            max_value=16000,
+    else:
+        # Advanced - go through all configuration sections
+
+        # ----- Capabilities -----
+        await show_section_header(interface, "CAPABILITIES")
+        agent_kwargs["include_python"] = await get_boolean_option(
+            interface, "Python execution", DEFAULT_AGENT_KWARGS["include_python"]
         )
-        agent_kwargs["character_max"] = await get_numeric_option(
-            interface,
-            "maximum characters per state",
-            DEFAULT_AGENT_KWARGS["character_max"],
-            min_value=100,
-            max_value=10000,
+        agent_kwargs["include_bash"] = await get_boolean_option(
+            interface, "Bash execution", DEFAULT_AGENT_KWARGS["include_bash"]
         )
 
-    # Load the model and initialize agent
+        # ----- Agent Behavior -----
+        await show_section_header(interface, "PLANNING BEHAVIOR")
+        agent_kwargs["force_planning"] = await get_boolean_option(
+            interface, "Force planning phase", DEFAULT_AGENT_KWARGS["force_planning"]
+        )
+        agent_kwargs["max_planning_loops"] = await get_numeric_option(
+            interface, "maximum planning loops", DEFAULT_AGENT_KWARGS["max_planning_loops"],
+            min_value=1, max_value=10
+        )
+
+        # ----- Performance Options -----
+        await show_section_header(interface, "PERFORMANCE")
+        agent_kwargs["reuse_prompt_cache"] = await get_boolean_option(
+            interface, "Reuse prompt cache", DEFAULT_AGENT_KWARGS["reuse_prompt_cache"]
+        )
+        agent_kwargs["cache_system_prompt"] = await get_boolean_option(
+            interface, "Cache system prompt", DEFAULT_AGENT_KWARGS["cache_system_prompt"]
+        )
+
+        # ----- Inference Parameters -----
+        if await get_boolean_option(interface, "Configure inference parameters", False):
+            await show_section_header(interface, "INFERENCE PARAMETERS")
+            agent_kwargs["temp"] = await get_numeric_option(
+                interface, "temperature", DEFAULT_AGENT_KWARGS["temp"],
+                min_value=0.0, max_value=2.0, float_type=True,
+            )
+            agent_kwargs["min_p"] = await get_numeric_option(
+                interface, "minimum p", DEFAULT_AGENT_KWARGS["min_p"],
+                min_value=0.0, max_value=1.0, float_type=True,
+            )
+            agent_kwargs["max_tokens"] = await get_numeric_option(
+                interface, "maximum tokens", DEFAULT_AGENT_KWARGS["max_tokens"],
+                min_value=100, max_value=16000,
+            )
+            agent_kwargs["character_max"] = await get_numeric_option(
+                interface, "maximum characters per state", DEFAULT_AGENT_KWARGS["character_max"],
+                min_value=100, max_value=10000,
+            )
+
+    # ----- Initialization -----
     await show_section_header(interface, "INITIALIZATION")
 
+    # Initialize agent and model
     with interface.console.status("Loading model and initializing agent..."):
         # Load the model
         inference = LocalInference(model_path, frontend=chosen_frontend)
