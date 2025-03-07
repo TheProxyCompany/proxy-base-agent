@@ -120,9 +120,10 @@ class LocalInference:
             str: A composite string containing the model path and hexadecimal hash digest,
                  formatted as "{model_path}:{hash_digest}".
         """
+        model_name = self.model_path.split("/")[-1]
         token_ids_str = json.dumps(token_ids[: len(token_ids) // 2])
         hash_obj = hashlib.sha256(token_ids_str.encode())
-        return f"{self.model_path}:{hash_obj.hexdigest()}"
+        return f"{model_name}:{hash_obj.hexdigest()}"
 
     def _cache_system_prompt(self, token_ids: list[int]) -> None:
         """
