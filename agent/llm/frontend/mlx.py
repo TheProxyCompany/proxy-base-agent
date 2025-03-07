@@ -1,3 +1,4 @@
+import json
 import logging
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -60,6 +61,7 @@ class MLXInference(Frontend):
         for generated_tokens, _ in generate_step(
             prompt=prompt,
             model=self.model,
+            prompt_cache=self.cache,
             logits_processors=[engine.process_logits],
             sampler=self.make_sampler(engine, **kwargs),
             max_tokens=kwargs.get("max_tokens", 1000),
@@ -93,3 +95,21 @@ class MLXInference(Frontend):
             min_tokens_to_keep=min_tokens_to_keep
         )
         return lambda x: engine.sample(x, sampler)
+
+    def supports_reusing_prompt_cache(self) -> bool:
+        return True
+
+    def save_cache_to_file(self, file_path: str, computed_ids: list[int]) -> None:
+        metadata = {"computed_ids": json.dumps(computed_ids)}
+        BaseCache.save_cache(file_path, self.cache, metadata)
+
+    def load_cache_from_file(self, file_path: str) -> tuple[list[BaseCache], list[int]]:
+        cached = BaseCache.load_cache(file_path, return_metadata=True)
+        if isinstance(cached, tuple):
+            metadata = cached[1]
+            computed_ids_encoded_str = metadata["computed_ids"]
+            computed_ids = json.loads(computed_ids_encoded_str)
+            assert isinstance(computed_ids, list)
+            return cached[0], computed_ids
+        else:
+            return cached, []

@@ -27,6 +27,7 @@ agent_kwargs = {
     "max_planning_loops": 5,
     "force_planning": False,
     "reuse_prompt_cache": True,
+    "cache_system_prompt": True,
     "character_max": 2500,
 }
 

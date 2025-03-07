@@ -63,3 +63,31 @@ class TorchInference(Frontend):
         thread = threading.Thread(target=self.model.generate, kwargs=generate_kwargs)
         thread.start()
         yield from streamer
+
+    def load_cache_from_file(self, file_path: str) -> tuple[list[Any], list[int]]:
+        """
+        Load a KV cache from a file.
+
+        PyTorch implementation does not support caching yet.
+
+        Args:
+            file_path (str): Path to the cache file.
+
+        Returns:
+            tuple[list[Any], list[int]]: Empty lists as PyTorch doesn't support caching yet.
+        """
+        # Return empty lists as PyTorch doesn't support caching yet
+        return [], []
+
+    def save_cache_to_file(self, file_path: str, computed_ids: list[int]) -> None:
+        """
+        Save a KV cache to a file.
+
+        PyTorch implementation does not support caching yet.
+
+        Args:
+            file_path (str): Path to the cache file.
+            computed_ids (list[int]): The token IDs that have been processed.
+        """
+        # No-op as PyTorch doesn't support caching yet
+        pass

@@ -180,3 +180,6 @@ cython_debug/
 uv.lock
 agent/system/voice/models/*
 CLAUDE.md
+
+# System prompt cache
+.cache/
