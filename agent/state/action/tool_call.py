@@ -42,7 +42,11 @@ class ToolCallState(AgentState):
     The following tools are available:
     {self.list_delimiters[0]}
     {"\n    ----------".join(textwrap.indent(str(tool), "    ") for tool in self.tools)}
-    {self.list_delimiters[1]}
+    {
+        self.list_delimiters[1]
+        if not self.list_delimiters[1].startswith("\n")
+        else "\n    " + self.list_delimiters[1].removeprefix("\n")
+    }
 
     No other tools are available, and these tools are not available in any other state.
     Always encapsulate your tool calls within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.

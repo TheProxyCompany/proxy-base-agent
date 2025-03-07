@@ -9,6 +9,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
+from mcp.types import Tool as MCPTool
 from pse.types.json.schema_sources.from_function import callable_to_schema
 from pydantic import BaseModel
 
@@ -21,12 +22,19 @@ class Tool:
     def __init__(
         self,
         name: str,
-        callable: Callable,
+        description: str,
+        callable: Callable | None = None,
+        schema: dict[str, Any] | None = None,
+        is_mcp_tool: bool = False,
     ):
         self.name = name
+        self.description = description
+        self.schema = schema
         self.callable = callable
-        self.source_code = inspect.getsource(callable)
-        self.schema = callable_to_schema(callable)
+        self.is_mcp_tool = is_mcp_tool
+        if callable:
+            self.source_code = inspect.getsource(callable)
+            self.schema = callable_to_schema(callable)
 
     def __call__(self, caller: Any, **kwargs) -> Any:
         """
@@ -39,6 +47,9 @@ class Tool:
         Returns:
             Any: The result of the tool call.
         """
+        if not self.callable:
+            return None
+
         arguments = {"self": caller, **kwargs}
         spec = inspect.getfullargspec(self.callable)
         annotations = spec.annotations
@@ -87,7 +98,7 @@ class Tool:
             logger.warning(f"No function named '{module_name}' found in {filepath}.")
             return None
 
-        return Tool(module_name, function)
+        return Tool(module_name, description=function.__doc__ or "", callable=function)
 
     @staticmethod
     def load(
@@ -161,6 +172,7 @@ class Tool:
         return found_tools
 
     def to_dict(self) -> dict[str, Any]:
+        schema = self.schema or {}
         return {
             "type": "object",
             "description": self.description or self.name,
@@ -171,7 +183,7 @@ class Tool:
                     "minLength": 10,
                 },
                 "name": {"const": self.name},
-                "arguments": self.schema.get("parameters", {}),
+                "arguments": schema.get("parameters", schema),
             },
             "required": ["intention", "name", "arguments"],
         }
@@ -191,6 +203,14 @@ class Tool:
         tool_str += f'\nTool description:\n{self.description}'
         tool_str += f'\nTool schema:\n{json.dumps(tool, indent=2)}'
         return tool_str
+
+    @staticmethod
+    def from_mcp_tool(mcp_tool: MCPTool) -> Tool:
+        """
+        Convert an tool from the MCP protocol to a local Tool object.
+        """
+        schema = mcp_tool.inputSchema
+        return Tool(mcp_tool.name, mcp_tool.description or "", schema=schema, is_mcp_tool=True)
 
 
 class ToolCall(BaseModel):

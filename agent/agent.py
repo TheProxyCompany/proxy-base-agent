@@ -12,8 +12,10 @@ from agent.interface import Interface
 from agent.llm import get_available_models
 from agent.llm.local import LocalInference
 from agent.llm.prompts import get_available_prompts, load_prompt
+from agent.state import AgentState
 from agent.state_machine import AgentStateMachine
 from agent.system.interaction import Interaction
+from agent.system.mcp.client import MCPClient
 from agent.system.memory import Hippocampus
 from agent.system.voice import VoiceBox
 from agent.tools import Tool, ToolCall
@@ -45,6 +47,10 @@ class Agent:
         def from_string(cls, state_string: str):
             return cls(state_string)
 
+    state_machine: AgentStateMachine
+    available_states: dict[str, AgentState]
+    tools: dict[str, Tool]
+
     def __init__(
         self,
         name: str,
@@ -71,6 +77,14 @@ class Agent:
         self.system_prompt_name = system_prompt_name
         self.inference_kwargs = inference_kwargs
         self.inference_kwargs["seed"] = self.seed
+        self.include_python = include_python
+        self.include_bash = include_bash
+        self.max_planning_loops = max_planning_loops
+        self.force_planning = force_planning
+        self.character_max = character_max
+
+        self.inference = inference
+        self.interface = interface
 
         self.tools: dict[str, Tool] = {}
         for tool in tools or Tool.load():
@@ -79,21 +93,10 @@ class Agent:
             elif isinstance(tool, str):
                 self.tools[tool] = Tool.load(file_name=tool)[0]
 
-        self.inference = inference
-        self.interface = interface
-        self.state_machine = AgentStateMachine(
-            tools=list(self.tools.values()),
-            use_python=include_python,
-            use_bash=include_bash,
-            max_planning_loops=max_planning_loops,
-            force_planning=force_planning,
-            delimiters_kwargs=self.inference.front_end.tokenizer.delimiters,
-            character_max=character_max,
-        )
-        self.states = self.state_machine.states
-        self.inference.engine.configure(self.state_machine)
-        self.hippocampus = Hippocampus(self.system_prompt)
+        self.hippocampus = Hippocampus()
         self.voicebox = VoiceBox()
+        self.mcp_client = MCPClient()
+        self.configure(set_system_prompt=True)
 
     @property
     def can_act(self) -> bool:
@@ -150,7 +153,7 @@ class Agent:
         ):
             if live_output := self.inference.engine.get_live_structured_output():
                 self.interface.show_live_output(
-                    self.states.get(live_output[0].lower()),
+                    self.available_states.get(live_output[0].lower()),
                     live_output[1]
                 )
             else:
@@ -171,7 +174,7 @@ class Agent:
             name=self.name,
         )
         for state, output in self.inference.engine.get_stateful_structured_output():
-            agent_state = self.states.get(state)
+            agent_state = self.available_states.get(state)
             if not agent_state:
                 logger.warning(f"Unknown state: {state}")
                 continue
@@ -182,7 +185,7 @@ class Agent:
 
                 case "tool_call":
                     tool_call = ToolCall(**output)
-                    interaction = self.use_tool(tool_call)
+                    interaction = await self.use_tool(tool_call)
                     await self.interface.show_output(interaction)
                     action.metadata["tool_call"] = tool_call.to_dict()
                     action.metadata["tool_result"] = interaction.to_dict()
@@ -206,7 +209,7 @@ class Agent:
 
         self.hippocampus.append_to_history(action)
 
-    def use_tool(self, tool_call: ToolCall) -> Interaction:
+    async def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
 
         Args:
@@ -214,6 +217,9 @@ class Agent:
         """
         try:
             tool = self.tools[tool_call.name]
+            if tool.is_mcp_tool:
+                return await self.use_mcp_tool(tool_call)
+
             with self.interface.console.status(f"[yellow]Using {tool_call.name}"):
                 result = tool(self, **tool_call.arguments)
             assert isinstance(result, Interaction)
@@ -224,6 +230,55 @@ class Agent:
                 role=Interaction.Role.TOOL,
                 content=f"Tool call failed: {e}",
             )
+
+    async def use_mcp_tool(self, tool_call: ToolCall) -> Interaction:
+        """Use a tool and return results.
+
+        Args:
+            tool_use: The tool call to use.
+        """
+        try:
+            result = await self.mcp_client.use_tool(tool_call.name, tool_call.arguments)
+            breakpoint()
+            interaction = Interaction(role=Interaction.Role.TOOL)
+            interaction.metadata["tool_call"] = tool_call.to_dict()
+            interaction.metadata["tool_result"] = result.content
+            return interaction
+        except Exception as e:
+            self.status = Agent.Status.FAILED
+            return Interaction(role=Interaction.Role.TOOL, content=f"Tool call failed: {e}")
+
+    async def connect_to_mcp_and_get_tools(
+        self,
+        mcp_server: str | None = None,
+        reset_system_prompt: bool = False,
+    ) -> list[Tool]:
+        """
+        Connect to the MCP server and get the tools.
+        """
+        await self.mcp_client.connect(mcp_server or "agent/system/mcp/server.py")
+        new_tools = []
+        for tool in await self.mcp_client.get_tools():
+            self.tools[tool.name] = Tool.from_mcp_tool(tool)
+            new_tools.append(tool)
+
+        self.configure(reset_system_prompt)
+        return new_tools
+
+    def configure(self, set_system_prompt: bool = False):
+        self.state_machine = AgentStateMachine(
+            tools=list(self.tools.values()),
+            use_python=self.include_python,
+            use_bash=self.include_bash,
+            max_planning_loops=self.max_planning_loops,
+            force_planning=self.force_planning,
+            delimiters_kwargs=self.inference.front_end.tokenizer.delimiters,
+            character_max=self.character_max,
+        )
+        self.available_states = self.state_machine.states
+        self.inference.engine.configure(self.state_machine)
+        if set_system_prompt:
+            self.hippocampus.update_system_prompt(self.system_prompt)
 
     @staticmethod
     async def get_agent_name(interface: Interface) -> str:
@@ -302,7 +357,9 @@ class Agent:
                 state_prompt=self.state_machine.prompt,
             )
             prompt = formatted_prompt
-        except Exception:
+        except Exception as e:
+            breakpoint()
+            logger.error(f"Error formatting system prompt: {e}")
             pass
 
         return Interaction(role=Interaction.Role.SYSTEM, content=prompt)

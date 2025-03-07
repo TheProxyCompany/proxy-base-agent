@@ -89,16 +89,16 @@ class AgentStateMachine(StateMachine):
         )
 
     def create_planning_states(self, character_max=None, **delimiters: tuple[str, str] | None) -> list[StateMachine]:
-        thinking_state = Thinking(delimiters.get("thinking"), character_max=character_max)
+        thinking_state = Thinking(delimiters.get("thinking"), character_max=character_max or 1000)
         self.states[thinking_state.identifier] = thinking_state
 
-        scratchpad_state = Scratchpad(delimiters.get("scratchpad"), character_max=character_max)
+        scratchpad_state = Scratchpad(delimiters.get("scratchpad"), character_max=character_max or 1000)
         self.states[scratchpad_state.identifier] = scratchpad_state
 
-        inner_monologue_state = InnerMonologue(delimiters.get("inner_monologue"), character_max=character_max)
+        inner_monologue_state = InnerMonologue(delimiters.get("inner_monologue"), character_max=character_max or 1000)
         self.states[inner_monologue_state.identifier] = inner_monologue_state
 
-        reasoning_state = Reasoning(delimiters.get("reasoning"), character_max=character_max)
+        reasoning_state = Reasoning(delimiters.get("reasoning"), character_max=character_max or 1000)
         self.states[reasoning_state.identifier] = reasoning_state
 
         return [

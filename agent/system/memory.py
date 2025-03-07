@@ -4,11 +4,12 @@ from agent.system.interaction import Interaction
 class Hippocampus:
     """Central memory management system for the agent."""
 
-    def __init__(self, system: Interaction):
+    def __init__(self):
         """
         Initialize the Hippocampus with different memory components.
         """
-        self.events: dict[str, Interaction] = {system.event_id: system}
+        self.events: dict[str, Interaction] = {}
+        self.system_prompt: Interaction | None = None
 
     def append_to_history(self, input_events: list[Interaction] | Interaction) -> None:
         """
@@ -25,6 +26,16 @@ class Hippocampus:
             return
 
         self.events[input_events.event_id] = input_events
+
+    def update_system_prompt(self, system_prompt: Interaction):
+        """
+        Update the system prompt.
+        """
+        if self.system_prompt is not None:
+            system_prompt.event_id = self.system_prompt.event_id
+
+        self.system_prompt = system_prompt
+        self.events[system_prompt.event_id] = system_prompt
 
     def clear_messages(self):
         """
