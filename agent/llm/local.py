@@ -121,7 +121,11 @@ class LocalInference:
                  formatted as "{model_path}:{hash_digest}".
         """
         model_name = self.model_path.split("/")[-1]
-        token_ids_str = json.dumps(token_ids[: len(token_ids) // 2])
+        # Use a fixed number of tokens (first 100) for consistent hashing
+        # This ensures the same system prompt always produces the same hash
+        # regardless of the total prompt length
+        fixed_token_count = min(100, len(token_ids))
+        token_ids_str = json.dumps(token_ids[:fixed_token_count])
         hash_obj = hashlib.sha256(token_ids_str.encode())
         return f"{model_name}:{hash_obj.hexdigest()}"
 

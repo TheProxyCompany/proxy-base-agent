@@ -3,9 +3,8 @@ import logging
 import os
 import sys
 
-from agent.agent import Agent
 from agent.interface.cli_interface import CLIInterface
-from agent.llm.local import LocalInference
+from agent.system.setup_wizard import setup_agent
 
 # Set up logging
 logging.basicConfig(
@@ -14,43 +13,22 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 
-agent_kwargs = {
-    "max_tokens": 5000,
-    "temp": 1.0,
-    "min_p": 0.02,
-    "min_tokens_to_keep": 9,
-    "add_generation_prompt": True,
-    "prefill": "",
-    "seed": 11,
-    "include_python": False,
-    "include_bash": False,
-    "max_planning_loops": 5,
-    "force_planning": False,
-    "reuse_prompt_cache": True,
-    "cache_system_prompt": True,
-    "character_max": 2500,
-}
-
 async def main():
+    """
+    Initialize and run the agent with an interactive setup wizard.
+    """
+    # Create the interface
     interface = CLIInterface()
-    await interface.clear()
 
-    agent_name = await Agent.get_agent_name(interface)
-    system_prompt_name = await Agent.get_agent_prompt(interface)
-
-    model_path = await Agent.get_model_path(interface)
-    with interface.console.status("[yellow]Loading model..."):
-        inference = LocalInference(model_path, frontend="mlx")
     try:
-        agent = Agent(
-            agent_name,
-            system_prompt_name,
-            interface,
-            inference,
-            **agent_kwargs,
-        )
+        # Run the setup wizard to configure and initialize the agent
+        agent = await setup_agent(interface)
+
+        # Start the agent loop
         await agent.loop()
     except Exception as error:
+        # Handle any exceptions
         await interface.exit_program(error)
 
+# Run the main function
 asyncio.run(main())

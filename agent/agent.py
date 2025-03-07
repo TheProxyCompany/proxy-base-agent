@@ -234,7 +234,7 @@ class Agent:
             str: The chosen agent name or a generated UUID if left blank.
         """
         response = await interface.get_input(
-            message="Give the ai a name:",
+            message="Agent Name",
             default="Cerebra",
         )
         agent_name = response.content if isinstance(response, Interaction) else response
@@ -255,7 +255,7 @@ class Agent:
             return available_prompts[0]
 
         prompt_name = await interface.get_input(
-            message="Select a prompt for the agent:",
+            message="System Prompt",
             choices=available_prompts,
             default="base" if "base" in available_prompts else available_prompts[0],
         )
@@ -276,14 +276,14 @@ class Agent:
         }
         available_models["Download a model from HuggingFace"] = ""
         model_name = await interface.get_input(
-            message="Select a model for the agent:",
+            message="Select Model",
             choices=list(available_models.keys()),
             default=next(iter(available_models.keys())),
         )
         model_path = available_models[model_name.content]
         if not model_path:
             huggingface_model_name = await interface.get_input(
-                message="Download a model from HuggingFace:",
+                message="HuggingFace Model ID",
                 default="mlx-community/Meta-Llama-3.1-8B-Instruct-8bit",
             )
             return huggingface_model_name.content
