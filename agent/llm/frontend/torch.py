@@ -33,7 +33,7 @@ class TorchInference(Frontend):
 
         # Initialize tokenizer with appropriate model type
         self.tokenizer = Tokenizer.load(model_path)
-
+        self.processed_token_ids: list[int] = []
         # Configure padding token to match EOS token
         self.model.config.pad_token_id = self.model.config.eos_token_id
 

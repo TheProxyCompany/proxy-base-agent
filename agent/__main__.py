@@ -22,10 +22,11 @@ agent_kwargs = {
     "add_generation_prompt": True,
     "prefill": "",
     "seed": 11,
-    "include_python": True,
+    "include_python": False,
     "include_bash": False,
-    "max_planning_loops": 5,
+    "max_planning_loops": 1,
     "force_planning": False,
+    "reuse_prompt_cache": True,
 }
 
 async def main():

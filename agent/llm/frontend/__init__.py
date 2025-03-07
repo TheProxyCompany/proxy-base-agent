@@ -17,6 +17,7 @@ class Frontend(ABC):
     """
 
     tokenizer: Tokenizer
+    processed_token_ids: list[int]
 
     @staticmethod
     def from_path(model_path: str, frontend: str | None = "mlx") -> Frontend:

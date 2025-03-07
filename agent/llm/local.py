@@ -49,8 +49,13 @@ class LocalInference:
         }
         encoded_prompt = self.front_end.tokenizer.encode(**tokenizer_config)
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-        yield from self.front_end.inference(
+        for generation_number, token_id in enumerate(self.front_end.inference(
             encoded_prompt,
             self.engine,
             **inference_kwargs,
-        )
+        )):
+            yield token_id
+            if generation_number == 0:
+                self.front_end.processed_token_ids = encoded_prompt
+            else:
+                self.front_end.processed_token_ids.append(token_id)

@@ -3,6 +3,7 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 import mlx.core as mx
+from mlx_proxy.cache import BaseCache
 from mlx_proxy.generate_step import generate_step
 from mlx_proxy.samplers import make_sampler
 from mlx_proxy.utils import load_model, set_max_reccomended_device_limit
@@ -29,6 +30,8 @@ class MLXInference(Frontend):
         set_max_reccomended_device_limit()
         self.model, _ = load_model(model_path)
         self.tokenizer = Tokenizer.load(model_path)
+        self.cache: list[BaseCache] = []
+        self.processed_token_ids = []
 
     def inference(
         self,
@@ -47,12 +50,21 @@ class MLXInference(Frontend):
         if seed := kwargs.get("seed", None):
             mx.random.seed(seed)
 
+        if not self.cache:
+            self.cache = BaseCache.make_kv_cache(
+                self.model,
+                max_kv_size=kwargs.get("max_kv_size", None),
+                reusable=kwargs.get("reuse_prompt_cache", False),
+            )
+
         for generated_tokens, _ in generate_step(
-            prompt=mx.array(prompt),
+            prompt=prompt,
             model=self.model,
             logits_processors=[engine.process_logits],
             sampler=self.make_sampler(engine, **kwargs),
             max_tokens=kwargs.get("max_tokens", 1000),
+            reuse_prompt_cache=kwargs.get("reuse_prompt_cache", False),
+            computed_ids=self.processed_token_ids,
         ):
             assert isinstance(generated_tokens, mx.array)
             assert generated_tokens.ndim == 1
