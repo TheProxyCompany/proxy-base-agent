@@ -11,7 +11,7 @@ DEFAULT_AGENT_KWARGS = {
     "min_tokens_to_keep": 9,
     "add_generation_prompt": True,
     "prefill": "",
-    "seed": 11,
+    # "seed": 11,
     "include_python": False,
     "include_bash": False,
     "max_planning_loops": 5,
