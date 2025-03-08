@@ -2,6 +2,7 @@
 from agent.agent import Agent
 from agent.interface import Interface
 from agent.llm.local import LocalInference
+from agent.system.interaction import Interaction
 
 # Default agent configuration
 DEFAULT_AGENT_KWARGS = {
@@ -11,23 +12,21 @@ DEFAULT_AGENT_KWARGS = {
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
     "character_max": 2500,
-
     # Prompt configuration
     "add_generation_prompt": True,
     "prefill": "",
-    # "seed": 11,
-
+    "seed": 11,
     # Feature toggles
     "include_python": False,
     "include_bash": False,
-
     # Planning behavior
     "max_planning_loops": 5,
     "force_planning": False,
-
     # Caching options
     "reuse_prompt_cache": True,
     "cache_system_prompt": True,
+    # MCP configuration
+    "connect_default_mcp_servers": True,
 }
 
 async def get_boolean_option(
@@ -191,6 +190,13 @@ async def setup_agent(interface: Interface) -> Agent:
                 min_value=100, max_value=10000,
             )
 
+        # ----- MCP Configuration -----
+        if await get_boolean_option(interface, "Configure MCP servers", False):
+            await show_section_header(interface, "MCP SERVER CONFIGURATION")
+            agent_kwargs["connect_default_mcp_servers"] = await get_boolean_option(
+                interface, "Connect to default MCP servers", DEFAULT_AGENT_KWARGS["connect_default_mcp_servers"]
+            )
+
     # ----- Initialization -----
     await show_section_header(interface, "INITIALIZATION")
 
@@ -207,5 +213,34 @@ async def setup_agent(interface: Interface) -> Agent:
             inference,
             **agent_kwargs,
         )
+
+        # Connect to MCP servers if configured
+        if agent_kwargs.get("connect_default_mcp_servers", False):
+            from agent.tools.mcp.connect_to_mcp import connect_to_mcp
+            from agent.tools.mcp.servers import default_mcp_servers
+            for server_name, server_params in default_mcp_servers.items():
+                try:
+                    command = server_params.get("command", "uvx")
+                    args = server_params.get("args", [])
+                    env = server_params.get("env", None)
+                    interaction = await connect_to_mcp(agent, server_name, command, env)
+                    agent.hippocampus.append_to_history(interaction)
+                    await interface.show_output(
+                        Interaction(
+                            role=Interaction.Role.SYSTEM,
+                            title="Model Control Protocol(MCP)",
+                            content=f"Connected to MCP server '{server_name}' at {args[0]}",
+                            color="green",
+                            emoji="white_check_mark",
+                        )
+                    )
+                except Exception as e:
+                    await interface.show_output(Interaction(
+                        role=Interaction.Role.SYSTEM,
+                        title="Model Control Protocol(MCP)",
+                        content=f"Error connecting to MCP server '{server_name}': {e}",
+                        color="red",
+                        emoji="warning",
+                    ))
 
     return agent

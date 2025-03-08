@@ -19,16 +19,19 @@ async def main():
     """
     # Create the interface
     interface = CLIInterface()
+    agent = None
 
     try:
         # Run the setup wizard to configure and initialize the agent
         agent = await setup_agent(interface)
-
         # Start the agent loop
         await agent.loop()
     except Exception as error:
         # Handle any exceptions
         await interface.exit_program(error)
+    finally:
+        if agent:
+            await agent.destroy()
 
 # Run the main function
 asyncio.run(main())

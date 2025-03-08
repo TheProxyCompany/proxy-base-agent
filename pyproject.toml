@@ -22,6 +22,7 @@ dependencies = [
     "kokoro-onnx",
     "numpy",
     "mcp>=1.3.0",
+    "docker>=7.1.0",
 ]
 
 [tool.ruff.lint]

@@ -178,7 +178,7 @@ cython_debug/
 
 .DS_Store
 uv.lock
-agent/system/voice/models/*
+agent/tools/voice/models/*
 CLAUDE.md
 
 # System prompt cache

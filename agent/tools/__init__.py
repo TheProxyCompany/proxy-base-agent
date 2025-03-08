@@ -25,31 +25,46 @@ class Tool:
         description: str,
         callable: Callable | None = None,
         schema: dict[str, Any] | None = None,
-        is_mcp_tool: bool = False,
+        mcp_server: str | None = None,
     ):
         self.name = name
         self.description = description
         self.schema = schema
         self.callable = callable
-        self.is_mcp_tool = is_mcp_tool
+        self.mcp_server = mcp_server
         if callable:
             self.source_code = inspect.getsource(callable)
             self.schema = callable_to_schema(callable)
 
-    def __call__(self, caller: Any, **kwargs) -> Any:
+    async def call(self, caller: Any, **kwargs) -> Any:
         """
-        Call the tool with the given arguments.
+        Call the tool with the given arguments asynchronously.
+        This method should only be used for asynchronous tools.
+        """
+        if not self.callable:
+            return None
+
+        arguments = self._prepare_arguments(caller, **kwargs)
+
+        # Check if the callable is a coroutine function
+        if inspect.iscoroutinefunction(self.callable):
+            result = await self.callable(**arguments)
+        else:
+            result = self.callable(**arguments)
+
+        return result
+
+    def _prepare_arguments(self, caller: Any, **kwargs) -> dict:
+        """
+        Prepare the arguments for the tool call.
 
         Args:
             caller (Any): The caller of the tool.
             **kwargs: Additional arguments to pass to the tool.
 
         Returns:
-            Any: The result of the tool call.
+            dict: The prepared arguments.
         """
-        if not self.callable:
-            return None
-
         arguments = {"self": caller, **kwargs}
         spec = inspect.getfullargspec(self.callable)
         annotations = spec.annotations
@@ -63,10 +78,7 @@ class Tool:
             if isinstance(arg, dict) and name in annotations:
                 arguments[name] = annotations[name](**arg)
 
-        result = self.callable(**arguments)
-
-        arguments.pop("self", None)
-        return result
+        return arguments
 
     @staticmethod
     def from_file(filepath: str) -> Tool | None:
@@ -205,12 +217,12 @@ class Tool:
         return tool_str
 
     @staticmethod
-    def from_mcp_tool(mcp_tool: MCPTool) -> Tool:
+    def from_mcp_tool(mcp_tool: MCPTool, server_name: str) -> Tool:
         """
         Convert an tool from the MCP protocol to a local Tool object.
         """
         schema = mcp_tool.inputSchema
-        return Tool(mcp_tool.name, mcp_tool.description or "", schema=schema, is_mcp_tool=True)
+        return Tool(mcp_tool.name, mcp_tool.description or "", schema=schema, mcp_server=server_name)
 
 
 class ToolCall(BaseModel):

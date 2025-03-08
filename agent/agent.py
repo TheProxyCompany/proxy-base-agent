@@ -15,10 +15,10 @@ from agent.llm.prompts import get_available_prompts, load_prompt
 from agent.state import AgentState
 from agent.state_machine import AgentStateMachine
 from agent.system.interaction import Interaction
-from agent.system.mcp.client import MCPClient
 from agent.system.memory import Hippocampus
-from agent.system.voice import VoiceBox
 from agent.tools import Tool, ToolCall
+from agent.tools.mcp.client import MCPClient
+from agent.tools.voice import VoiceBox
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,8 @@ MAX_SUB_STEPS: int = 20
 
 T = TypeVar("T")
 
-class Agent:
 
+class Agent:
     class Status(Enum):
         # Core System States
         PROCESSING = "processing"
@@ -95,7 +95,7 @@ class Agent:
 
         self.hippocampus = Hippocampus()
         self.voicebox = VoiceBox()
-        self.mcp_client = MCPClient()
+        self.mcp_clients: dict[str, MCPClient] = {}
         self.configure(set_system_prompt=True)
 
     @property
@@ -153,8 +153,7 @@ class Agent:
         ):
             if live_output := self.inference.engine.get_live_structured_output():
                 self.interface.show_live_output(
-                    self.available_states.get(live_output[0].lower()),
-                    live_output[1]
+                    self.available_states.get(live_output[0].lower()), live_output[1]
                 )
             else:
                 self.interface.end_live_output()
@@ -191,14 +190,16 @@ class Agent:
                     action.metadata["tool_result"] = interaction.to_dict()
 
                 case "python":
-                    from agent.system.run_python_code import run_python_code
+                    from agent.tools.code.run_python_code import run_python_code
+
                     interaction = await run_python_code(self, output)
                     await self.interface.show_output(interaction)
                     action.metadata["tool_call"] = agent_state.format(output.strip())
                     action.metadata["tool_result"] = interaction.to_dict()
 
                 case "bash":
-                    from agent.system.run_bash_code import run_bash_code
+                    from agent.tools.code.run_bash_code import run_bash_code
+
                     interaction = await run_bash_code(self, output)
                     await self.interface.show_output(interaction)
                     action.metadata["tool_call"] = agent_state.format(output.strip())
@@ -217,11 +218,11 @@ class Agent:
         """
         try:
             tool = self.tools[tool_call.name]
-            if tool.is_mcp_tool:
-                return await self.use_mcp_tool(tool_call)
-
             with self.interface.console.status(f"[yellow]Using {tool_call.name}"):
-                result = tool(self, **tool_call.arguments)
+                if tool_server := tool.mcp_server:
+                    return await self.use_mcp_tool(tool_call, tool_server)
+
+                result = await tool.call(self, **tool_call.arguments)
             assert isinstance(result, Interaction)
             return result
         except Exception as e:
@@ -231,36 +232,40 @@ class Agent:
                 content=f"Tool call failed: {e}",
             )
 
-    async def use_mcp_tool(self, tool_call: ToolCall) -> Interaction:
+    async def use_mcp_tool(self, tool_call: ToolCall, server_name: str) -> Interaction:
         """Use a tool and return results.
 
         Args:
             tool_use: The tool call to use.
         """
         try:
-            result = await self.mcp_client.use_tool(tool_call.name, tool_call.arguments)
-            breakpoint()
+            result = await self.mcp_clients[server_name].use_tool(tool_call.name, tool_call.arguments)
             interaction = Interaction(role=Interaction.Role.TOOL)
-            interaction.metadata["tool_call"] = tool_call.to_dict()
-            interaction.metadata["tool_result"] = result.content
+            interaction.content = result
             return interaction
         except Exception as e:
             self.status = Agent.Status.FAILED
-            return Interaction(role=Interaction.Role.TOOL, content=f"Tool call failed: {e}")
+            return Interaction(
+                role=Interaction.Role.TOOL, content=f"Tool call failed: {e}"
+            )
 
     async def connect_to_mcp_and_get_tools(
         self,
-        mcp_server: str | None = None,
+        mcp_server: str,
+        command: str | None = None,
+        env: dict[str, str] | None = None,
         reset_system_prompt: bool = False,
     ) -> list[Tool]:
         """
         Connect to the MCP server and get the tools.
         """
-        await self.mcp_client.connect(mcp_server or "agent/system/mcp/server.py")
+        self.mcp_clients[mcp_server] = MCPClient()
+        await self.mcp_clients[mcp_server].connect(mcp_server, command, env)
         new_tools = []
-        for tool in await self.mcp_client.get_tools():
-            self.tools[tool.name] = Tool.from_mcp_tool(tool)
-            new_tools.append(tool)
+        for tool in await self.mcp_clients[mcp_server].get_tools():
+            new_tool = Tool.from_mcp_tool(tool, mcp_server)
+            self.tools[new_tool.name] = new_tool
+            new_tools.append(new_tool)
 
         self.configure(reset_system_prompt)
         return new_tools
@@ -279,6 +284,13 @@ class Agent:
         self.inference.engine.configure(self.state_machine)
         if set_system_prompt:
             self.hippocampus.update_system_prompt(self.system_prompt)
+
+    async def destroy(self):
+        """
+        Destroy the agent and disconnect the MCP client.
+        """
+        for mcp_client in self.mcp_clients.values():
+            await mcp_client.disconnect()
 
     @staticmethod
     async def get_agent_name(interface: Interface) -> str:
@@ -358,7 +370,6 @@ class Agent:
             )
             prompt = formatted_prompt
         except Exception as e:
-            breakpoint()
             logger.error(f"Error formatting system prompt: {e}")
             pass
 

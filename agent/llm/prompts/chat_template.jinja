@@ -23,7 +23,6 @@
             {{- tool_end -}}
         {%- endif -%}
     {%- endif -%}
-
     {%- if interaction.tool_result and not interaction.tool_result.last and not interaction.tool_result.silent -%}
         {{- end_of_message -}}
         {{- assistant_header_start + roles.tool + assistant_header_end -}}

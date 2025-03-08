@@ -3,7 +3,7 @@ from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.types import CallToolResult, Tool
+from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 
 
 class MCPClient:
@@ -15,14 +15,15 @@ class MCPClient:
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
 
-    async def connect(self, server: str):
-        is_python = server.endswith(".py")
-        is_js = server.endswith(".js")
-        if not (is_python or is_js):
-            raise ValueError("Server script must be a .py or .js file")
+    async def connect(self, server: str, command: str | None = None, env: dict[str, str] | None = None):
+        if server.endswith(".py"):
+            command = "python"
+        elif server.endswith(".js"):
+            command = "node"
+        else:
+            command = command or "uvx"
 
-        command = "python" if is_python else "node"
-        server_params = StdioServerParameters(command=command, args=[server], env=None)
+        server_params = StdioServerParameters(command=command, args=[server], env=env or None)
 
         # Enter context with a single exit stack
         stdio_transport = await self.exit_stack.enter_async_context(
@@ -46,17 +47,26 @@ class MCPClient:
         tools = await self.session.list_tools()
         return tools.tools
 
-    async def use_tool(self, name: str, arguments: dict[str, Any]) -> CallToolResult:
+    async def use_tool(self, name: str, arguments: dict[str, Any]) -> str:
         """
         Use a tool on the MCP server.
         """
         assert self.session is not None
-        return await self.session.call_tool(name, arguments)
+        tool_result = await self.session.call_tool(name, arguments)
+        breakpoint()
+        for content in tool_result.content:
+            if isinstance(content, TextContent):
+                return content.text
+            elif isinstance(content, ImageContent):
+                return str(content)
+            elif isinstance(content, EmbeddedResource):
+                return str(content)
+        raise ValueError("No text content found in tool result")
 
     async def disconnect(self):
         """
         Disconnect from the MCP server.
         """
         if self.session:
+            await self.exit_stack.aclose()
             self.session = None
-        await self.exit_stack.aclose()
