@@ -17,7 +17,7 @@ async def connect_to_mcp(
     result += "\nThe following tools were added:\n" + tool_list
 
     return Interaction(
-        role=Interaction.Role.SYSTEM,
+        role=Interaction.Role.TOOL,
         content=result,
         title=f"{self.name} connected to a model control protocol server",
         subtitle=mcp_server,

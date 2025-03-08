@@ -216,8 +216,8 @@ async def setup_agent(interface: Interface) -> Agent:
 
         # Connect to MCP servers if configured
         if agent_kwargs.get("connect_default_mcp_servers", False):
-            from agent.tools.mcp.connect_to_mcp import connect_to_mcp
-            from agent.tools.mcp.servers import default_mcp_servers
+            from agent.mcp.connect_to_mcp import connect_to_mcp
+            from agent.mcp.servers import default_mcp_servers
             for server_name, server_params in default_mcp_servers.items():
                 try:
                     command = server_params.get("command", "uvx")

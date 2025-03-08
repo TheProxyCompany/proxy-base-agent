@@ -17,31 +17,6 @@ default_mcp_servers: dict[str, dict[str, Any]] = {
     },
 }
 
-def get_dockerfiles() -> list[tuple[str, str]]:
-    """
-    Scans the current directory for subdirectories containing Dockerfiles.
-
-    Returns:
-        A list of tuples. Each tuple contains the subdirectory name and the
-        contents of the Dockerfile.
-    """
-    dockerfiles: list[tuple[str, str]] = []
-    current_dir = Path(__file__).parent
-    for item in current_dir.iterdir():
-        if item.is_dir():
-            dockerfile_path = item / "Dockerfile"
-            if dockerfile_path.exists():
-                try:
-                    with open(dockerfile_path, encoding="utf-8") as f:
-                        dockerfile_content = f.read()
-                        dockerfile_content = dockerfile_content.replace('src/', '')
-                    dockerfiles.append((item.name, dockerfile_content))
-                except OSError as e:
-                    logger.error(f"Error reading Dockerfile in {item.name}: {e}")
-
-    return dockerfiles
-
-
 def download_server_from_github(
     repo_path: str,
     target_folder: str | None = None,
@@ -68,6 +43,7 @@ def download_server_from_github(
     target_path = Path(__file__).parent / target_folder
 
     return _download_files(owner, repo_name, folder_path, branch, target_path)
+
 
 def _parse_repo_path(repo_path: str, branch: str) -> tuple[str, str, str, str]:
     """Parses the repository path and extracts owner, repo name, folder path, and branch."""
@@ -97,6 +73,7 @@ def _parse_repo_path(repo_path: str, branch: str) -> tuple[str, str, str, str]:
 
     return owner, repo_name, folder_path, branch
 
+
 def _download_files(
     owner: str,
     repo_name: str,
@@ -120,7 +97,9 @@ def _download_files(
             contents = [contents]
 
         target_path.mkdir(exist_ok=True)
-        logger.debug(f"Downloading files from {owner}/{repo_name}/{folder_path} to {target_path}")
+        logger.debug(
+            f"Downloading files from {owner}/{repo_name}/{folder_path} to {target_path}"
+        )
 
         to_process = contents.copy()
         while to_process:
@@ -167,24 +146,3 @@ def _download_files(
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
         return False
-
-if __name__ == "__main__":
-    # Test with GitHub URL
-    url_path = "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer"
-    logger.info(f"Testing with GitHub URL: {url_path}")
-    success = download_server_from_github(url_path)
-
-    # Test with URL containing encoded characters
-    if success:
-        logger.info("\nTesting with URL containing encoded characters")
-        encoded_url = (
-            "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search"
-        )
-        success = download_server_from_github(encoded_url)
-
-    if success:
-        dockerfiles = get_dockerfiles()
-        logger.info(f"Found {len(dockerfiles)} Dockerfiles:")
-        for name, content in dockerfiles:
-            logger.info(f"Dockerfile in {name}:")
-            logger.info(content)
