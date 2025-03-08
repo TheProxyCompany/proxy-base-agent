@@ -53,7 +53,6 @@ class MCPClient:
         """
         assert self.session is not None
         tool_result = await self.session.call_tool(name, arguments)
-        breakpoint()
         for content in tool_result.content:
             if isinstance(content, TextContent):
                 return content.text

@@ -20,9 +20,5 @@ default_mcp_servers = {
     "mcp-server-time": {
         "command": "uvx",
         "args": ["mcp-server-time"],
-    },
-    "everything": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-everything"],
     }
 }
