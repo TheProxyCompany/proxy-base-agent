@@ -180,7 +180,7 @@ cython_debug/
 uv.lock
 agent/tools/voice/models/*
 CLAUDE.md
-agent/tools/mcp/servers/*
-!agent/tools/mcp/servers/__init__.py
+agent/mcp/servers/*
+!agent/mcp/servers/__init__.py
 # System prompt cache
 .cache/

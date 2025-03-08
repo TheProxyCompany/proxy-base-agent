@@ -12,12 +12,12 @@ from agent.interface import Interface
 from agent.llm import get_available_models
 from agent.llm.local import LocalInference
 from agent.llm.prompts import get_available_prompts, load_prompt
+from agent.mcp.client import MCPClient
 from agent.state import AgentState
 from agent.state_machine import AgentStateMachine
 from agent.system.interaction import Interaction
 from agent.system.memory import Hippocampus
 from agent.tools import Tool, ToolCall
-from agent.tools.mcp.client import MCPClient
 from agent.tools.voice import VoiceBox
 
 logger = logging.getLogger(__name__)

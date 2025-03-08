@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -7,6 +8,7 @@ from urllib.parse import unquote, urlparse
 from github import Github, GithubException
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
 default_mcp_servers: dict[str, dict[str, Any]] = {
     "mcp-server-time": {
@@ -32,6 +34,7 @@ def get_dockerfiles() -> list[tuple[str, str]]:
                 try:
                     with open(dockerfile_path, encoding="utf-8") as f:
                         dockerfile_content = f.read()
+                        dockerfile_content = dockerfile_content.replace('src/', '')
                     dockerfiles.append((item.name, dockerfile_content))
                 except OSError as e:
                     logger.error(f"Error reading Dockerfile in {item.name}: {e}")
