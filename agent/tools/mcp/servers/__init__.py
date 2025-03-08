@@ -13,12 +13,30 @@ default_mcp_servers: dict[str, dict[str, Any]] = {
         "command": "uvx",
         "args": ["mcp-server-time"],
     },
-    # Example configuration for puppeteer server
-    # "puppeteer": {
-    #     "command": "npx",
-    #     "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
-    # }
 }
+
+def get_dockerfiles() -> list[tuple[str, str]]:
+    """
+    Scans the current directory for subdirectories containing Dockerfiles.
+
+    Returns:
+        A list of tuples. Each tuple contains the subdirectory name and the
+        contents of the Dockerfile.
+    """
+    dockerfiles: list[tuple[str, str]] = []
+    current_dir = Path(__file__).parent
+    for item in current_dir.iterdir():
+        if item.is_dir():
+            dockerfile_path = item / "Dockerfile"
+            if dockerfile_path.exists():
+                try:
+                    with open(dockerfile_path, encoding="utf-8") as f:
+                        dockerfile_content = f.read()
+                    dockerfiles.append((item.name, dockerfile_content))
+                except OSError as e:
+                    logger.error(f"Error reading Dockerfile in {item.name}: {e}")
+
+    return dockerfiles
 
 
 def download_server_from_github(
@@ -153,10 +171,17 @@ if __name__ == "__main__":
     logger.info(f"Testing with GitHub URL: {url_path}")
     success = download_server_from_github(url_path)
 
-    # # Test with URL containing encoded characters
-    # if success:
-    #     logger.info("\nTesting with URL containing encoded characters")
-    #     encoded_url = (
-    #         "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search"
-    #     )
-    #     success = download_server_from_github(encoded_url)
+    # Test with URL containing encoded characters
+    if success:
+        logger.info("\nTesting with URL containing encoded characters")
+        encoded_url = (
+            "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search"
+        )
+        success = download_server_from_github(encoded_url)
+
+    if success:
+        dockerfiles = get_dockerfiles()
+        logger.info(f"Found {len(dockerfiles)} Dockerfiles:")
+        for name, content in dockerfiles:
+            logger.info(f"Dockerfile in {name}:")
+            logger.info(content)
