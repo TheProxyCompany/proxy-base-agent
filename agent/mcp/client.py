@@ -1,8 +1,9 @@
+import os
 from contextlib import AsyncExitStack
 from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp.client.stdio import get_default_environment, stdio_client
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 
 from agent.mcp.server import MCPServer
@@ -21,9 +22,15 @@ class MCPClient:
         self,
         server: MCPServer,
     ):
+        envs = get_default_environment()
+        if server.required_env_vars:
+            for env_var in server.required_env_vars:
+                envs[env_var] = os.environ[env_var]
+
         server_params = StdioServerParameters(
             command=server.command,
             args=server.args,
+            env=envs,
         )
         # Enter context with a single exit stack
         stdio_transport = await self.exit_stack.enter_async_context(

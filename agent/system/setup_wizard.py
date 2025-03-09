@@ -25,6 +25,9 @@ DEFAULT_AGENT_KWARGS = {
     "reuse_prompt_cache": True,
     "cache_system_prompt": True,
     # MCP configuration
+    "default_mcp_servers": [
+        # "@modelcontextprotocol/server-puppeteer",
+    ],
     "connect_default_mcp_servers": True,
     "include_pause_button": True,
 }
@@ -213,5 +216,12 @@ async def setup_agent(interface: Interface) -> Agent:
             inference,
             **agent_kwargs,
         )
+
+    if agent_kwargs["connect_default_mcp_servers"]:
+        from agent.tools.add_mcp_server import add_mcp_server
+        with interface.console.status("Connecting to default MCP servers..."):
+            for server in agent_kwargs["default_mcp_servers"]:
+                interaction = await add_mcp_server(agent, server)
+                agent.hippocampus.append_to_history(interaction)
 
     return agent

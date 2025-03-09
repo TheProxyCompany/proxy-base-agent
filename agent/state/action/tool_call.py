@@ -41,7 +41,7 @@ class ToolCallState(AgentState):
 
     The following tools are available:
     {self.list_delimiters[0]}
-    {"\n    ----------".join(textwrap.indent(str(tool), "    ") for tool in self.tools)}
+    {"\n    ----------\n".join(textwrap.indent(str(tool), "    ") for tool in self.tools)}
     {
         self.list_delimiters[1]
         if not self.list_delimiters[1].startswith("\n")

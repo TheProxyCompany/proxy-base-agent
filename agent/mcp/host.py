@@ -23,7 +23,7 @@ class MCPHost:
             raise ValueError(f"MCP server {server_id} not found")
 
         requested_server = self.available_servers[server_id]
-        requested_server.download_server()
+        # requested_server.download_server()
 
         new_client = MCPClient()
         await new_client.connect(requested_server)

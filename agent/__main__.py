@@ -34,4 +34,8 @@ async def main():
             await agent.mcp_host.cleanup()
 
 # Run the main function
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except Exception as error:
+    logging.error(f"Error: {error}")
+    sys.exit(1)

@@ -15,6 +15,7 @@ from agent.interface import Interface
 from agent.llm import get_available_models
 from agent.llm.local import LocalInference
 from agent.llm.prompts import get_available_prompts, load_prompt
+from agent.mcp import MCP_PROMPT
 from agent.mcp.host import MCPHost
 from agent.state import AgentState
 from agent.state_machine import AgentStateMachine
@@ -397,6 +398,7 @@ class Agent:
             formatted_prompt = prompt.format(
                 name=self.name,
                 state_prompt=self.state_machine.prompt,
+                mcp_prompt=MCP_PROMPT,
             )
             prompt = formatted_prompt
         except Exception as e:

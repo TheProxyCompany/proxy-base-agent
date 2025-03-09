@@ -211,7 +211,7 @@ class Tool:
 
     def __str__(self) -> str:
         tool = self.to_dict().get("properties", {})
-        tool_str = f'\nTool name: "{self.name}"'
+        tool_str = f'Tool name: "{self.name}"'
         tool_str += f'\nTool description:\n{self.description}'
         tool_str += f'\nTool schema:\n{json.dumps(tool, indent=2)}'
         return tool_str
