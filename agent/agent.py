@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import logging
 import uuid
 from enum import Enum
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 MAX_SUB_STEPS: int = 20
 
 T = TypeVar("T")
+
 
 class Agent:
     class Status(Enum):
@@ -66,6 +68,7 @@ class Agent:
         max_planning_loops: int = 3,
         force_planning: bool = True,
         character_max: int | None = None,
+        include_pause_button: bool = True,
         **inference_kwargs,
     ):
         """Initialize an agent."""
@@ -101,13 +104,37 @@ class Agent:
         self.configure(set_system_prompt=True)
 
         # Set up keyboard listener for pause/resume functionality
-        self.keyboard_listener = pynput_keyboard.Listener(on_press=self.on_key_press)
+        if include_pause_button:
+            self.keyboard_listener: pynput_keyboard.Listener | None = None
+            self._setup_keyboard_listener()
+
+    def _setup_keyboard_listener(self):
+        """Set up the keyboard listener with a weak reference to avoid memory leaks."""
+        import weakref
+
+        # Create a weak reference to self
+        weak_self = weakref.ref(self)
+
+        # Define a callback that uses the weak reference
+        def on_key_press(key):
+            self_ref = weak_self()
+            if self_ref is not None and key == pynput_keyboard.Key.space:
+                self_ref.toggle_pause()
+                logger.info(
+                    f"Agent {'paused' if self_ref.status == Agent.Status.PAUSED else 'resumed'}"
+                )
+
+        # Create and start the listener
+        self.keyboard_listener = pynput_keyboard.Listener(on_press=on_key_press)
         self.keyboard_listener.start()
 
-    def on_key_press(self, key: pynput_keyboard.Key | pynput_keyboard.KeyCode | None):
-        """Handle key press events for agent control."""
-        if key == pynput_keyboard.Key.space:
-            self.toggle_pause()
+        # Register cleanup function
+        def cleanup():
+            if self.keyboard_listener:
+                self.keyboard_listener.stop()
+                self.keyboard_listener = None
+
+        atexit.register(cleanup)
 
     @property
     def can_act(self) -> bool:
@@ -128,7 +155,9 @@ class Agent:
             self.status = Agent.Status.PAUSED
         else:
             self.status = Agent.Status.PROCESSING
-        logger.info(f"Agent {'paused' if self.status == Agent.Status.PAUSED else 'resumed'}")
+        logger.info(
+            f"Agent {'paused' if self.status == Agent.Status.PAUSED else 'resumed'}"
+        )
 
     async def loop(self) -> None:
         """
@@ -246,7 +275,9 @@ class Agent:
                 if not tool.mcp_server:
                     result = await tool.call(self, **tool_call.arguments)
                 else:
-                    tool_result = await self.mcp_host.use_tool(tool.mcp_server, tool_call)
+                    tool_result = await self.mcp_host.use_tool(
+                        tool.mcp_server, tool_call
+                    )
                     result = Interaction(
                         role=Interaction.Role.TOOL,
                         content=tool_result,

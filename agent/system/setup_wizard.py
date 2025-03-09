@@ -27,6 +27,7 @@ DEFAULT_AGENT_KWARGS = {
     "cache_system_prompt": True,
     # MCP configuration
     "connect_default_mcp_servers": True,
+    "include_pause_button": True,
 }
 
 async def get_boolean_option(
