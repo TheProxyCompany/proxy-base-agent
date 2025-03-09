@@ -234,7 +234,7 @@ class ToolCall(BaseModel):
     """The reason or goal of the tool call. Minimum 10 characters."""
     name: str
     """The name of the tool to call."""
-    arguments: dict[str, Any]
+    arguments: dict[str, Any] | None = None
     """The arguments to pass to the tool."""
 
     def __str__(self) -> str:

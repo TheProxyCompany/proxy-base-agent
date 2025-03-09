@@ -118,7 +118,11 @@ class Agent:
         # Define a callback that uses the weak reference
         def on_key_press(key):
             self_ref = weak_self()
-            if self_ref is not None and key == pynput_keyboard.Key.space:
+            if (
+                self_ref is not None
+                and self_ref.status == Agent.Status.PROCESSING
+                and key == pynput_keyboard.Key.space
+            ):
                 self_ref.toggle_pause()
                 logger.info(
                     f"Agent {'paused' if self_ref.status == Agent.Status.PAUSED else 'resumed'}"
@@ -273,7 +277,7 @@ class Agent:
             tool = self.tools[tool_call.name]
             with self.interface.console.status(f"[yellow]Using {tool_call.name}"):
                 if not tool.mcp_server:
-                    result = await tool.call(self, **tool_call.arguments)
+                    result = await tool.call(self, **tool_call.arguments or {})
                 else:
                     tool_result = await self.mcp_host.use_tool(
                         tool.mcp_server, tool_call

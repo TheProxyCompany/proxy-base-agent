@@ -55,7 +55,7 @@ class MCPHost:
         if server_id not in self.mcp_clients:
             raise ValueError(f"MCP server {server_id} not found")
 
-        return await self.mcp_clients[server_id].use_tool(tool_call.name, tool_call.arguments)
+        return await self.mcp_clients[server_id].use_tool(tool_call.name, tool_call.arguments or {})
 
 
     async def cleanup(self):

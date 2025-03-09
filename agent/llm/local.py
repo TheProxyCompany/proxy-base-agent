@@ -61,6 +61,7 @@ class LocalInference:
             cache_system_prompt
             and reuse_prompt_cache
             and self.front_end.supports_reusing_prompt_cache()
+            and not self.front_end.processed_token_ids
         ):
             # Check if we have a cached prompt
             self._load_cached_system_prompt(encoded_prompt)
