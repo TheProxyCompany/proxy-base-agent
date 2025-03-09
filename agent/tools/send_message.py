@@ -43,7 +43,11 @@ def send_message(
         speech_text = spoken if isinstance(spoken, str) else message
         self.voicebox(speech_text)
 
-    self.status = Agent.Status.SUCCESS
+    self.status = (
+        Agent.Status.SUCCESS
+        if wait_for_response
+        else Agent.Status.PROCESSING
+    )
     return Interaction(
         role=Interaction.Role.ASSISTANT,
         content=message,
