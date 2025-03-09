@@ -31,7 +31,7 @@ async def main():
         await interface.exit_program(error)
     finally:
         if agent:
-            await agent.destroy()
+            await agent.mcp_host.cleanup()
 
 # Run the main function
 asyncio.run(main())

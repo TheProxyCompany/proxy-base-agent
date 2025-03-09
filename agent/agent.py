@@ -8,11 +8,13 @@ from enum import Enum
 from random import randint
 from typing import TypeVar
 
+from pynput import keyboard as pynput_keyboard
+
 from agent.interface import Interface
 from agent.llm import get_available_models
 from agent.llm.local import LocalInference
 from agent.llm.prompts import get_available_prompts, load_prompt
-from agent.mcp.client import MCPClient
+from agent.mcp.host import MCPHost
 from agent.state import AgentState
 from agent.state_machine import AgentStateMachine
 from agent.system.interaction import Interaction
@@ -26,10 +28,10 @@ MAX_SUB_STEPS: int = 20
 
 T = TypeVar("T")
 
-
 class Agent:
     class Status(Enum):
         # Core System States
+        PAUSED = "paused"
         PROCESSING = "processing"
         STANDBY = "standby"
         IDLE = "idle"
@@ -95,8 +97,17 @@ class Agent:
 
         self.hippocampus = Hippocampus()
         self.voicebox = VoiceBox()
-        self.mcp_clients: dict[str, MCPClient] = {}
+        self.mcp_host = MCPHost()
         self.configure(set_system_prompt=True)
+
+        # Set up keyboard listener for pause/resume functionality
+        self.keyboard_listener = pynput_keyboard.Listener(on_press=self.on_key_press)
+        self.keyboard_listener.start()
+
+    def on_key_press(self, key: pynput_keyboard.Key | pynput_keyboard.KeyCode | None):
+        """Handle key press events for agent control."""
+        if key == pynput_keyboard.Key.space:
+            self.toggle_pause()
 
     @property
     def can_act(self) -> bool:
@@ -110,6 +121,14 @@ class Agent:
             Agent.Status.STANDBY,
             Agent.Status.SUCCESS,
         ]
+
+    def toggle_pause(self):
+        """Toggle the agent's pause state when the spacebar is pressed."""
+        if self.status != Agent.Status.PAUSED:
+            self.status = Agent.Status.PAUSED
+        else:
+            self.status = Agent.Status.PROCESSING
+        logger.info(f"Agent {'paused' if self.status == Agent.Status.PAUSED else 'resumed'}")
 
     async def loop(self) -> None:
         """
@@ -157,6 +176,11 @@ class Agent:
                 )
             else:
                 self.interface.end_live_output()
+
+            if self.status == Agent.Status.PAUSED:
+                self.interface.end_live_output()
+                breakpoint()
+                self.status = Agent.Status.PROCESSING
 
         self.interface.end_live_output()
         await self.take_action()
@@ -219,10 +243,15 @@ class Agent:
         try:
             tool = self.tools[tool_call.name]
             with self.interface.console.status(f"[yellow]Using {tool_call.name}"):
-                if tool_server := tool.mcp_server:
-                    return await self.use_mcp_tool(tool_call, tool_server)
+                if not tool.mcp_server:
+                    result = await tool.call(self, **tool_call.arguments)
+                else:
+                    tool_result = await self.mcp_host.use_tool(tool.mcp_server, tool_call)
+                    result = Interaction(
+                        role=Interaction.Role.TOOL,
+                        content=tool_result,
+                    )
 
-                result = await tool.call(self, **tool_call.arguments)
             assert isinstance(result, Interaction)
             return result
         except Exception as e:
@@ -232,43 +261,28 @@ class Agent:
                 content=f"Tool call failed: {e}",
             )
 
-    async def use_mcp_tool(self, tool_call: ToolCall, server_name: str) -> Interaction:
-        """Use a tool and return results.
-
-        Args:
-            tool_use: The tool call to use.
-        """
-        try:
-            result = await self.mcp_clients[server_name].use_tool(tool_call.name, tool_call.arguments)
-            interaction = Interaction(role=Interaction.Role.TOOL)
-            interaction.content = result
-            return interaction
-        except Exception as e:
-            self.status = Agent.Status.FAILED
-            return Interaction(
-                role=Interaction.Role.TOOL, content=f"Tool call failed: {e}"
-            )
-
     async def connect_to_mcp_and_get_tools(
         self,
         mcp_server: str,
         command: str | None = None,
         env: dict[str, str] | None = None,
-        reset_system_prompt: bool = False,
     ) -> list[Tool]:
         """
         Connect to the MCP server and get the tools.
         """
-        self.mcp_clients[mcp_server] = MCPClient()
-        await self.mcp_clients[mcp_server].connect(mcp_server, command, env)
-        new_tools = []
-        for tool in await self.mcp_clients[mcp_server].get_tools():
-            new_tool = Tool.from_mcp_tool(tool, mcp_server)
-            self.tools[new_tool.name] = new_tool
-            new_tools.append(new_tool)
+        await self.mcp_host.connect_to_server(mcp_server, command, env)
+        return await self.mcp_host.get_tools(mcp_server)
 
+    def add_tools(
+        self,
+        new_tools: list[Tool],
+        reset_system_prompt: bool = False,
+    ):
+        """
+        Add new tools to the agent.
+        """
+        self.tools.update({tool.name: tool for tool in new_tools})
         self.configure(reset_system_prompt)
-        return new_tools
 
     def configure(self, set_system_prompt: bool = False):
         self.state_machine = AgentStateMachine(
@@ -284,13 +298,6 @@ class Agent:
         self.inference.engine.configure(self.state_machine)
         if set_system_prompt:
             self.hippocampus.update_system_prompt(self.system_prompt)
-
-    async def destroy(self):
-        """
-        Destroy the agent and disconnect the MCP client.
-        """
-        for mcp_client in self.mcp_clients.values():
-            await mcp_client.disconnect()
 
     @staticmethod
     async def get_agent_name(interface: Interface) -> str:

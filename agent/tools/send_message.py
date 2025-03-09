@@ -6,12 +6,14 @@ def send_message(
     self: Agent,
     message: str,
     spoken: str | bool | None = None,
+    wait_for_response: bool = True,
 ) -> Interaction:
     """
     IMPORTANT: This is the ONLY method that should be used for sending messages to users.
     Do not attempt to communicate with users through other means.
     Sends a message to the user and optionally speaks it aloud.
     Handles delivery mechanics automatically.
+    When `wait_for_response` is True, the agent pauses its activity, awaiting the user's reply before proceeding.
 
     Args:
         message (str):
@@ -25,6 +27,9 @@ def send_message(
             - true: Speaks the message text
             - str: Speaks this alternative text instead
             Note: Spoken content should be more concise than written text.
+        wait_for_response (bool):
+            If True, the agent will wait for a response from the user before continuing.
+            If False, the agent will continue acting immediately.
     """
 
     if isinstance(spoken, str):
@@ -45,6 +50,6 @@ def send_message(
         title=self.name,
         color="cyan",
         emoji="alien",
-        last=True,
+        last=wait_for_response,
         silent=True,
     )
