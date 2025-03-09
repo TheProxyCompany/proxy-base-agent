@@ -5,6 +5,8 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 
+from agent.mcp.server import MCPServer
+
 
 class MCPClient:
     """
@@ -15,16 +17,14 @@ class MCPClient:
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
 
-    async def connect(self, server: str, command: str | None = None, env: dict[str, str] | None = None):
-        if server.endswith(".py"):
-            command = "python"
-        elif server.endswith(".js"):
-            command = "node"
-        else:
-            command = command or "uvx"
-
-        server_params = StdioServerParameters(command=command, args=[server], env=env or None)
-
+    async def connect(
+        self,
+        server: MCPServer,
+    ):
+        server_params = StdioServerParameters(
+            command=server.command,
+            args=server.args,
+        )
         # Enter context with a single exit stack
         stdio_transport = await self.exit_stack.enter_async_context(
             stdio_client(server_params)

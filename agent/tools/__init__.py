@@ -217,12 +217,12 @@ class Tool:
         return tool_str
 
     @staticmethod
-    def from_mcp_tool(mcp_tool: MCPTool, server_name: str) -> Tool:
+    def from_mcp_tool(mcp_tool: MCPTool, server_id: str) -> Tool:
         """
         Convert an tool from the MCP protocol to a local Tool object.
         """
         schema = mcp_tool.inputSchema
-        return Tool(mcp_tool.name, mcp_tool.description or "", schema=schema, mcp_server=server_name)
+        return Tool(mcp_tool.name, mcp_tool.description or "", schema=schema, mcp_server=server_id)
 
 
 class ToolCall(BaseModel):

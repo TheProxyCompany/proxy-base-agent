@@ -292,18 +292,6 @@ class Agent:
                 content=f"Tool call failed: {e}",
             )
 
-    async def connect_to_mcp_and_get_tools(
-        self,
-        mcp_server: str,
-        command: str | None = None,
-        env: dict[str, str] | None = None,
-    ) -> list[Tool]:
-        """
-        Connect to the MCP server and get the tools.
-        """
-        await self.mcp_host.connect_to_server(mcp_server, command, env)
-        return await self.mcp_host.get_tools(mcp_server)
-
     def add_tools(
         self,
         new_tools: list[Tool],

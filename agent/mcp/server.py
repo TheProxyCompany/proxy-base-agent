@@ -13,13 +13,39 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MCPServer:
+    identifier: str
     name: str
     description: str
     vendor: str
     sourceUrl: str
-    homepage: str
-    license: str
-    runtime: str
+    command: str
+    args: list[str]
+    required_env_vars: list[str]
+
+    @property
+    def download_path(self) -> Path:
+        """
+        Get the path to the downloaded server.
+        """
+        return Path(__file__).parent / "servers" / self.identifier
+
+    def download_server(self, force: bool = False) -> bool:
+        """
+        Download the server from the source URL.
+        """
+        if not force and self.is_downloaded():
+            return True
+
+        repo_path = self.sourceUrl
+        target_folder = self.identifier
+        branch = "main"
+        return self._download_server_from_github(repo_path, target_folder, branch)
+
+    def is_downloaded(self) -> bool:
+        """
+        Check if the server is downloaded.
+        """
+        return self.download_path.exists() and self.download_path.is_dir()
 
     @classmethod
     def load_available_servers_from_json(
@@ -50,7 +76,7 @@ class MCPServer:
             return []
 
     @staticmethod
-    def download_server_from_github(
+    def _download_server_from_github(
         repo_path: str,
         target_folder: str | None = None,
         branch: str = "main",
@@ -185,3 +211,19 @@ class MCPServer:
         except Exception as e:
             logger.exception(f"An unexpected error occurred: {e}")
             return False
+
+    def __str__(self) -> str:
+        string_data = f"- {self.name}:\n"
+        string_data += f"  - Identifier: {self.identifier}\n"
+        string_data += f"  - Description: {self.description}\n"
+
+        if self.required_env_vars:
+            env_var_status = []
+            for env_var in self.required_env_vars:
+                is_present = os.environ.get(env_var) is not None
+                env_var_status.append(
+                    f"{env_var} ({'Found ✅' if is_present else 'Not found ❌'})"
+                )
+
+            string_data += f"  - Required environment variables: {', '.join(env_var_status)}\n"
+        return string_data
