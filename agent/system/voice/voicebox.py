@@ -13,7 +13,7 @@ class VoiceBox:
         if not MODEL_PATH or not VOICES_PATH:
             download_path = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
             raise FileNotFoundError(
-                f"Model or voices file not found. Download from {download_path} into the voice/models directory."
+                f"Model or voices file not found. Download from {download_path} into the `system/voice/models` directory."
             )
         self.kokoro = Kokoro(MODEL_PATH, VOICES_PATH)
 

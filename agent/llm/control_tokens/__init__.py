@@ -182,9 +182,12 @@ def _determine_model_type(model_path: str, tokenizer_config: dict) -> str:
     """Determine the model type from the model path."""
     model_type = tokenizer_config.get("model_type", "chatml")
     eos_token = tokenizer_config.get("eos_token", "<|eot_id|>")
+    if isinstance(eos_token, dict):
+        eos_token = eos_token.get("content", "<|eot_id|>")
+
     if eos_token == "<|eot_id|>":
         model_type = "llama"
-    elif eos_token.strip() == "<|im_end|>":
+    elif isinstance(eos_token, str) and eos_token.strip() == "<|im_end|>":
         model_type = "chatml"
 
     if model_type == "llama":

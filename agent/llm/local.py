@@ -67,7 +67,7 @@ class LocalInference:
             self._load_cached_system_prompt(encoded_prompt)
 
         logger.info(f"PROMPT:\n{self.front_end.tokenizer.decode(encoded_prompt)}")
-        for generation_number, token_id in enumerate(
+        for n, token_id in enumerate(
             self.front_end.inference(
                 encoded_prompt,
                 self.engine,
@@ -77,7 +77,7 @@ class LocalInference:
             yield token_id
 
             if self.front_end.supports_reusing_prompt_cache():
-                if generation_number == 0:
+                if n == 0:
                     if (
                         cache_system_prompt
                         and encoded_prompt[100:] != self.front_end.processed_token_ids[100:]
