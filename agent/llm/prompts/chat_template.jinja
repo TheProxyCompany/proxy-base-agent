@@ -65,7 +65,9 @@
     {{ render_interaction(interaction) -}}
 {%- endfor -%}
 {%- if add_generation_prompt -%}
-    {{- roles.assistant.role_start_tag + roles.assistant.role_name + roles.assistant.role_end_tag -}}
+    {%- if roles is not none and roles.assistant is not none -%}
+        {{- roles.assistant.role_start_tag + roles.assistant.role_name + roles.assistant.role_end_tag -}}
+    {%- endif -%}
 {%- endif -%}
 {%- if prefill is not none -%}
     {{- prefill -}}
