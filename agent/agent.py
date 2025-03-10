@@ -32,24 +32,44 @@ T = TypeVar("T")
 
 
 class Agent:
+    """
+    The main Agent class that orchestrates language model interactions, tool usage, and state transitions.
+    
+    This class implements a stateful agent that processes user inputs, generates responses using
+    language models, and can interact with the environment through specialized tools. The agent
+    follows a state machine architecture that structures its behavior into planning states
+    (thinking, reasoning, etc.) and action states (tool usage, code execution, etc.).
+    
+    The agent maintains its conversation history in memory and can be configured with
+    different capabilities, such as Python code execution, Bash commands, and various
+    specialized tools. It also supports features like pause/resume during processing.
+    """
+    
     class Status(Enum):
+        """
+        Enumeration of possible agent status states.
+        
+        These states track the operational status of the agent through its lifecycle
+        and are used for control flow and UI feedback.
+        """
         # Core System States
-        PAUSED = "paused"
-        PROCESSING = "processing"
-        STANDBY = "standby"
-        IDLE = "idle"
-
+        PAUSED = "paused"      # Agent execution is temporarily suspended
+        PROCESSING = "processing"  # Agent is actively processing
+        STANDBY = "standby"    # Agent is ready but not actively processing
+        IDLE = "idle"          # Agent is initialized but not engaged
+        
         # Error and Recovery States
-        SUCCESS = "success"
-        FAILED = "failed"
-        RETRYING = "retrying"
-        BLOCKED = "blocked"
+        SUCCESS = "success"    # Action completed successfully
+        FAILED = "failed"      # Action failed to complete
+        RETRYING = "retrying"  # Attempting recovery from failure
+        BLOCKED = "blocked"    # Unable to proceed, waiting for external resolution
 
         def __str__(self):
             return self.value
 
         @classmethod
         def from_string(cls, state_string: str):
+            """Convert a string representation to a Status enum value."""
             return cls(state_string)
 
     state_machine: AgentStateMachine
@@ -72,7 +92,24 @@ class Agent:
         include_pause_button: bool = True,
         **inference_kwargs,
     ):
-        """Initialize an agent."""
+        """
+        Initialize an Agent instance with the specified configuration.
+        
+        Args:
+            name: Human-readable name for this agent instance
+            system_prompt_name: Name of the system prompt template to use
+            interface: Interface implementation for user interaction
+            inference: Inference engine for language model interaction
+            seed: Random seed for reproducible generation (default: random)
+            tools: List of Tool instances or tool names to load (default: all available)
+            python_interpreter: Whether to enable Python code execution (default: False)
+            bash_interpreter: Whether to enable Bash command execution (default: False)
+            max_planning_loops: Maximum iterations through planning states (default: 3)
+            force_planning: Whether to require at least one planning iteration (default: True)
+            character_max: Maximum character limit for each state output (default: None)
+            include_pause_button: Enable spacebar to pause execution (default: True)
+            **inference_kwargs: Additional parameters for the inference engine
+        """
 
         self.seed = seed or randint(0, 1000000)
         self.name = name
@@ -167,9 +204,16 @@ class Agent:
 
     async def loop(self) -> None:
         """
-        Run the agent within a loop.
-
-        The agent will take action until it reaches the maximum number of sub-steps.
+        Run the agent in a continuous interaction loop.
+        
+        This method is the main entry point for agent execution. It:
+        1. Gets user input through the configured interface
+        2. Processes the input and determines the appropriate response
+        3. Generates actions using the language model until reaching limits
+        4. Recursively continues the interaction loop
+        
+        The loop stops when the agent reaches MAX_SUB_STEPS, receives a shutdown
+        signal, or encounters an unrecoverable error.
         """
         message = await self.interface.get_input(
             message="Enter your message [enter to send, Ctrl+C to exit]:",
@@ -196,9 +240,17 @@ class Agent:
 
     async def generate_action(self) -> None:
         """
-        Generate an action based on the current state of the agent.
-
-        This method generates an action based on the current state of the agent.
+        Generate an appropriate action using the language model.
+        
+        This method:
+        1. Resets the inference engine for a fresh generation
+        2. Runs inference on the full conversation history
+        3. Shows live output as it's being generated
+        4. Handles pause/resume functionality
+        5. Processes the final structured output for execution
+        
+        The generated output is structured according to the agent's state machine,
+        which determines what actions (reasoning, tool usage, code execution) to take.
         """
         self.inference.engine.reset()
         for _ in self.inference.run_inference(
@@ -271,10 +323,19 @@ class Agent:
         self.memory.append_to_history(action)
 
     async def use_tool(self, tool_call: ToolCall) -> Interaction:
-        """Use a tool and return results.
-
+        """
+        Execute a tool call and return the results as an Interaction.
+        
+        This method handles both local tools and tools available through MCP servers.
+        It manages all aspects of tool execution including error handling and status
+        updates.
+        
         Args:
-            tool_use: The tool call to use.
+            tool_call: The structured tool call to execute, including the tool name and arguments
+            
+        Returns:
+            An Interaction object containing either the successful tool results or
+            an error message if the tool execution failed
         """
         try:
             tool = self.tools[tool_call.name]

@@ -1,24 +1,50 @@
-# The Proxy Base Agent
+# Proxy Base Agent
 
-<p align="center">
-  <strong>A Stateful, Tool-Enabled Agent Powered by the Proxy Structuring Engine</strong>
-</p>
+A stateful, tool-enabled agent built with the Proxy Structuring Engine.
 
 ## Overview
 
-The Proxy Base Agent showcases a powerful, structured implementation built on top of the [Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine).
+The Proxy Base Agent uses the [Proxy Structuring Engine](https://github.com/TheProxyCompany/proxy-structuring-engine) to implement a state machine architecture that guides language models through planning and action phases.
 
-The Proxy Base Agent leverages a state machine architecture to enable reliable, deterministic agent behavior while maintaining the creative power of large language models.
+## Architecture
 
-It's designed for both performance and flexibility, allowing you to create agents that can:
+```
+                    ┌───────────────────┐
+                    │                   │
+                    ▼                   │
+        ┌─────────────────────────────────────┐
+        │                 PLAN                │
+        │ ┌─────────┐  ┌──────────┐           │
+        │ │THINKING │  │SCRATCHPAD│           │
+        │ └─────────┘  └──────────┘           │
+        │ ┌─────────┐  ┌───────────────┐      │
+        │ │REASONING│  │INNER MONOLOGUE│      │
+        │ └─────────┘  └───────────────┘      │
+        └──────────────────┬──────────────────┘
+                           │
+                           ▼
+            ┌───────────────────────────────┐
+            │           TAKE ACTION         │
+            │ ┌─────────┐ ┌────────┐ ┌─────┐│
+            │ │  TOOLS  │ │ PYTHON │ │BASH ││
+            │ └────┬────┘ └───┬────┘ └──┬──┘│
+            └──────┼──────────┼─────────┼───┘
+                   │          │         │
+                   └──────────┼─────────┘
+                              ▼
+                        ┌─────────┐
+                        │  DONE   │
+                        └─────────┘
+```
 
-- Execute complex, multi-step tasks
-- Utilize external tools and APIs
-- Maintain context and state across interactions
+The agent transitions between two main phases:
+
+1. **Planning states** (Thinking, Scratchpad, Reasoning, Inner Monologue)
+2. **Action states** (Tool calls, Python code, Bash commands)
 
 ## Installation
 
-The Proxy Base Agent requires Python 3.11 or newer.
+Requires Python 3.11+
 
 ```bash
 # Clone the repository
@@ -40,5 +66,5 @@ python -m agent
 
 ## Related Projects
 
-- [Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine) - The core technology powering the Proxy Base Agent
-- [MLX Proxy](https://github.com/TheProxyCompany/mlx-proxy) - Optimized MLX implementations used by this agent
+- [Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine)
+- [MLX Proxy](https://github.com/TheProxyCompany/mlx-proxy)

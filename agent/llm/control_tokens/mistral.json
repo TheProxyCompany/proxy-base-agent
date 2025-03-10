@@ -7,7 +7,7 @@
         "system": {
             "role_name": "",
             "role_start_tag": "[SYSTEM_PROMPT]",
-            "role_end_tag": "",
+            "role_end_tag": "\n",
             "end_of_message": "[/SYSTEM_PROMPT]"
         },
         "user": {

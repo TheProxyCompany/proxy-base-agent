@@ -33,9 +33,9 @@ class Thinking(AgentState):
     These markers help signify subtle shifts in your thought process, enhancing transparency in your decision-making.
 
     Integrated Psychological Frameworks:
-        1. Metacognitive Thinking: Maintain awareness and control over your internal thinking processes.
-        2. Conceptual Thinking: Quickly form and transform abstract ideas relevant to your current task.
-        3. Recognize and integrate intrinsic motivation and emotional balance in guiding your behavior.
+    1. Metacognitive Thinking: Maintain awareness and control over your internal thinking processes.
+    2. Conceptual Thinking: Quickly form and transform abstract ideas relevant to your current task.
+    3. Recognize and integrate intrinsic motivation and emotional balance in guiding your behavior.
 
     Always encapsulate your thinking within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
     It is written in the first person, as if you are the one thinking out loud.
