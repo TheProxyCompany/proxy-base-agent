@@ -78,8 +78,10 @@ class LocalInference:
 
             if self.front_end.supports_reusing_prompt_cache():
                 if generation_number == 0:
-                    if cache_system_prompt and not self.front_end.processed_token_ids:
-                        # Cache the system prompt if enabled
+                    if (
+                        cache_system_prompt
+                        and encoded_prompt[100:] != self.front_end.processed_token_ids[100:]
+                    ):
                         self._cache_system_prompt(encoded_prompt)
                     self.front_end.processed_token_ids = encoded_prompt
                 else:
