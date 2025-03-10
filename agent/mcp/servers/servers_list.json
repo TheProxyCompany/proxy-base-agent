@@ -1,0 +1,32 @@
+[
+  {
+    "identifier": "mcp-server-brave-search",
+    "name": "Brave Web Search",
+    "description": "MCP server for Brave Search API integration. Use this to search the web for information.",
+    "vendor": "Anthropic, PBC (https://anthropic.com)",
+    "sourceUrl": "https://github.com/modelcontextprotocol/servers/blob/main/src/brave-search",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+    "required_env_vars": ["BRAVE_API_KEY"]
+  },
+  {
+    "identifier": "mcp-server-fetch",
+    "name": "Web Content Fetch",
+    "description": "MCP server for retrieving and processing web page content. Use this to fetch the contents of a specific url.",
+    "vendor": "Model Context Protocol",
+    "sourceUrl": "https://github.com/modelcontextprotocol/servers/blob/main/src/fetch",
+    "command": "uvx",
+    "args": ["mcp-server-fetch"],
+    "required_env_vars": []
+  },
+  {
+    "identifier": "mcp-server-time",
+    "name": "Time Server",
+    "description": "MCP server for time and timezone conversion capabilities. Get current time in any timezone and convert between timezones using IANA timezone names.",
+    "vendor": "Model Context Protocol",
+    "sourceUrl": "https://github.com/modelcontextprotocol/servers/blob/main/src/time",
+    "command": "uvx",
+    "args": ["mcp-server-time", "--local-timezone=America/New_York"],
+    "required_env_vars": []
+  }
+]

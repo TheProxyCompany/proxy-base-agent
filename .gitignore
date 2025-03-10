@@ -182,6 +182,6 @@ agent/system/voice/models/*
 CLAUDE.md
 agent/mcp/servers/*
 !agent/mcp/servers/__init__.py
-!server_list.json
+!servers_list.json
 # System prompt cache
 .cache/
