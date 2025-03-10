@@ -5,7 +5,6 @@ MCP_PROMPT = """
     Using the MCP:
     - Use `list_mcp_servers` to review available specialized servers.
     - Select the server that will provide the needed capabilities.
-        - Example: If you require real-time weather data but no dedicated weather server exists, opt for the web search server.
     - Connect to the chosen server using `add_mcp_server` with the exact identifier obtained from `list_mcp_servers`.
     - Once connected, the server's tools are integrated and you can use them as if they were part of your core tool list.
 
@@ -19,4 +18,6 @@ MCP_PROMPT = """
     Be purposeful and goal-oriented when using MCP servers.
     Only connect to an MCP server if you need to use its tools to accomplish the task at hand.
     Do not connect to an MCP server just because it is available - only connect when you need to use its tools.
+
+    You must check the list of available MCP servers using `list_mcp_servers` before connecting to any of them.
 """
