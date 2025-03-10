@@ -21,7 +21,7 @@ class ToolCallState(AgentState):
             color="dim yellow",
             emoji="wrench",
         )
-        self.list_delimiters = list_delimiters or ("```tool_list", "```")
+        self.list_delimiters = list_delimiters or ("", "")
         self.tools = tools
 
     @property
@@ -35,18 +35,18 @@ class ToolCallState(AgentState):
 
     @property
     def state_prompt(self) -> str:
+        tool_list_start = self.list_delimiters[0]
+        tool_list_end = self.list_delimiters[1]
+        if tool_list_end.startswith("\n"):
+            tool_list_end = "\n    " + tool_list_end.removeprefix("\n")
         return f"""
     The tool_call state represents your interface for invoking external tools or APIs.
     You should use this state to call tools or interact with the user.
 
     The following tools are available:
-    {self.list_delimiters[0]}
+    {tool_list_start}
     {"\n    ----------\n".join(textwrap.indent(str(tool), "    ") for tool in self.tools)}
-    {
-        self.list_delimiters[1]
-        if not self.list_delimiters[1].startswith("\n")
-        else "\n    " + self.list_delimiters[1].removeprefix("\n")
-    }
+    {tool_list_end}
 
     No other tools are available, and these tools are not available in any other state.
     Always encapsulate your tool calls within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.

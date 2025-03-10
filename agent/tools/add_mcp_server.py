@@ -34,7 +34,7 @@ async def add_mcp_server(
     self.add_tools(new_tools)
     result = f"Connected to model control protocol server at {server_identifier} and loaded {len(new_tools)} new tools."
     tool_list = "\n".join(textwrap.indent(str(tool), "    ") for tool in new_tools)
-    result += "\nThe following tools were added:\n" + tool_list
+    result += "\nThe following tools were added:\n" + tool_list + "\n"
 
     return Interaction(
         role=Interaction.Role.TOOL,

@@ -4,11 +4,17 @@ import os
 from pydantic import BaseModel
 
 
-class RoleTokens(BaseModel):
-    system: str
-    assistant: str
-    user: str
-    tool: str
+class Role(BaseModel):
+    role_name: str
+    role_start_tag: str
+    role_end_tag: str
+    end_of_message: str | None = None
+
+class RoleTags(BaseModel):
+    system: Role | None = None
+    assistant: Role | None = None
+    user: Role | None = None
+    tool: Role | None = None
 
 
 class ControlTokens(BaseModel):
@@ -17,14 +23,11 @@ class ControlTokens(BaseModel):
     This class defines the structure and access methods for control tokens used in
     various LLM template formats.
     """
+
     template_type: str
     begin_of_text: str
     end_of_message: str
     end_of_sequence: str
-    user_start: str
-    user_end: str
-    assistant_header_start: str
-    assistant_header_end: str
     inner_monologue_start: str | None = None
     inner_monologue_end: str | None = None
     thinking_start: str | None = None
@@ -35,11 +38,15 @@ class ControlTokens(BaseModel):
     reasoning_end: str | None = None
     tool_list_start: str | None = None
     tool_list_end: str | None = None
-    tool_start: str
-    tool_end: str
-    tool_result_start: str
-    tool_result_end: str
-    roles: RoleTokens
+    tool_call_start: str
+    tool_call_end: str
+    tool_calls_start: str | None = None
+    tool_calls_end: str | None = None
+    tool_result_start: str | None = None
+    tool_result_end: str | None = None
+    tool_results_start: str | None = None
+    tool_results_end: str | None = None
+    roles: RoleTags
 
     def delimiters(self) -> dict[str, tuple[str, str] | None]:
         """Returns a dictionary of all delimiter pairs.
@@ -55,6 +62,7 @@ class ControlTokens(BaseModel):
             "tool_call": self.tool_use_delimiters,
             "tool_list": self.tool_list_delimiters,
             "tool_result": self.tool_result_delimiters,
+            "tool_results": self.tool_results_delimiters,
         }
 
     def end_tokens(self) -> list[str]:
@@ -149,14 +157,25 @@ class ControlTokens(BaseModel):
         return None
 
     @property
+    def tool_results_delimiters(self) -> tuple[str, str] | None:
+        """Returns the tool results delimiter pair if defined.
+
+        Returns:
+            A tuple of start and end delimiters, or None if not defined.
+        """
+        if self.tool_results_start and self.tool_results_end:
+            return self.tool_results_start, self.tool_results_end
+        return None
+
+    @property
     def tool_use_delimiters(self) -> tuple[str, str] | None:
         """Returns the tool use delimiter pair if defined.
 
         Returns:
             A tuple of start and end delimiters, or None if not defined.
         """
-        if self.tool_start and self.tool_end:
-            return self.tool_start, self.tool_end
+        if self.tool_call_start and self.tool_call_end:
+            return self.tool_call_start, self.tool_call_end
         return None
 
 
@@ -187,13 +206,15 @@ def _determine_model_type(model_path: str, tokenizer_config: dict) -> str:
 
     if eos_token == "<|eot_id|>":
         model_type = "llama"
+    elif eos_token == "<｜end▁of▁sentence｜>":  # noqa: RUF001
+        if tokenizer_config.get("tokenizer_class") == "LlamaTokenizerFast":
+            model_type = "llama-deepseek"
+        else:
+            model_type = "deepseek"
     elif isinstance(eos_token, str) and eos_token.strip() == "<|im_end|>":
         model_type = "chatml"
 
-    if model_type == "llama":
-        if "deepseek" in model_path.lower():
-            model_type = "llama-deepseek"
-    elif model_type == "chatml" and "hermes" in model_path.lower():
+    if "hermes" in model_path.lower():
         model_type = "hermes"
 
     return model_type

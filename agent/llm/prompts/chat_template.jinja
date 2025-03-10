@@ -1,36 +1,62 @@
-{# Default role mappings #}
-{%- set roles = roles or {
-    "user": "user",
-    "system": "system",
-    "assistant": "assistant",
-    "tool": "tool"
-} -%}
 {%- set add_generation_prompt = add_generation_prompt or true -%}
 {%- set prefill = prefill or none -%}
 {# ------------------------------------------------------------------------ #}
 {# Macro to render individual interactions                                  #}
 {# ------------------------------------------------------------------------ #}
 {%- macro render_interaction(interaction) -%}
-    {%- set role = roles.get(interaction['role'], interaction['role']) -%}
-    {{- assistant_header_start + role + assistant_header_end -}}
+
+    {%- set role = roles.get(interaction['role']) -%}
+    {%- if role is not none -%}
+        {{- role.role_start_tag + role.role_name + role.role_end_tag -}}
+    {%- endif -%}
+
     {{- interaction['content'] | safe -}}
+
     {%- if interaction.tool_call -%}
+        {%- if tool_calls_start -%}
+            {{- tool_calls_start -}}
+        {%- endif -%}
+
         {%- if interaction.tool_call is string -%}
             {{- interaction.tool_call | trim -}}
         {%- else -%}
-            {{- tool_start }}
+            {{- tool_call_start }}
             {{- interaction.tool_call | tojson(indent=2) | trim -}}
-            {{- tool_end -}}
+            {{- tool_call_end -}}
+        {%- endif -%}
+
+        {%- if tool_calls_end -%}
+            {{- tool_calls_end -}}
         {%- endif -%}
     {%- endif -%}
+
     {%- if interaction.tool_result and not interaction.tool_result.last and not interaction.tool_result.silent -%}
-        {{- end_of_message -}}
-        {{- assistant_header_start + roles.tool + assistant_header_end -}}
+        {%- if tool_results_start -%}
+            {{- tool_results_start -}}
+        {%- else -%}
+            {{- end_of_message -}}
+            {{- roles.tool.role_start_tag + roles.tool.role_name + roles.tool.role_end_tag -}}
+        {%- endif -%}
+        {%- if tool_result_start -%}
+            {{- tool_result_start -}}
+        {%- endif -%}
         {{- interaction.tool_result.content | safe -}}
+        {%- if tool_result_end -%}
+            {{- tool_result_end -}}
+        {%- endif -%}
+        {%- if tool_results_end -%}
+            {{- tool_results_end -}}
+        {%- endif -%}
     {%- endif -%}
 
-    {{- end_of_sequence -}}
+    {%- if role.end_of_message is not none -%}
+        {{- role.end_of_message -}}
+    {%- else -%}
+        {{- end_of_sequence -}}
+    {%- endif -%}
+
 {%- endmacro -%}
+
 {# ------------------------------------------------------------------------ #}
 {# Chat template                                                            #}
 {# ------------------------------------------------------------------------ #}
@@ -39,7 +65,7 @@
     {{ render_interaction(interaction) -}}
 {%- endfor -%}
 {%- if add_generation_prompt -%}
-    {{- assistant_header_start + roles.assistant + assistant_header_end -}}
+    {{- roles.assistant.role_start_tag + roles.assistant.role_name + roles.assistant.role_end_tag -}}
 {%- endif -%}
 {%- if prefill is not none -%}
     {{- prefill -}}

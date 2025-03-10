@@ -1,20 +1,30 @@
 {
     "template_type": "llama",
-    "assistant_header_end": "<|end_header_id|>\n\n",
-    "assistant_header_start": "<|start_header_id|>",
     "begin_of_text": "<|begin_of_text|>",
     "end_of_message": "<|eom_id|>",
     "end_of_sequence": "<|eot_id|>",
     "roles": {
-        "assistant": "assistant",
-        "system": "system",
-        "tool": "ipython",
-        "user": "user"
+        "assistant": {
+            "role_name": "assistant",
+            "role_start_tag": "<|start_header_id|>",
+            "role_end_tag": "<|end_header_id|>\n\n"
+        },
+        "system": {
+            "role_name": "system",
+            "role_start_tag": "<|start_header_id|>",
+            "role_end_tag": "<|end_header_id|>\n\n"
+        },
+        "tool": {
+            "role_name": "ipython",
+            "role_start_tag": "<|start_header_id|>",
+            "role_end_tag": "<|end_header_id|>\n\n"
+        },
+        "user": {
+            "role_name": "user",
+            "role_start_tag": "<|start_header_id|>",
+            "role_end_tag": "<|end_header_id|>\n\n"
+        }
     },
-    "tool_start": "```tool\n",
-    "tool_end": "\n```",
-    "tool_result_start": "<|start_header_id|>ipython<|end_header_id|>\n\n",
-    "tool_result_end": "<|eot_id|>",
-    "user_end": "<|end_header_id|>\n\n",
-    "user_start": "<|start_header_id|>"
+    "tool_call_start": "```tool\n",
+    "tool_call_end": "\n```"
 }

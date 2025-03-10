@@ -3,20 +3,32 @@
     "begin_of_text": "",
     "end_of_sequence": "<|im_end|>\n",
     "end_of_message": "<|im_end|>\n",
-    "user_start": "<|im_start|>",
-    "user_end": "\n",
-    "assistant_header_start": "<|im_start|>",
-    "assistant_header_end": "\n",
     "tool_list_start": "```tool_list\n",
     "tool_list_end": "\n```",
-    "tool_start": "```tool\n",
-    "tool_end": "\n```",
+    "tool_call_start": "<tool_call>",
+    "tool_call_end": "</tool_call>",
     "tool_result_start": "<tool_response>\n",
     "tool_result_end": "\n</tool_response>",
     "roles": {
-        "system": "system",
-        "assistant": "assistant",
-        "user": "user",
-        "tool": "tool"
+        "system": {
+            "role_name": "system",
+            "role_start_tag": "<|im_start|>",
+            "role_end_tag": "\n"
+        },
+        "assistant": {
+            "role_name": "assistant",
+            "role_start_tag": "<|im_start|>",
+            "role_end_tag": "\n"
+        },
+        "user": {
+            "role_name": "user",
+            "role_start_tag": "<|im_start|>",
+            "role_end_tag": "\n"
+        },
+        "tool": {
+            "role_name": "tool",
+            "role_start_tag": "<|im_start|>",
+            "role_end_tag": "\n"
+        }
     }
 }
