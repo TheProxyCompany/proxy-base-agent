@@ -3,9 +3,8 @@ MCP_PROMPT = """
     As an agent, treat MCP servers as extensions of your capabilities that you use to access real-world data, systems, and tools.
 
     Using the MCP:
-    - First, determine the specific capabilities required to accomplish your task.
     - Use `list_mcp_servers` to review available specialized servers.
-    - Select the server most likely to provide the needed capabilities, using fuzzy matching if necessary.
+    - Select the server that will provide the needed capabilities.
         - Example: If you require real-time weather data but no dedicated weather server exists, opt for the web search server.
     - Connect to the chosen server using `add_mcp_server` with the exact identifier obtained from `list_mcp_servers`.
     - Once connected, the server's tools are integrated and you can use them as if they were part of your core tool list.
