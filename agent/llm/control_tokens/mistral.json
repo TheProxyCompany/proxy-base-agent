@@ -15,6 +15,12 @@
             "role_start_tag": "[INST]",
             "role_end_tag": "",
             "end_of_message": "[/INST]"
+        },
+        "tool": {
+            "role_name": "",
+            "role_start_tag": "",
+            "role_end_tag": "",
+            "end_of_message": "\n"
         }
     },
     "tool_call_start": "[TOOL_CALL]",
