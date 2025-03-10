@@ -20,7 +20,7 @@ from agent.mcp.host import MCPHost
 from agent.state import AgentState
 from agent.state_machine import AgentStateMachine
 from agent.system.interaction import Interaction
-from agent.system.memory import Hippocampus
+from agent.system.memory import Memory
 from agent.tools import Tool, ToolCall
 from agent.tools.voice import VoiceBox
 
@@ -64,8 +64,8 @@ class Agent:
         inference: LocalInference,
         seed: int | None = None,
         tools: list[Tool] | list[str] | None = None,
-        include_python: bool = False,
-        include_bash: bool = False,
+        python_interpreter: bool = False,
+        bash_interpreter: bool = False,
         max_planning_loops: int = 3,
         force_planning: bool = True,
         character_max: int | None = None,
@@ -83,8 +83,8 @@ class Agent:
         self.system_prompt_name = system_prompt_name
         self.inference_kwargs = inference_kwargs
         self.inference_kwargs["seed"] = self.seed
-        self.include_python = include_python
-        self.include_bash = include_bash
+        self.python_interpreter = python_interpreter
+        self.bash_interpreter = bash_interpreter
         self.max_planning_loops = max_planning_loops
         self.force_planning = force_planning
         self.character_max = character_max
@@ -99,13 +99,14 @@ class Agent:
             elif isinstance(tool, str):
                 self.tools[tool] = Tool.load(file_name=tool)[0]
 
-        self.hippocampus = Hippocampus()
-        self.voicebox = VoiceBox()
+        self.memory = Memory()
+        self.enable_voice = inference_kwargs.pop("enable_voice", False)
+        self.voicebox = VoiceBox() if self.enable_voice else None
         self.mcp_host = MCPHost()
         self.configure(set_system_prompt=True)
 
-        # Set up keyboard listener for pause/resume functionality
         if include_pause_button:
+            # Set up keyboard listener for pause/resume functionality
             self.keyboard_listener: pynput_keyboard.Listener | None = None
             self._setup_keyboard_listener()
 
@@ -178,7 +179,7 @@ class Agent:
         if isinstance(message, Interaction):
             self.status = Agent.Status.PROCESSING
             if message.content:
-                self.hippocampus.append_to_history(message)
+                self.memory.append_to_history(message)
                 await self.interface.show_output(message)
         elif message is None:
             self.status = Agent.Status.STANDBY
@@ -201,7 +202,7 @@ class Agent:
         """
         self.inference.engine.reset()
         for _ in self.inference.run_inference(
-            prompt=[e.to_dict() for e in self.hippocampus.events.values()],
+            prompt=[e.to_dict() for e in self.memory.events.values()],
             **self.inference_kwargs,
         ):
             if live_output := self.inference.engine.get_live_structured_output():
@@ -266,7 +267,7 @@ class Agent:
                 case _:
                     raise ValueError(f"Unknown structured output: {output}")
 
-        self.hippocampus.append_to_history(action)
+        self.memory.append_to_history(action)
 
     async def use_tool(self, tool_call: ToolCall) -> Interaction:
         """Use a tool and return results.
@@ -279,12 +280,13 @@ class Agent:
             with self.interface.console.status(f"[yellow]Using {tool_call.name}"):
                 if not tool.mcp_server:
                     result = await tool.call(self, **tool_call.arguments or {})
+                    assert isinstance(result, Interaction)
                 else:
                     result = await self.mcp_host.use_tool(
-                        tool.mcp_server, tool_call
+                        tool.mcp_server,
+                        tool_call,
                     )
 
-            assert isinstance(result, Interaction)
             return result
         except Exception as e:
             self.status = Agent.Status.FAILED
@@ -307,8 +309,8 @@ class Agent:
     def configure(self, set_system_prompt: bool = False):
         self.state_machine = AgentStateMachine(
             tools=list(self.tools.values()),
-            use_python=self.include_python,
-            use_bash=self.include_bash,
+            use_python=self.python_interpreter,
+            use_bash=self.bash_interpreter,
             max_planning_loops=self.max_planning_loops,
             force_planning=self.force_planning,
             delimiters_kwargs=self.inference.front_end.tokenizer.delimiters,
@@ -317,7 +319,7 @@ class Agent:
         self.available_states = self.state_machine.states
         self.inference.engine.configure(self.state_machine)
         if set_system_prompt:
-            self.hippocampus.update_system_prompt(self.system_prompt)
+            self.memory.update_system_prompt(self.system_prompt)
 
     @staticmethod
     async def get_agent_name(interface: Interface) -> str:

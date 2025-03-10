@@ -1,12 +1,12 @@
 from agent.system.interaction import Interaction
 
 
-class Hippocampus:
+class Memory:
     """Central memory management system for the agent."""
 
     def __init__(self):
         """
-        Initialize the Hippocampus with different memory components.
+        Initialize the Memory with different memory components.
         """
         self.events: dict[str, Interaction] = {}
         self.system_prompt: Interaction | None = None

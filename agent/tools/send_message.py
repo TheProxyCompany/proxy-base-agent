@@ -39,7 +39,7 @@ def send_message(
         elif spoken_lower in ("none", "null", "false"):
             spoken = None
 
-    if spoken:
+    if spoken and self.voicebox is not None and self.enable_voice:
         speech_text = spoken if isinstance(spoken, str) else message
         self.voicebox(speech_text)
 
