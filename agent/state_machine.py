@@ -64,7 +64,7 @@ class AgentStateMachine(StateMachine):
     ) -> None:
         """
         Initialize the agent state machine with specific capabilities.
-        
+
         Args:
             tools: List of Tool objects available to the agent
             use_python: Whether to enable Python code execution
@@ -103,20 +103,20 @@ class AgentStateMachine(StateMachine):
     def create_planning_states(self, character_max=None, **delimiters: tuple[str, str] | None) -> list[StateMachine]:
         """
         Create and configure all planning phase states.
-        
+
         Planning states allow the agent to reason through problems before taking action.
         Each state serves a specific cognitive function in the planning process.
-        
+
         Args:
             character_max: Maximum character limit for state outputs
             **delimiters: Custom delimiters for different states
-            
+
         Returns:
             List of StateMachine objects for planning states
         """
         # Use a default character limit of 1000 if not specified
         char_limit = character_max or 1000
-        
+
         # Thinking: Initial problem analysis and approach planning
         thinking_state = Thinking(delimiters.get("thinking"), character_max=char_limit)
         self.states[thinking_state.identifier] = thinking_state
@@ -149,26 +149,26 @@ class AgentStateMachine(StateMachine):
     ) -> list[StateMachine]:
         """
         Create and configure all action phase states.
-        
+
         Action states enable the agent to interact with its environment through
         various mechanisms, such as tools, code execution, or system commands.
-        
+
         Args:
             tools: List of Tool objects to make available for tool calls
             use_python: Whether to enable Python code execution state
             use_bash: Whether to enable Bash command execution state
             **delimiters: Custom delimiters for different states
-            
+
         Returns:
             List of StateMachine objects for action states
-            
+
         Note:
             At least one action state must be enabled for the agent to function.
             If no action states are enabled, the agent would have no way to
             interact with its environment.
         """
         action_states = []
-        
+
         # Tool Call State: For invoking specialized tools
         if tools:
             tool_state = ToolCallState(
@@ -178,7 +178,7 @@ class AgentStateMachine(StateMachine):
             )
             self.states[tool_state.identifier] = tool_state
             action_states.append(tool_state.state_machine)
-            
+
         # Python State: For executing Python code
         if use_python:
             python_state = Python()
@@ -196,28 +196,27 @@ class AgentStateMachine(StateMachine):
     @property
     def prompt(self) -> str:
         """
-        Generate the agent system prompt with detailed state transition information.
-        
-        This property creates a comprehensive explanation of how the agent should
+        Creates a comprehensive explanation of how the agent should
         use the available states, transition between them, and structure its output.
         The prompt includes descriptions of all registered states.
-        
-        Returns:
-            Formatted system prompt explaining state usage
         """
         explanation = f"""
 An agentic system operates through a sequence of states to interact with its environment.
 
 State Transitions:
 - Move between states using delimiters to indicate the start and end of a state.
-- Each transition should be purposeful and advance toward an underlying goal
-- Do not be overly verbose or repetitive
-- Choose the most appropriate state for the current task
+- Each transition should be purposeful and advance toward an underlying goal.
+- Do not be overly verbose or repeat yourself.
 
 Available States:
-{ "\n".join(str(state) for state in self.states.values()) }
+{"\n".join(str(state) for state in self.states.values())}
 
-Encapsulate all outputs with the correct delimiters corresponding to your current state.
-When operating in any state, embody the state's intended purpose rather than verbally confirming your state.
+You interact with the user exclusively through the "send message" tool.
+No direct output or dialogue should occur outside this tool.
+Time spent outside of sending message is added latency to your response.
+
+Nested states are NOT allowed.
+State transitions must be explicit, singular, and clearly defined.
+States occur sequentially, one after the other, not simultaneously.
         """
         return explanation
