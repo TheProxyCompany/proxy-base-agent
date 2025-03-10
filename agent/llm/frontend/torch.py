@@ -47,9 +47,9 @@ class TorchInference(Frontend):
         # Apply the same padding configuration to generation config if it exists
         if self.model.generation_config:
             if isinstance(self.model.generation_config.pad_token_id, list):
-                self.model.generation_config.pad_token_id = self.model.generation_config.pad_token_id[0]
+                self.model.generation_config.pad_token_id = self.model.config.pad_token_id[0]
             else:
-                self.model.generation_config.pad_token_id = self.model.generation_config.pad_token_id
+                self.model.generation_config.pad_token_id = self.model.config.pad_token_id
 
     def inference(self, prompt: list[int], engine: StructuringEngine, **kwargs: Any) -> Iterator[str]:
         assert isinstance(self.model, PSE_Torch)

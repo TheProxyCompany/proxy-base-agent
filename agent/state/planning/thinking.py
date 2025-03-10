@@ -27,17 +27,15 @@ class Thinking(AgentState):
     @property
     def state_prompt(self) -> str:
         return f"""
-    The thinking state encapsulates the agent's internal cognitive mechanisms, completely hidden from the user's view.
-    Include expressions such as:
-    "Hmm, I'm not sure", "I need to think", "Oh wait, that's not right", etc.
-    These markers help signify subtle shifts in your thought process, enhancing transparency in your decision-making.
+    The Metacognitive Thinking state is exclusively for reflecting on and evaluating your thought processes, not for planning or detailed internal dialogue.
 
-    Integrated Psychological Frameworks:
-    1. Metacognitive Thinking: Maintain awareness and control over your internal thinking processes.
-    2. Conceptual Thinking: Quickly form and transform abstract ideas relevant to your current task.
-    3. Recognize and integrate intrinsic motivation and emotional balance in guiding your behavior.
+    Use this state to:
+        1. Identify gaps or inconsistencies in your thinking.
+        2. Reflect on and adjust your reasoning when you detect errors or misconceptions.
+        3. Maintain a concise, self-aware assessment of your cognitive process.
+
+    Do NOT use this state for detailed exploration or initial idea generation; those belong in the Inner Monologue or Scratchpad states.
 
     Always encapsulate your thinking within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
-    It is written in the first person, as if you are the one thinking out loud.
-    The user can not see this state, and your output is not displayed to the user.
+    This state is private, hidden from the user.
         """
