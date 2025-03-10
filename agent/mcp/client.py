@@ -2,11 +2,10 @@ import os
 from contextlib import AsyncExitStack
 from typing import Any
 
+from agent.mcp.server import MCPServer
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
 from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
-
-from agent.mcp.server import MCPServer
 
 
 class MCPClient:
@@ -54,7 +53,7 @@ class MCPClient:
         tools = await self.session.list_tools()
         return tools.tools
 
-    async def use_tool(self, name: str, arguments: dict[str, Any]) -> str:
+    async def use_tool(self, name: str, arguments: dict[str, Any]) -> str | ImageContent | EmbeddedResource:
         """
         Use a tool on the MCP server.
         """
@@ -64,9 +63,9 @@ class MCPClient:
             if isinstance(content, TextContent):
                 return content.text
             elif isinstance(content, ImageContent):
-                return str(content)
+                return content
             elif isinstance(content, EmbeddedResource):
-                return str(content)
+                return content
         raise ValueError("No text content found in tool result")
 
     async def disconnect(self):

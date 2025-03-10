@@ -1,8 +1,15 @@
+import base64
 import logging
+import uuid
+from io import BytesIO
+
+from PIL import Image
 
 from agent.mcp.client import MCPClient
 from agent.mcp.server import MCPServer
+from agent.system.interaction import Interaction
 from agent.tools import Tool, ToolCall
+from mcp.types import ImageContent
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +52,7 @@ class MCPHost:
 
         return new_tools
 
-    async def use_tool(self, server_id: str, tool_call: ToolCall) -> str:
+    async def use_tool(self, server_id: str, tool_call: ToolCall) -> Interaction:
         """
         Use a tool from the given MCP server.
 
@@ -55,7 +62,24 @@ class MCPHost:
         if server_id not in self.mcp_clients:
             raise ValueError(f"MCP server {server_id} not found")
 
-        return await self.mcp_clients[server_id].use_tool(tool_call.name, tool_call.arguments or {})
+        result = await self.mcp_clients[server_id].use_tool(tool_call.name, tool_call.arguments or {})
+        if isinstance(result, ImageContent):
+            base64_data = result.data
+            image = Image.open(BytesIO(base64.b64decode(base64_data)))
+            image_path = f"/tmp/image_{uuid.uuid4().hex}.png"
+            image.save(image_path)
+            result = image_path
+            interaction = Interaction(
+                role=Interaction.Role.TOOL,
+                image_url=image_path,
+            )
+            return interaction
+        else:
+            interaction = Interaction(
+                role=Interaction.Role.TOOL,
+                content=str(result),
+            )
+            return interaction
 
 
     async def cleanup(self):

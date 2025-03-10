@@ -280,12 +280,8 @@ class Agent:
                 if not tool.mcp_server:
                     result = await tool.call(self, **tool_call.arguments or {})
                 else:
-                    tool_result = await self.mcp_host.use_tool(
+                    result = await self.mcp_host.use_tool(
                         tool.mcp_server, tool_call
-                    )
-                    result = Interaction(
-                        role=Interaction.Role.TOOL,
-                        content=tool_result,
                     )
 
             assert isinstance(result, Interaction)
