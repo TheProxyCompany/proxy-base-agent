@@ -1,21 +1,21 @@
 import logging
+import os
 import threading
 from collections.abc import Iterator
 
 import sounddevice as sd
 from kokoro_onnx import Kokoro
 
+from agent.system.voice import MODEL_PATH, VOICES_PATH
+
 logger = logging.getLogger(__name__)
 class VoiceBox:
     def __init__(self):
-        from agent.system.voice import MODEL_PATH, VOICES_PATH
-
-        if not MODEL_PATH or not VOICES_PATH:
-            download_path = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
-            raise FileNotFoundError(
-                f"Model or voices file not found. Download from {download_path} into the `system/voice/models` directory."
-            )
         self.kokoro = Kokoro(MODEL_PATH, VOICES_PATH)
+
+    @staticmethod
+    def is_downloaded() -> bool:
+        return os.path.exists(MODEL_PATH) and os.path.exists(VOICES_PATH)
 
     def __call__(self, message: str, voice: str = "af_heart", lang: str = "en-us"):
         """

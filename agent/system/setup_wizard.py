@@ -11,7 +11,7 @@ DEFAULT_AGENT_KWARGS = {
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
     "character_max": 2500,
-    "include_pause_button": True,
+    "include_pause_button": False,
     # Prompt configuration
     "add_generation_prompt": True,
     "prefill": "",

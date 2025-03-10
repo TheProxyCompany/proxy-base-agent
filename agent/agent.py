@@ -101,7 +101,7 @@ class Agent:
 
         self.memory = Memory()
         self.enable_voice = inference_kwargs.pop("enable_voice", False)
-        self.voicebox = VoiceBox() if self.enable_voice else None
+        self.voicebox = VoiceBox() if self.enable_voice and VoiceBox.is_downloaded() else None
         self.mcp_host = MCPHost()
         self.configure(set_system_prompt=True)
 
