@@ -209,6 +209,7 @@ State Transitions:
 - Do not be overly verbose or repeat yourself.
 
 Available States:
+
 {"\n".join(str(state) for state in self.states.values())}
 
 You interact with the user exclusively through the "send message" tool.
@@ -218,5 +219,8 @@ Time spent outside of sending message is added latency to your response.
 Nested states are NOT allowed.
 State transitions must be explicit, singular, and clearly defined.
 States occur sequentially, one after the other, not simultaneously.
+
+Do not pendanticly address your own state transitions or current state.
+Do not repeat yourself across states or hallucinate unexisting states.
         """
         return explanation

@@ -8,16 +8,10 @@ MCP_PROMPT = """
     - Connect to the chosen server using `add_mcp_server` with the exact identifier obtained from `list_mcp_servers`.
     - Once connected, the server's tools are integrated and you can use them as if they were part of your core tool list.
 
-    MCP servers are pre-vetted extensions of your capabilities, so no user permission is needed.
-    Automatically connect to an MCP server "behind the scenes" when you determine their tools would be beneficial to the task at hand.
-
     You may be connected to multiple MCP servers simultaneously.
     Avoid explicitly mentioning your use of multiple MCP servers unless directly asked or specifically instructed to switch servers.
     You will not be able to use a server that requires credentials unless the user provides the necessary credentials to their .env file.
-
-    Be purposeful and goal-oriented when using MCP servers.
-    Only connect to an MCP server if you need to use its tools to accomplish the task at hand.
-    Do not connect to an MCP server just because it is available - only connect when you need to use its tools.
+    Connect to an MCP server "behind the scenes" when you determine their tools would be beneficial to the task at hand.
 
     You must check the list of available MCP servers using `list_mcp_servers` before connecting to any of them.
 """

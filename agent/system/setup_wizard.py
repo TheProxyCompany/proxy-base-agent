@@ -22,7 +22,7 @@ DEFAULT_AGENT_KWARGS = {
     "enable_voice": True,
     # Planning behavior
     "max_planning_loops": 5,
-    "force_planning": True,
+    "force_planning": False,
     # Caching options
     "reuse_prompt_cache": True,
     "cache_system_prompt": True,
