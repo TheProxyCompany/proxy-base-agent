@@ -35,11 +35,21 @@ class TorchInference(Frontend):
         self.tokenizer = Tokenizer.load(model_path)
         self.processed_token_ids: list[int] = []
         # Configure padding token to match EOS token
-        self.model.config.pad_token_id = self.model.config.eos_token_id
+        eos_token_id = self.model.config.eos_token_id
+        if eos_token_id is None:
+            raise ValueError("EOS token ID is not set for the model.")
+
+        if isinstance(eos_token_id, list):
+            self.model.config.pad_token_id = eos_token_id[0]
+        else:
+            self.model.config.pad_token_id = eos_token_id
 
         # Apply the same padding configuration to generation config if it exists
         if self.model.generation_config:
-            self.model.generation_config.pad_token_id = self.model.config.eos_token_id
+            if isinstance(self.model.generation_config.pad_token_id, list):
+                self.model.generation_config.pad_token_id = self.model.generation_config.pad_token_id[0]
+            else:
+                self.model.generation_config.pad_token_id = self.model.generation_config.pad_token_id
 
     def inference(self, prompt: list[int], engine: StructuringEngine, **kwargs: Any) -> Iterator[str]:
         assert isinstance(self.model, PSE_Torch)

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class Tool:
-    """A tool is a piece of code that can be invoked by an ."""
+    """A tool is a piece of code that can be invoked by an agent."""
 
     def __init__(
         self,

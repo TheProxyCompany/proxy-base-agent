@@ -1,7 +1,7 @@
 [project]
-name = "Agent"
+name = "Proxy-Base-Agent"
 version = "1.0.0"
-description = "A simple agent powered by the Proxy Structuring Engine."
+description = "A stateful, tool-enabled agent powered by the Proxy Structuring Engine."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

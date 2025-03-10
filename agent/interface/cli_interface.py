@@ -27,9 +27,9 @@ PANEL_PADDING = (0, 1)
 
 
 class CLIInterface(Interface):
-    """An elegant command-line interface for interacting with the Brain agent.
+    """An elegant command-line interface for interacting with the Proxy Base Agent.
 
-    This class implements the AgentInterface and provides methods for
+    This class implements the Interface and provides methods for
     displaying different message types with consistent, beautiful formatting
     using Rich library elements (Panels, Markdown, Emojis).
     """

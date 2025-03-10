@@ -115,7 +115,7 @@ async def setup_agent(interface: Interface) -> Agent:
         A configured and initialized Agent instance
     """
     await interface.clear()
-    await interface.show_output("=== PROXY AGENT CONFIGURATION ===\n")
+    await interface.show_output("=== PROXY BASE AGENT CONFIGURATION ===\n")
 
     # ----- Basic Configuration -----
     await show_section_header(interface, "ESSENTIAL SETTINGS")
