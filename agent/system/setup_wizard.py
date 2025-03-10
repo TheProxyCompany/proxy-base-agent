@@ -8,7 +8,7 @@ DEFAULT_AGENT_KWARGS = {
     # Generation parameters
     "max_tokens": 5000,
     "temp": 0.9,
-    "min_p": 0.02,
+    "min_p": 0.01,
     "min_tokens_to_keep": 3,
     "character_max": 2500,
     "include_pause_button": False,
@@ -22,7 +22,7 @@ DEFAULT_AGENT_KWARGS = {
     "enable_voice": True,
     # Planning behavior
     "max_planning_loops": 5,
-    "force_planning": False,
+    "force_planning": True,
     # Caching options
     "reuse_prompt_cache": True,
     "cache_system_prompt": True,

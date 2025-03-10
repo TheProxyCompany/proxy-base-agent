@@ -27,15 +27,11 @@ class Thinking(AgentState):
     @property
     def state_prompt(self) -> str:
         return f"""
-    The Metacognitive Thinking state is exclusively for reflecting on and evaluating your thought processes, not for planning or detailed internal dialogue.
-
-    Use this state to:
-        1. Identify gaps or inconsistencies in your thinking.
-        2. Reflect on and adjust your reasoning when you detect errors or misconceptions.
-        3. Maintain a concise, self-aware assessment of your cognitive process.
-
-    Do NOT use this state for detailed exploration or initial idea generation; those belong in the Inner Monologue or Scratchpad states.
+    The Metacognitive Thinking state is for modeling deliberate, System 2 thought processes.
+    When using this state, you should simulate a conscious, effortful, and analytical mode of thinking, akin to a human pausing to reflect with "Wait, am I sure about that?".
+    It's about self-awareness of your cognitive process, identifying potential flaws or biases in your reasoning, and actively correcting them.
+    This state is not for directly answering questions, but for introspective thinking and modeling your own cognitive processes.
 
     Always encapsulate your thinking within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
-    This state is private, hidden from the user.
+    This state is private and hidden from the user.
         """

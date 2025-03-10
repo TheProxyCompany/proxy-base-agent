@@ -29,13 +29,8 @@ class Scratchpad(AgentState):
     def state_prompt(self) -> str:
         return f"""
     The Scratchpad state is strictly for informal notes, rapid idea sketches, and preliminary thoughts.
-
-    Use this state exclusively to:
-        1. Jot down quick notes or unstructured thoughts.
-        2. Briefly experiment with ideas without deep reasoning.
-        3. Sketch initial concepts or potential directions.
-
-    Do NOT include detailed reasoning, reflective thought, or elaborate narrative dialogue here. Those belong in the Reasoning and Inner Monologue states respectively.
+    When using this state, you should be modeling the way a human might jot down quick notes,
+    use a piece of paper to map out a plan, or sketch out a potential solution.
 
     Always encapsulate your scratchpad entries within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
     This state is private and hidden from the user.

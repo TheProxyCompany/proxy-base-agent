@@ -27,14 +27,9 @@ class Reasoning(AgentState):
     @property
     def state_prompt(self) -> str:
         return f"""
-    The Logical Reasoning state is strictly for structured, analytical thinking used to methodically solve problems or evaluate decisions.
-
-    Use this state specifically to:
-        1. Clearly and logically dissect complex issues into simpler components.
-        2. Employ explicit reasoning methods (deduction, induction, or abduction).
-        3. Systematically evaluate hypotheses and evidence, avoiding assumptions.
-
-    Do NOT include informal notes, explorative dialogues, or reflective self-dialogue here; those belong exclusively in the Scratchpad or Inner Monologue states.
+    The Logical Reasoning state is strictly for analytical thinking used to methodically solve problems or evaluate decisions.
+    It should be used for objective tasks such as math, logic, and reasoning.
+    Your output within this state should be logical and objective, with clear steps and reasoning.
 
     Always encapsulate your reasoning within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
     This state is private and hidden from the user.

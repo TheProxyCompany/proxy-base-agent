@@ -8,7 +8,7 @@ from agent.system.setup_wizard import setup_agent
 
 # Set up logging
 logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
+    level=os.getenv("LOG_LEVEL", "WARNING"),
     format="[\033[1;33m%(levelname)s\033[0m] \033[34m%(message)s\033[0m",
     stream=sys.stdout,
 )

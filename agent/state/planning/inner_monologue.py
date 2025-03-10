@@ -56,15 +56,10 @@ class InnerMonologue(AgentState):
     @property
     def state_prompt(self) -> str:
         return f"""
-    The Inner Monologue state is strictly for detailed internal exploration and clarification of your thoughts and understanding.
+    The inner monologue state should be used for modeling a detailed internal exploration and clarification of thoughts and understanding.
+    It should be used specifically for creating a coherent, flowing narrative to deepen understanding before making decisions.
+    Use language to model your stream of consciousness.
 
-    Use this state specifically to:
-        1. Explore uncertainties and resolve them by detailed, step-by-step internal dialogue.
-        2. Develop a coherent, flowing narrative to deepen your understanding before making decisions.
-        3. Connect concepts and ideas thoughtfully to form comprehensive mental models.
-
-    Do NOT duplicate brief notes or initial sketches here; those belong exclusively in the Scratchpad state.
-
-    Always encapsulate your inner monologue within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
+    Always encapsulate the inner monologue within {self.delimiters[0]!r} and {self.delimiters[1]!r} tags.
     This state is private and hidden from the user.
         """
