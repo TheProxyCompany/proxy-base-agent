@@ -7,8 +7,8 @@ can be displayed in the agent interface.
 """
 
 import os
-import time
 import tempfile
+import time
 import uuid
 
 from mflux.config.config import Config
@@ -30,34 +30,24 @@ def create_image(
 ) -> Interaction:
     """
     Generate and display an image based on a text prompt.
-
-    This tool has a permanent pixel art style (16x16 resolution, 8-bit aesthetic)
-    to create quick, stylized visualizations. The generated image is saved to a
-    temporary file and displayed to the user.
-
+    The generated image is saved to a temporary file and displayed to the user.
     The prompt should reflect your (the agent's) visual interpretation of the scene
     or concept. Consider incorporating artistic elements such as:
     - Artistic movements (surrealism, impressionism, art nouveau)
     - Visual styles (anime, pixel art, watercolor, oil painting)
     - Compositional elements (perspective, lighting, color palette)
 
-    Arguments:
-        prompt: Descriptive text that will be used to generate the image.
-            The prompt will automatically be enhanced with pixel art modifiers.
-        steps: Number of diffusion steps for image generation.
-            Each step takes ~30 seconds. More steps = higher quality.
-            Default: 4 steps (≈ 120 seconds)
-        guidance: Controls how closely the image follows the prompt.
-            Higher values (>7) = more literal interpretation but less creative variety
-            Lower values (<7) = more creative but may diverge from prompt
-            Default: 8.0
+    Args:
+        prompt (str): Descriptive text for image generation, automatically enhanced with pixel art modifiers.
+        steps (int): Diffusion steps (default: 4, ~30s/step, more steps = higher quality).
+        guidance (int): Controls prompt adherence (default: 8, higher = literal, lower = creative).
     """
     if not prompt:
         raise ValueError("Prompt is required, cannot visualize an empty prompt.")
 
     # Start timing the image generation process
     tic = time.time()
-    
+
     # Initialize model with Schnell config (optimized for speed)
     model_config = ModelConfig.schnell()
 
@@ -66,7 +56,7 @@ def create_image(
         model_config=model_config,
         quantize=8,  # Use 8-bit quantization to reduce memory usage
     )
-    
+
     # Generate the image, appending pixel art style modifiers to the prompt
     # This ensures consistent visual style across all generated images
     image = flux.generate_image(
@@ -79,14 +69,14 @@ def create_image(
             guidance=guidance,          # Controls adherence to prompt vs. creativity
         ),
     )
-    
+
     # Clean up any existing image at the target path to avoid permission issues
     if os.path.exists(IMAGE_PATH):
         os.remove(IMAGE_PATH)
 
     # Save the generated image to the temporary file location
     image.save(path=IMAGE_PATH)
-    
+
     # Calculate and format the total generation time
     toc = time.time()
     total_time = f"{toc - tic:.2f} seconds"

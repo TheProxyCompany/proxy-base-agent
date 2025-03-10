@@ -9,14 +9,10 @@ def list_mcp_servers(
     """
     List available model context protocol servers, returning their names, descriptions, and runtime environments.
     Model Context Protocol (MCP) is a protocol for integrating external services and APIs. These are the only MCP servers available to the agent.
-
-    If the user references a server, use this tool to see what servers are available.
+    If the user requires capabilities that are outside your core functionality, use this tool to see what servers are available.
 
     Args:
         limit (int, optional): Limit the number of servers returned. Defaults to None (all servers).
-
-    Returns:
-        Interaction: An Interaction object containing the list of servers.
     """
     available_servers = list(self.mcp_host.available_servers.values())
 

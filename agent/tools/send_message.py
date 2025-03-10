@@ -9,27 +9,18 @@ def send_message(
     wait_for_response: bool = True,
 ) -> Interaction:
     """
-    IMPORTANT: This is the ONLY method that should be used for sending messages to users.
-    Do not attempt to communicate with users through other means.
-    Sends a message to the user and optionally speaks it aloud.
-    Handles delivery mechanics automatically.
-    When `wait_for_response` is True, the agent pauses its activity, awaiting the user's reply before proceeding.
+    This tool sends a text-based message to the user and optionally speaks it aloud using a text-to-speech engine.
+    By default, the agent will wait for a response from the user before proceeding.
+    Multiple messages can be sent in a row by setting `wait_for_response` to False.
+
+    IMPORTANT:
+        This is the ONLY method that should be used for sending messages to users.
+        Do not attempt to communicate with users through other means.
 
     Args:
-        message (str):
-            The main message to display to the user.
-            Must be self-contained and complete - users only see this content.
-            Do not reference internal states or reasoning.
-
-        spoken (str | bool | null):
-            Speech behavior control:
-            - null (default): No speech output
-            - true: Speaks the message text
-            - str: Speaks this alternative text instead
-            Note: Spoken content should be more concise than written text.
-        wait_for_response (bool):
-            If True, the agent will wait for a response from the user before continuing.
-            If False, the agent will continue acting immediately.
+        message (str): The message to display to the user. This message should concisely summarize all previous actions, states, and reasoning that led to this point. Be self-contained and complete; users only see this message content, and will not see internal states or processes.
+        spoken (str | bool | None): Controls the text-to-speech behavior. Default is no speech output. True will speak the message text aloud. A string will speak this alternative text aloud. Note: Spoken content should generally be more concise than the written `message`.
+        wait_for_response (bool): This parameter determines whether the agent waits for user response after sending the message.
     """
 
     if isinstance(spoken, str):

@@ -16,9 +16,6 @@ async def add_mcp_server(
 
     Args:
         server_identifier (str): The identifier of the server to connect to.
-
-    Returns:
-        Interaction: An Interaction object containing the list of servers.
     """
     server = self.mcp_host.available_servers.get(server_identifier)
     if not server:
