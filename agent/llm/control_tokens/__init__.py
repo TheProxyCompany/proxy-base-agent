@@ -206,6 +206,8 @@ def _determine_model_type(model_path: str, tokenizer_config: dict) -> str:
 
     if eos_token == "<|eot_id|>":
         model_type = "llama"
+    elif eos_token == "</s>":
+        model_type = "mistral"
     elif eos_token == "<｜end▁of▁sentence｜>":  # noqa: RUF001
         if tokenizer_config.get("tokenizer_class") == "LlamaTokenizerFast":
             model_type = "llama-deepseek"
