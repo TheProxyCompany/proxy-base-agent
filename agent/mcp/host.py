@@ -30,6 +30,7 @@ class MCPHost:
             raise ValueError(f"MCP server {server_id} not found")
 
         requested_server = self.available_servers[server_id]
+        # you can download the server to the local 'servers'directory
         # requested_server.download_server()
 
         new_client = MCPClient()
