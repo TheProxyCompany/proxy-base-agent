@@ -21,8 +21,8 @@ from agent.state import AgentState
 from agent.state_machine import AgentStateMachine
 from agent.system.interaction import Interaction
 from agent.system.memory import Memory
+from agent.system.voice import VoiceBox
 from agent.tools import Tool, ToolCall
-from agent.tools.voice import VoiceBox
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +213,7 @@ class Agent:
                 self.interface.end_live_output()
 
             if self.status == Agent.Status.PAUSED:
+                # useful for debugging
                 self.interface.end_live_output()
                 breakpoint()
                 self.status = Agent.Status.PROCESSING
@@ -249,7 +250,7 @@ class Agent:
                     action.metadata["tool_result"] = interaction.to_dict()
 
                 case "python":
-                    from agent.tools.code.run_python_code import run_python_code
+                    from agent.system.run_code.run_python_code import run_python_code
 
                     interaction = await run_python_code(self, output)
                     await self.interface.show_output(interaction)
@@ -257,7 +258,7 @@ class Agent:
                     action.metadata["tool_result"] = interaction.to_dict()
 
                 case "bash":
-                    from agent.tools.code.run_bash_code import run_bash_code
+                    from agent.system.run_code.run_bash_code import run_bash_code
 
                     interaction = await run_bash_code(self, output)
                     await self.interface.show_output(interaction)

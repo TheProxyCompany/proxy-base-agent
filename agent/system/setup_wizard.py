@@ -11,6 +11,7 @@ DEFAULT_AGENT_KWARGS = {
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
     "character_max": 2500,
+    "include_pause_button": True,
     # Prompt configuration
     "add_generation_prompt": True,
     "prefill": "",
@@ -18,7 +19,7 @@ DEFAULT_AGENT_KWARGS = {
     # Feature toggles
     "include_python": False,
     "include_bash": False,
-    "enable_voice": False,
+    "enable_voice": True,
     # Planning behavior
     "max_planning_loops": 5,
     "force_planning": False,
@@ -28,7 +29,6 @@ DEFAULT_AGENT_KWARGS = {
     # MCP configuration
     "default_mcp_servers": [],
     "connect_default_mcp_servers": True,
-    "include_pause_button": True,
 }
 
 async def get_boolean_option(

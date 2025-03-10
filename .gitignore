@@ -178,7 +178,7 @@ cython_debug/
 
 .DS_Store
 uv.lock
-agent/tools/voice/models/*
+agent/system/voice/models/*
 CLAUDE.md
 agent/mcp/servers/*
 !agent/mcp/servers/__init__.py
