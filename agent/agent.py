@@ -34,21 +34,21 @@ T = TypeVar("T")
 class Agent:
     """
     The main Agent class that orchestrates language model interactions, tool usage, and state transitions.
-    
+
     This class implements a stateful agent that processes user inputs, generates responses using
     language models, and can interact with the environment through specialized tools. The agent
     follows a state machine architecture that structures its behavior into planning states
-    (thinking, reasoning, etc.) and action states (tool usage, code execution, etc.).
-    
+    (thinking, inner monologue, etc.) and action states (tool usage, code execution, etc.).
+
     The agent maintains its conversation history in memory and can be configured with
     different capabilities, such as Python code execution, Bash commands, and various
     specialized tools. It also supports features like pause/resume during processing.
     """
-    
+
     class Status(Enum):
         """
         Enumeration of possible agent status states.
-        
+
         These states track the operational status of the agent through its lifecycle
         and are used for control flow and UI feedback.
         """
@@ -57,7 +57,7 @@ class Agent:
         PROCESSING = "processing"  # Agent is actively processing
         STANDBY = "standby"    # Agent is ready but not actively processing
         IDLE = "idle"          # Agent is initialized but not engaged
-        
+
         # Error and Recovery States
         SUCCESS = "success"    # Action completed successfully
         FAILED = "failed"      # Action failed to complete
@@ -94,7 +94,7 @@ class Agent:
     ):
         """
         Initialize an Agent instance with the specified configuration.
-        
+
         Args:
             name: Human-readable name for this agent instance
             system_prompt_name: Name of the system prompt template to use
@@ -205,13 +205,13 @@ class Agent:
     async def loop(self) -> None:
         """
         Run the agent in a continuous interaction loop.
-        
+
         This method is the main entry point for agent execution. It:
         1. Gets user input through the configured interface
         2. Processes the input and determines the appropriate response
         3. Generates actions using the language model until reaching limits
         4. Recursively continues the interaction loop
-        
+
         The loop stops when the agent reaches MAX_SUB_STEPS, receives a shutdown
         signal, or encounters an unrecoverable error.
         """
@@ -241,16 +241,16 @@ class Agent:
     async def generate_action(self) -> None:
         """
         Generate an appropriate action using the language model.
-        
+
         This method:
         1. Resets the inference engine for a fresh generation
         2. Runs inference on the full conversation history
         3. Shows live output as it's being generated
         4. Handles pause/resume functionality
         5. Processes the final structured output for execution
-        
+
         The generated output is structured according to the agent's state machine,
-        which determines what actions (reasoning, tool usage, code execution) to take.
+        which determines what actions (thinking, tool usage, code execution) to take.
         """
         self.inference.engine.reset()
         for _ in self.inference.run_inference(
@@ -291,7 +291,7 @@ class Agent:
                 continue
 
             match agent_state.identifier:
-                case "scratchpad" | "thinking" | "reasoning" | "inner_monologue":
+                case "scratchpad" | "thinking" | "inner_monologue":
                     action.content += agent_state.format(output.strip()) + "\n"
 
                 case "tool_call":
@@ -325,14 +325,14 @@ class Agent:
     async def use_tool(self, tool_call: ToolCall) -> Interaction:
         """
         Execute a tool call and return the results as an Interaction.
-        
+
         This method handles both local tools and tools available through MCP servers.
         It manages all aspects of tool execution including error handling and status
         updates.
-        
+
         Args:
             tool_call: The structured tool call to execute, including the tool name and arguments
-            
+
         Returns:
             An Interaction object containing either the successful tool results or
             an error message if the tool execution failed

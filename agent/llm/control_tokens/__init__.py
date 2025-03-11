@@ -34,8 +34,6 @@ class ControlTokens(BaseModel):
     thinking_end: str | None = None
     scratchpad_start: str | None = None
     scratchpad_end: str | None = None
-    reasoning_start: str | None = None
-    reasoning_end: str | None = None
     tool_list_start: str | None = None
     tool_list_end: str | None = None
     tool_call_start: str
@@ -56,7 +54,6 @@ class ControlTokens(BaseModel):
         """
         return {
             "inner_monologue": self.inner_monologue_delimiters,
-            "reasoning": self.reasoning_delimiters,
             "scratchpad": self.scratchpad_delimiters,
             "thinking": self.thinking_delimiters,
             "tool_call": self.tool_use_delimiters,
@@ -99,17 +96,6 @@ class ControlTokens(BaseModel):
         """
         if self.inner_monologue_start and self.inner_monologue_end:
             return self.inner_monologue_start, self.inner_monologue_end
-        return None
-
-    @property
-    def reasoning_delimiters(self) -> tuple[str, str] | None:
-        """Returns the reasoning delimiter pair if defined.
-
-        Returns:
-            A tuple of start and end delimiters, or None if not defined.
-        """
-        if self.reasoning_start and self.reasoning_end:
-            return self.reasoning_start, self.reasoning_end
         return None
 
     @property

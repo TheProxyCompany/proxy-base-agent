@@ -42,7 +42,6 @@ from agent.state.action.bash import Bash  # noqa: E402
 from agent.state.action.python import Python  # noqa: E402
 from agent.state.action.tool_call import ToolCallState  # noqa: E402
 from agent.state.planning.inner_monologue import InnerMonologue  # noqa: E402
-from agent.state.planning.reasoning import Reasoning  # noqa: E402
 from agent.state.planning.scratchpad import Scratchpad  # noqa: E402
 from agent.state.planning.thinking import Thinking  # noqa: E402
 
@@ -50,7 +49,6 @@ __all__ = [
     "Bash",
     "InnerMonologue",
     "Python",
-    "Reasoning",
     "Scratchpad",
     "Thinking",
     "ToolCallState",

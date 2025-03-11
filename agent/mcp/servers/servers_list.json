@@ -1,15 +1,5 @@
 [
   {
-    "identifier": "mcp-server-brave-search",
-    "name": "Brave Web Search",
-    "description": "MCP server for Brave Search API integration. Use this to search the web for information.",
-    "vendor": "Anthropic, PBC (https://anthropic.com)",
-    "sourceUrl": "https://github.com/modelcontextprotocol/servers/blob/main/src/brave-search",
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-brave-search"],
-    "required_env_vars": ["BRAVE_API_KEY"]
-  },
-  {
     "identifier": "mcp-server-time",
     "name": "Time Server",
     "description": "MCP server for time and timezone conversion capabilities. Get current time in any timezone and convert between timezones using IANA timezone names.",

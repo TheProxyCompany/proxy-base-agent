@@ -18,7 +18,7 @@ def send_message(
         Do not attempt to communicate with users through other means.
 
     Args:
-        message (str): The message to display to the user. This message should concisely summarize all previous actions, states, and reasoning that led to this point. Be self-contained and complete; users only see this message content, and will not see internal states or processes.
+        message (str): The message to display to the user. This message should concisely summarize all information since the last message was sent. Be self-contained and complete; users only see this message content, and cannot see internal states or processes.
         spoken (str | bool | None): Controls the text-to-speech behavior. Default is no speech output. True will speak the message text aloud. A string will speak this alternative text aloud. Note: Spoken content should generally be more concise than the written `message`.
         wait_for_response (bool): This parameter determines whether the agent waits for user response after sending the message.
     """

@@ -7,7 +7,6 @@ from agent.state import (
     Bash,
     InnerMonologue,
     Python,
-    Reasoning,
     Scratchpad,
     Thinking,
     ToolCallState,
@@ -22,17 +21,14 @@ class AgentStateMachine(StateMachine):
                         ┌───────────────────┐
                         │                   │
                         ▼                   │
-            ┌─────────────────────────────────────┐
-            │                 PLAN                │ ◀─ loops (min=0, max=3)
-            │ ┌─────────┐  ┌──────────┐           │
-            │ │THINKING │  │SCRATCHPAD│           │
-            │ └─────────┘  └──────────┘           │
-            │ ┌─────────┐  ┌───────────────┐      │
-            │ │REASONING│  │INNER MONOLOGUE│      │
-            │ └─────────┘  └───────────────┘      │
-            └──────────────────┬──────────────────┘
-                               │
-                               ▼
+            ┌──────────────────────────────────────────────────┐
+            │                   PLAN                           │ ◀─ loops (min=x, max=y)
+            │ ┌─────────┐  ┌──────────┐  ┌───────────────┐     │
+            │ │THINKING │  │SCRATCHPAD│  │INNER MONOLOGUE│     │
+            │ └─────────┘  └──────────┘  └───────────────┘     │
+            └────────────────────┬─────────────────────────────┘
+                                 │
+                                 ▼
                 ┌───────────────────────────────┐
                 │           TAKE ACTION         │
                 │ ┌─────────┐ ┌────────┐ ┌─────┐│
@@ -47,7 +43,7 @@ class AgentStateMachine(StateMachine):
                             └─────────┘
 
     Explanation:
-    - The agent begins in PLAN, iteratively cycling (0 to 3 loops) through the unordered states: THINKING, SCRATCHPAD, REASONING, and INNER MONOLOGUE.
+    - The agent begins in PLAN, iteratively cycling (min=x, max=y loops) through the unordered states: THINKING, SCRATCHPAD, and INNER MONOLOGUE.
     - After planning, it transitions into TAKE ACTION, selecting among TOOLS, PYTHON, or BASH (if enabled).
     - Upon completing the action phase, the agent transitions into DONE.
     """
@@ -129,15 +125,10 @@ class AgentStateMachine(StateMachine):
         inner_monologue_state = InnerMonologue(delimiters.get("inner_monologue"), character_max=char_limit)
         self.states[inner_monologue_state.identifier] = inner_monologue_state
 
-        # Reasoning: Explicit logical deduction and structured problem-solving
-        reasoning_state = Reasoning(delimiters.get("reasoning"), character_max=char_limit)
-        self.states[reasoning_state.identifier] = reasoning_state
-
         return [
             thinking_state.state_machine,
             scratchpad_state.state_machine,
             inner_monologue_state.state_machine,
-            reasoning_state.state_machine,
         ]
 
     def create_action_states(
