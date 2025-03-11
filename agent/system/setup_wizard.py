@@ -18,7 +18,6 @@ DEFAULT_AGENT_KWARGS = {
     "seed": 11,
     # Feature toggles
     "include_python": False,
-    "include_bash": False,
     "enable_voice": True,
     # Planning behavior
     "max_planning_loops": 5,
@@ -151,11 +150,6 @@ async def setup_agent(interface: Interface) -> Agent:
             "Python execution",
             DEFAULT_AGENT_KWARGS["include_python"]
         )
-        agent_kwargs["include_bash"] = await get_boolean_option(
-            interface,
-            "Bash execution",
-            DEFAULT_AGENT_KWARGS["include_bash"]
-        )
 
         # Voice capabilities
         agent_kwargs["enable_voice"] = await get_boolean_option(
@@ -267,6 +261,10 @@ async def setup_agent(interface: Interface) -> Agent:
     with interface.console.status("Loading model and initializing agent..."):
         # Load the model
         inference = LocalInference(model_path, frontend=chosen_frontend)
+
+        # Convert include_python to python_interpreter parameter
+        if "include_python" in agent_kwargs:
+            agent_kwargs["python_interpreter"] = agent_kwargs.pop("include_python")
 
         # Create the agent
         agent = Agent(

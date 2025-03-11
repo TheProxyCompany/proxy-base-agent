@@ -81,7 +81,6 @@ class Agent:
         seed: int | None = None,
         tools: list[Tool] | list[str] | None = None,
         python_interpreter: bool = False,
-        bash_interpreter: bool = False,
         max_planning_loops: int = 3,
         force_planning: bool = True,
         character_max: int | None = None,
@@ -99,7 +98,6 @@ class Agent:
             seed: Random seed for reproducible generation (default: random)
             tools: List of Tool instances or tool names to load (default: all available)
             python_interpreter: Whether to enable Python code execution (default: False)
-            bash_interpreter: Whether to enable Bash command execution (default: False)
             max_planning_loops: Maximum iterations through planning states (default: 3)
             force_planning: Whether to require at least one planning iteration (default: True)
             character_max: Maximum character limit for each state output (default: None)
@@ -117,7 +115,6 @@ class Agent:
         self.inference_kwargs = inference_kwargs
         self.inference_kwargs["seed"] = self.seed
         self.python_interpreter = python_interpreter
-        self.bash_interpreter = bash_interpreter
         self.max_planning_loops = max_planning_loops
         self.force_planning = force_planning
         self.character_max = character_max
@@ -282,13 +279,6 @@ class Agent:
                     action.metadata["tool_call"] = agent_state.format(output.strip())
                     action.metadata["tool_result"] = interaction.to_dict()
 
-                case "bash":
-                    from agent.system.run_code.run_bash_code import run_bash_code
-
-                    interaction = await run_bash_code(self, output)
-                    await self.interface.show_output(interaction)
-                    action.metadata["tool_call"] = agent_state.format(output.strip())
-                    action.metadata["tool_result"] = interaction.to_dict()
 
                 case _:
                     raise ValueError(f"Unknown structured output: {output}")
@@ -345,7 +335,6 @@ class Agent:
         self.state_machine = AgentStateMachine(
             tools=list(self.tools.values()),
             use_python=self.python_interpreter,
-            use_bash=self.bash_interpreter,
             max_planning_loops=self.max_planning_loops,
             force_planning=self.force_planning,
             delimiters_kwargs=self.inference.front_end.tokenizer.delimiters,

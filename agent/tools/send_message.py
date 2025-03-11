@@ -9,13 +9,13 @@ def send_message(
     wait_for_response: bool = True,
 ) -> Interaction:
     """
-    This tool sends a text-based message to the user and optionally speaks it aloud using a text-to-speech engine.
+    This tool sends a message to the user and optionally speaks it aloud using a text-to-speech engine.
     By default, the agent will wait for a response from the user before proceeding.
-    Multiple messages can be sent in a row by setting `wait_for_response` to False.
-
+    Setting `wait_for_response` to false will send the message and
+    allow the agent to take multiple actions before waiting for a response.
     IMPORTANT:
-        This is the ONLY method that should be used for sending messages to users.
-        Do not attempt to communicate with users through other means.
+    This is the ONLY method that should be used for sending messages to users.
+    Do not attempt to communicate with users through other means.
 
     Args:
         message (str): The message to display to the user. This message should concisely summarize all information since the last message was sent. Be self-contained and complete; users only see this message content, and cannot see internal states or processes.

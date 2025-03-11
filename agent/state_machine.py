@@ -4,7 +4,6 @@ from pse_core.state_machine import StateMachine
 
 from agent.state import (
     AgentState,
-    Bash,
     InnerMonologue,
     Python,
     Scratchpad,
@@ -31,12 +30,12 @@ class AgentStateMachine(StateMachine):
                                  ▼
                 ┌───────────────────────────────┐
                 │           TAKE ACTION         │
-                │ ┌─────────┐ ┌────────┐ ┌─────┐│
-                │ │  TOOLS  │ │ PYTHON │ │BASH ││
-                │ └────┬────┘ └───┬────┘ └──┬──┘│
-                └──────┼──────────┼─────────┼───┘
-                       │          │         │
-                       └──────────┼─────────┘
+                │ ┌─────────┐ ┌────────┐        │
+                │ │  TOOLS  │ │ PYTHON │        │
+                │ └────┬────┘ └───┬────┘        │
+                └──────┼──────────┼─────────────┘
+                       │          │              
+                       └──────────┼──────────────
                                   ▼
                             ┌─────────┐
                             │  DONE   │
@@ -44,7 +43,7 @@ class AgentStateMachine(StateMachine):
 
     Explanation:
     - The agent begins in PLAN, iteratively cycling (min=x, max=y loops) through the unordered states: THINKING, SCRATCHPAD, and INNER MONOLOGUE.
-    - After planning, it transitions into TAKE ACTION, selecting among TOOLS, PYTHON, or BASH (if enabled).
+    - After planning, it transitions into TAKE ACTION, selecting among TOOLS or PYTHON.
     - Upon completing the action phase, the agent transitions into DONE.
     """
 
@@ -52,7 +51,6 @@ class AgentStateMachine(StateMachine):
         self,
         tools: list[Tool] | None = None,
         use_python: bool = False,
-        use_bash: bool = False,
         force_planning: bool = True,
         max_planning_loops: int = 3,
         delimiters_kwargs: dict[str, tuple[str, str] | None] | None = None,
@@ -64,7 +62,6 @@ class AgentStateMachine(StateMachine):
         Args:
             tools: List of Tool objects available to the agent
             use_python: Whether to enable Python code execution
-            use_bash: Whether to enable Bash command execution
             force_planning: If True, require at least one planning loop
             max_planning_loops: Maximum number of planning iterations
             delimiters_kwargs: Custom delimiters for state boundary markers
@@ -76,7 +73,6 @@ class AgentStateMachine(StateMachine):
         action_states = self.create_action_states(
             tools,
             use_python,
-            use_bash,
             **delimiters,
         )
 
@@ -142,19 +138,17 @@ class AgentStateMachine(StateMachine):
         self,
         tools: list[Tool] | None = None,
         use_python: bool = False,
-        use_bash: bool = False,
         **delimiters: tuple[str, str] | None,
     ) -> list[StateMachine]:
         """
         Create and configure all action phase states.
 
         Action states enable the agent to interact with its environment through
-        various mechanisms, such as tools, code execution, or system commands.
+        various mechanisms, such as tools or code execution.
 
         Args:
             tools: List of Tool objects to make available for tool calls
             use_python: Whether to enable Python code execution state
-            use_bash: Whether to enable Bash command execution state
             **delimiters: Custom delimiters for different states
 
         Returns:
@@ -182,12 +176,6 @@ class AgentStateMachine(StateMachine):
             python_state = Python()
             self.states[python_state.identifier] = python_state
             action_states.append(python_state.state_machine)
-
-        # Bash State: For executing shell commands
-        if use_bash:
-            bash_state = Bash()
-            self.states[bash_state.identifier] = bash_state
-            action_states.append(bash_state.state_machine)
 
         return action_states
 
