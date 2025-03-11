@@ -35,7 +35,7 @@ The Proxy Base Agent uses the [Proxy Structuring Engine](https://github.com/TheP
 
 The agent transitions between two main phases:
 
-1. **Planning states** (Thinking, Scratchpad, Reasoning, Inner Monologue)
+1. **Planning states** (Thinking, Scratchpad, Inner Monologue)
 2. **Action states** (Tool calls, Python code)
 
 ## Installation
