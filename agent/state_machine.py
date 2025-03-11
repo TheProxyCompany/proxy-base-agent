@@ -72,9 +72,12 @@ class AgentStateMachine(StateMachine):
         """
         self.states: dict[str, AgentState] = {}
         delimiters = delimiters_kwargs or {}
-        planning_states = self.create_planning_states(character_max=character_max, **delimiters)
+        planning_states = self.create_planning_states(character_max, **delimiters)
         action_states = self.create_action_states(
-            tools=tools, use_python=use_python, use_bash=use_bash, **delimiters
+            tools,
+            use_python,
+            use_bash,
+            **delimiters,
         )
 
         super().__init__(
@@ -96,7 +99,11 @@ class AgentStateMachine(StateMachine):
             end_states=["done"],
         )
 
-    def create_planning_states(self, character_max=None, **delimiters: tuple[str, str] | None) -> list[StateMachine]:
+    def create_planning_states(
+        self,
+        character_max: int | None = None,
+        **delimiters: tuple[str, str] | None,
+    ) -> list[StateMachine]:
         """
         Create and configure all planning phase states.
 
@@ -187,11 +194,10 @@ class AgentStateMachine(StateMachine):
     @property
     def prompt(self) -> str:
         """
-        Creates a comprehensive explanation of how the agent should
-        use the available states, transition between them, and structure its output.
-        The prompt includes descriptions of all registered states.
+        Creates a comprehensive explanation of how the agent's state machine works.
         """
-        explanation = f"""
+
+        return f"""
 An agentic system operates through a sequence of states to interact with its environment.
 
 State Transitions:
@@ -214,4 +220,3 @@ States occur sequentially, one after the other, not simultaneously.
 Do not pendanticly address your own state transitions or current state.
 Do not repeat yourself across states or hallucinate unexisting states.
         """
-        return explanation

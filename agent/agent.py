@@ -7,7 +7,6 @@ import logging
 import uuid
 from enum import Enum
 from random import randint
-from typing import TypeVar
 
 from pynput import keyboard as pynput_keyboard
 
@@ -27,9 +26,6 @@ from agent.tools import Tool, ToolCall
 logger = logging.getLogger(__name__)
 
 MAX_SUB_STEPS: int = 20
-
-T = TypeVar("T")
-
 
 class Agent:
     """
@@ -53,16 +49,16 @@ class Agent:
         and are used for control flow and UI feedback.
         """
         # Core System States
-        PAUSED = "paused"      # Agent execution is temporarily suspended
+        PAUSED = "paused"          # Agent execution is temporarily suspended
         PROCESSING = "processing"  # Agent is actively processing
-        STANDBY = "standby"    # Agent is ready but not actively processing
-        IDLE = "idle"          # Agent is initialized but not engaged
+        STANDBY = "standby"        # Agent is ready but not actively processing
+        IDLE = "idle"              # Agent is initialized but not engaged
 
         # Error and Recovery States
-        SUCCESS = "success"    # Action completed successfully
-        FAILED = "failed"      # Action failed to complete
-        RETRYING = "retrying"  # Attempting recovery from failure
-        BLOCKED = "blocked"    # Unable to proceed, waiting for external resolution
+        SUCCESS = "success"       # Action completed successfully
+        FAILED = "failed"         # Action failed to complete
+        RETRYING = "retrying"     # Attempting recovery from failure
+        BLOCKED = "blocked"       # Unable to proceed, waiting for external resolution
 
         def __str__(self):
             return self.value
@@ -147,38 +143,6 @@ class Agent:
             self.keyboard_listener: pynput_keyboard.Listener | None = None
             self._setup_keyboard_listener()
 
-    def _setup_keyboard_listener(self):
-        """Set up the keyboard listener with a weak reference to avoid memory leaks."""
-        import weakref
-
-        # Create a weak reference to self
-        weak_self = weakref.ref(self)
-
-        # Define a callback that uses the weak reference
-        def on_key_press(key):
-            self_ref = weak_self()
-            if (
-                self_ref is not None
-                and self_ref.status == Agent.Status.PROCESSING
-                and key == pynput_keyboard.Key.space
-            ):
-                self_ref.toggle_pause()
-                logger.info(
-                    f"Agent {'paused' if self_ref.status == Agent.Status.PAUSED else 'resumed'}"
-                )
-
-        # Create and start the listener
-        self.keyboard_listener = pynput_keyboard.Listener(on_press=on_key_press)
-        self.keyboard_listener.start()
-
-        # Register cleanup function
-        def cleanup():
-            if self.keyboard_listener:
-                self.keyboard_listener.stop()
-                self.keyboard_listener = None
-
-        atexit.register(cleanup)
-
     @property
     def can_act(self) -> bool:
         """
@@ -192,15 +156,24 @@ class Agent:
             Agent.Status.SUCCESS,
         ]
 
-    def toggle_pause(self):
-        """Toggle the agent's pause state when the spacebar is pressed."""
-        if self.status != Agent.Status.PAUSED:
-            self.status = Agent.Status.PAUSED
-        else:
-            self.status = Agent.Status.PROCESSING
-        logger.info(
-            f"Agent {'paused' if self.status == Agent.Status.PAUSED else 'resumed'}"
-        )
+    @property
+    def system_prompt(self) -> Interaction:
+        prompt = load_prompt(self.system_prompt_name)
+        if prompt is None:
+            raise ValueError(f"No System Prompt Found for {self.system_prompt_name}")
+
+        try:
+            formatted_prompt = prompt.format(
+                name=self.name,
+                state_prompt=self.state_machine.prompt,
+                mcp_prompt=MCP_PROMPT,
+            )
+            prompt = formatted_prompt
+        except Exception as e:
+            logger.error(f"Error formatting system prompt: {e}")
+            pass
+
+        return Interaction(role=Interaction.Role.SYSTEM, content=prompt)
 
     async def loop(self) -> None:
         """
@@ -448,21 +421,44 @@ class Agent:
 
         return model_path
 
-    @property
-    def system_prompt(self) -> Interaction:
-        prompt = load_prompt(self.system_prompt_name)
-        if prompt is None:
-            raise ValueError(f"No System Prompt Found for {self.system_prompt_name}")
+    def toggle_pause(self):
+        """Toggle the agent's pause state when the spacebar is pressed."""
+        if self.status != Agent.Status.PAUSED:
+            self.status = Agent.Status.PAUSED
+        else:
+            self.status = Agent.Status.PROCESSING
+        logger.info(
+            f"Agent {'paused' if self.status == Agent.Status.PAUSED else 'resumed'}"
+        )
 
-        try:
-            formatted_prompt = prompt.format(
-                name=self.name,
-                state_prompt=self.state_machine.prompt,
-                mcp_prompt=MCP_PROMPT,
-            )
-            prompt = formatted_prompt
-        except Exception as e:
-            logger.error(f"Error formatting system prompt: {e}")
-            pass
+    def _setup_keyboard_listener(self):
+        """Set up the keyboard listener with a weak reference to avoid memory leaks."""
+        import weakref
 
-        return Interaction(role=Interaction.Role.SYSTEM, content=prompt)
+        # Create a weak reference to self
+        weak_self = weakref.ref(self)
+
+        # Define a callback that uses the weak reference
+        def on_key_press(key):
+            self_ref = weak_self()
+            if (
+                self_ref is not None
+                and self_ref.status == Agent.Status.PROCESSING
+                and key == pynput_keyboard.Key.space
+            ):
+                self_ref.toggle_pause()
+                logger.info(
+                    f"Agent {'paused' if self_ref.status == Agent.Status.PAUSED else 'resumed'}"
+                )
+
+        # Create and start the listener
+        self.keyboard_listener = pynput_keyboard.Listener(on_press=on_key_press)
+        self.keyboard_listener.start()
+
+        # Register cleanup function
+        def cleanup():
+            if self.keyboard_listener:
+                self.keyboard_listener.stop()
+                self.keyboard_listener = None
+
+        atexit.register(cleanup)

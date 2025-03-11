@@ -240,14 +240,14 @@ async def setup_agent(interface: Interface) -> Agent:
         )
 
         # ----- Reproducibility -----
-        if await get_boolean_option(interface, "Configure random seed", False):
-            await show_section_header(interface, "REPRODUCIBILITY")
-            use_random_seed = await get_boolean_option(
+        if await get_boolean_option(interface, "Configure seed", False):
+            await show_section_header(interface, "SEED")
+            use_seed = await get_boolean_option(
                 interface,
-                "Use random seed",
+                "Set randomness seed",
                 True
             )
-            if not use_random_seed:
+            if use_seed:
                 agent_kwargs["seed"] = await get_numeric_option(
                     interface,
                     "fixed random seed",

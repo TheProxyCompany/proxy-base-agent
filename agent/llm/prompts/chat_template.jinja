@@ -1,22 +1,34 @@
+{# ------------------------------------------------------------------------ #}
+{# Template configuration                                                   #}
+{# Designed to accept model-specific control tokens                         #}
+{# ------------------------------------------------------------------------ #}
 {%- set add_generation_prompt = add_generation_prompt or true -%}
 {%- set prefill = prefill or none -%}
+
 {# ------------------------------------------------------------------------ #}
-{# Macro to render individual interactions                                  #}
+{# Macro: render_interaction                                                #}
+{# Renders individual interactions using model-specific control tokens.     #}
+{# Uses role configurations and tokens (like tool_call_start,               #}
+{# end_of_sequence, etc.) from the model's token configuration.             #}
 {# ------------------------------------------------------------------------ #}
 {%- macro render_interaction(interaction) -%}
 
+    {# Get the role configuration (start/end tags, etc.) for this interaction #}
     {%- set role = roles.get(interaction['role']) -%}
     {%- if role is not none -%}
         {{- role.role_start_tag + role.role_name + role.role_end_tag -}}
     {%- endif -%}
 
+    {# Render the main content of the interaction                            #}
     {{- interaction['content'] | safe -}}
 
+    {# Handle tool calls when present                                        #}
     {%- if interaction.tool_call -%}
         {%- if tool_calls_start -%}
             {{- tool_calls_start -}}
         {%- endif -%}
 
+        {# Tool calls can be raw strings or structured JSON                  #}
         {%- if interaction.tool_call is string -%}
             {{- interaction.tool_call | trim -}}
         {%- else -%}
@@ -30,6 +42,7 @@
         {%- endif -%}
     {%- endif -%}
 
+    {# Handle tool results when present and not marked as last or silent     #}
     {%- if interaction.tool_result and not interaction.tool_result.last and not interaction.tool_result.silent -%}
         {%- if tool_results_start -%}
             {{- tool_results_start -}}
@@ -37,6 +50,7 @@
             {{- end_of_message -}}
             {{- roles.tool.role_start_tag + roles.tool.role_name + roles.tool.role_end_tag -}}
         {%- endif -%}
+
         {%- if tool_result_start -%}
             {{- tool_result_start -}}
         {%- endif -%}
@@ -49,6 +63,7 @@
         {%- endif -%}
     {%- endif -%}
 
+    {# Add end token based on role configuration                             #}
     {%- if role is not none and role.end_of_message is not none -%}
         {{- role.end_of_message -}}
     {%- else -%}
@@ -58,7 +73,9 @@
 {%- endmacro -%}
 
 {# ------------------------------------------------------------------------ #}
-{# Chat template                                                            #}
+{# Main chat template structure                                             #}
+{# Iterates over interactions and assembles the complete chat prompt.       #}
+{# Ensures model-specific control tokens delimit the content appropriately. #}
 {# ------------------------------------------------------------------------ #}
 {{ begin_of_text }}
 {%- for interaction in interactions -%}
