@@ -82,7 +82,7 @@ async def get_numeric_option(
 async def show_section_header(interface: Interface, title: str):
     """Display a formatted section header in the interface."""
     # Clean formatting that will work with the CLI interface
-    await interface.show_output(f"\n--- {title} ---\n")
+    await interface.show_output(f"\n▓▓▓ {title.upper()} ▓▓▓\n")
 
 async def configure_basic_options(interface: Interface) -> tuple[str, str, str, str]:
     """Configure basic agent identity and model options."""
@@ -94,10 +94,12 @@ async def configure_basic_options(interface: Interface) -> tuple[str, str, str, 
     model_path = await Agent.get_model_path(interface)
     frontend_response = await interface.get_input(
         message="Inference Backend",
-        choices=["mlx", "torch"],
-        default="mlx",
+        choices=["MLX", "PyTorch"],
+        default="MLX",
     )
-    chosen_frontend: str = frontend_response.content
+    # Convert display name back to internal representation
+    frontend_map = {"MLX": "mlx", "PyTorch": "torch"}
+    chosen_frontend: str = frontend_map[frontend_response.content]
 
     return agent_name, system_prompt_name, model_path, chosen_frontend
 
@@ -115,10 +117,12 @@ async def setup_agent(interface: Interface) -> Agent:
         A configured and initialized Agent instance
     """
     await interface.clear()
-    await interface.show_output("=== PROXY BASE AGENT CONFIGURATION ===\n")
+    await interface.show_output("╔═══════════════════════════════════════╗")
+    await interface.show_output("║      PROXY BASE AGENT SETUP           ║")
+    await interface.show_output("╚═══════════════════════════════════════╝\n")
 
-    # ----- Basic Configuration -----
-    await show_section_header(interface, "ESSENTIAL SETTINGS")
+    # Basic Configuration
+    await show_section_header(interface, "IDENTITY & MODEL")
     agent_name, system_prompt_name, model_path, chosen_frontend = await configure_basic_options(interface)
 
     # Start with default configuration
@@ -127,13 +131,13 @@ async def setup_agent(interface: Interface) -> Agent:
     # Ask for configuration mode (simple vs. advanced)
     config_mode_response = await interface.get_input(
         message="Configuration Mode",
-        choices=["Simple", "Advanced"],
-        default="Simple",
+        choices=["Basic", "Advanced"],
+        default="Basic",
     )
     config_mode = config_mode_response.content if hasattr(config_mode_response, "content") else config_mode_response
 
-    if config_mode == "Simple":
-        # Simple configuration - no capabilities options in simple mode
+    if config_mode == "Basic":
+        # Basic configuration - no capabilities options in basic mode
         pass
     else:
         # Advanced - go through all configuration sections

@@ -22,8 +22,8 @@ from agent.system.interaction import Interaction
 logger = logging.getLogger(__name__)
 
 # Enhanced styling constants
-PANEL_WIDTH = 90
-PANEL_PADDING = (0, 1)
+PANEL_WIDTH = 100  # Slightly wider panels for better readability
+PANEL_PADDING = (1, 2)  # More padding for a cleaner look
 
 
 class CLIInterface(Interface):
@@ -89,17 +89,17 @@ class CLIInterface(Interface):
         exit_phrases = frozenset({"exit", "quit", "q", "quit()", "exit()"})
         clear_line = kwargs.pop("clear_line", False)
 
-        # Enhanced questionary styling
+        # Enhanced questionary styling with more vibrant colors
         style = questionary.Style(
             [
-                ("qmark", "fg:ansimagenta bold"),
-                ("question", "fg:ansicyan bold"),
-                ("answer", "fg:ansigreen bold"),
-                ("pointer", "fg:ansimagenta bold"),
-                ("highlighted", "fg:ansigreen bold"),
-                ("selected", "fg:ansigreen bold"),
-                ("separator", "fg:ansigray"),
-                ("instruction", "fg:ansigray"),
+                ("qmark", "fg:ansibrightmagenta bold"),
+                ("question", "fg:ansibrightcyan bold"),
+                ("answer", "fg:ansibrightgreen bold"),
+                ("pointer", "fg:ansibrightmagenta bold"),
+                ("highlighted", "fg:ansibrightgreen bold"),
+                ("selected", "fg:ansibrightgreen bold"),
+                ("separator", "fg:ansibrightblack"),
+                ("instruction", "fg:ansibrightblack italic"),
             ]
         )
 
@@ -239,11 +239,12 @@ class CLIInterface(Interface):
 
         if error_message and error_message.content:
             panel_style = {
-                "border_style": "red",
+                "border_style": "bright_red",
                 "title": f"{Emoji('warning')} Error Details",
                 "subtitle": "Please check the information below",
-                "padding": (0, 0),
+                "padding": PANEL_PADDING,
                 "box": box.HEAVY,
+                "width": PANEL_WIDTH,
             }
 
             self.console.print()

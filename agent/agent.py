@@ -405,16 +405,16 @@ class Agent:
         available_models: dict[str, str] = {
             name: path for name, path, _ in get_available_models()
         }
-        available_models["Download a model from HuggingFace"] = ""
+        available_models["Get a model from HuggingFace"] = ""
         model_name = await interface.get_input(
-            message="Select Model",
+            message="Select LLM",
             choices=list(available_models.keys()),
             default=next(iter(available_models.keys())),
         )
         model_path = available_models[model_name.content]
         if not model_path:
             huggingface_model_name = await interface.get_input(
-                message="HuggingFace Model ID",
+                message="Enter HuggingFace Model ID",
                 default="mlx-community/Meta-Llama-3.1-8B-Instruct-8bit",
             )
             return huggingface_model_name.content
