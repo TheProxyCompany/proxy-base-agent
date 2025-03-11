@@ -12,22 +12,21 @@ The Proxy Base Agent uses the [Proxy Structuring Engine](https://github.com/TheP
                     ┌───────────────────┐
                     │                   │
                     ▼                   │
-        ┌──────────────────────────────────────────────────┐
-        │                   PLAN                           │ ◀─ loops (min=x, max=y)
-        │ ┌─────────┐  ┌──────────┐  ┌───────────────┐     │
-        │ │THINKING │  │SCRATCHPAD│  │INNER MONOLOGUE│     │
-        │ └─────────┘  └──────────┘  └───────────────┘     │
-        └────────────────────┬─────────────────────────────┘
+        ┌──────────────────────────────────────────────┐
+        │                   PLAN                       │ ◀─ loops (min=x, max=y)
+        │ ┌─────────┐  ┌──────────┐  ┌───────────────┐ │
+        │ │THINKING │  │SCRATCHPAD│  │INNER MONOLOGUE│ │
+        │ └─────────┘  └──────────┘  └───────────────┘ │
+        └────────────────────┬─────────────────────────┘
                              │
                              ▼
             ┌───────────────────────────────┐
             │           TAKE ACTION         │
-            │ ┌─────────┐ ┌────────┐ ┌─────┐│
-            │ │  TOOLS  │ │ PYTHON │ │BASH ││
-            │ └────┬────┘ └───┬────┘ └──┬──┘│
-            └──────┼──────────┼─────────┼───┘
-                   │          │         │
-                   └──────────┼─────────┘
+            │ ┌─────────┐        ┌────────┐ │
+            │ │  TOOLS  │        │ PYTHON │ │
+            │ └─────────┘        └────────┘ │
+            └───────────────────────────────┘
+                              │
                               ▼
                         ┌─────────┐
                         │  DONE   │
@@ -37,7 +36,7 @@ The Proxy Base Agent uses the [Proxy Structuring Engine](https://github.com/TheP
 The agent transitions between two main phases:
 
 1. **Planning states** (Thinking, Scratchpad, Reasoning, Inner Monologue)
-2. **Action states** (Tool calls, Python code, Bash commands)
+2. **Action states** (Tool calls, Python code)
 
 ## Installation
 

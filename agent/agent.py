@@ -37,7 +37,7 @@ class Agent:
     (thinking, inner monologue, etc.) and action states (tool usage, code execution, etc.).
 
     The agent maintains its conversation history in memory and can be configured with
-    different capabilities, such as Python code execution, Bash commands, and various
+    different capabilities, such as Python code execution and various
     specialized tools. It also supports features like pause/resume during processing.
     """
 
@@ -272,7 +272,7 @@ class Agent:
                     action.metadata["tool_result"] = interaction.to_dict()
 
                 case "python":
-                    from agent.system.run_code.run_python_code import run_python_code
+                    from agent.system.run_python_code import run_python_code
 
                     interaction = await run_python_code(self, output)
                     await self.interface.show_output(interaction)
