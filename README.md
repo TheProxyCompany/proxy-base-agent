@@ -1,9 +1,5 @@
 # Proxy Base Agent
 
-A stateful, tool-enabled agent built with the Proxy Structuring Engine.
-
-## Overview
-
 The Proxy Base Agent uses the [Proxy Structuring Engine](https://github.com/TheProxyCompany/proxy-structuring-engine) to implement a state machine architecture that guides language models through planning and action phases.
 
 ## Architecture
