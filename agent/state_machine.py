@@ -34,7 +34,7 @@ class AgentStateMachine(StateMachine):
                 │ │  TOOLS  │ │ PYTHON │        │
                 │ └────┬────┘ └───┬────┘        │
                 └──────┼──────────┼─────────────┘
-                       │          │              
+                       │          │
                        └──────────┼──────────────
                                   ▼
                             ┌─────────┐
@@ -121,11 +121,15 @@ class AgentStateMachine(StateMachine):
         self.states[thinking_state.identifier] = thinking_state
 
         # Scratchpad: Workspace for notes, calculations, and data organization
-        scratchpad_state = Scratchpad(delimiters.get("scratchpad"), character_max=char_limit)
+        scratchpad_state = Scratchpad(
+            delimiters.get("scratchpad"), character_max=char_limit
+        )
         self.states[scratchpad_state.identifier] = scratchpad_state
 
         # Inner Monologue: Self-reflective consideration of approach and reasoning
-        inner_monologue_state = InnerMonologue(delimiters.get("inner_monologue"), character_max=char_limit)
+        inner_monologue_state = InnerMonologue(
+            delimiters.get("inner_monologue"), character_max=char_limit
+        )
         self.states[inner_monologue_state.identifier] = inner_monologue_state
 
         return [
@@ -185,6 +189,8 @@ class AgentStateMachine(StateMachine):
         Creates a comprehensive explanation of how the agent's state machine works.
         """
 
+        states_str = "\n".join(str(state) for state in self.states.values())
+
         return f"""
 An agentic system operates through a sequence of states to interact with its environment.
 
@@ -195,7 +201,7 @@ State Transitions:
 
 Available States:
 
-{"\n".join(str(state) for state in self.states.values())}
+{states_str}
 
 You interact with the user exclusively through the "send message" tool.
 No direct output or dialogue should occur outside this tool.
