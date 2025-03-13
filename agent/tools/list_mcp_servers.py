@@ -29,7 +29,8 @@ def list_mcp_servers(
         )
 
     server_list = [str(server) for server in available_servers]
-    content = f"Available MCP servers:\n\n{'\n'.join(server_list)}\n\n"
+    joined_servers = "\n".join(server_list)
+    content = f"Available MCP servers:\n\n{joined_servers}\n\n"
     content += "Use the `add_mcp_server` tool to connect to a server."
 
     return Interaction(
