@@ -7,7 +7,7 @@ from agent.llm.local import LocalInference
 DEFAULT_AGENT_KWARGS = {
     # Generation parameters
     "max_tokens": 5000,
-    "temp": 1.0,
+    "temp": 0.7,
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
     "character_max": 2500,
@@ -136,6 +136,7 @@ async def setup_agent(interface: Interface) -> Agent:
     config_mode = config_mode_response.content if hasattr(config_mode_response, "content") else config_mode_response
 
     if config_mode == "Basic":
+        agent_kwargs.pop("seed")
         # Basic configuration - no capabilities options in basic mode
         pass
     else:
@@ -239,14 +240,7 @@ async def setup_agent(interface: Interface) -> Agent:
 
         # ----- Reproducibility -----
         if await get_boolean_option(interface, "Configure seed", False):
-            await show_section_header(interface, "SEED")
-            use_seed = await get_boolean_option(
-                interface,
-                "Set randomness seed",
-                True
-            )
-            if use_seed:
-                agent_kwargs["seed"] = await get_numeric_option(
+            agent_kwargs["seed"] = await get_numeric_option(
                     interface,
                     "fixed random seed",
                     DEFAULT_AGENT_KWARGS["seed"],

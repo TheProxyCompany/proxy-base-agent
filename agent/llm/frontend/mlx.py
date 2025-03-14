@@ -87,7 +87,7 @@ class MLXInference(Frontend):
         Otherwise, use the simple sampler.
         """
         temp = float(kwargs.get("temp", 1.0))
-        min_p = float(kwargs.get("min_p", 0.0))
+        min_p = float(kwargs.get("min_p", 0.02))
         min_tokens_to_keep = int(kwargs.get("min_tokens_to_keep", 1))
         sampler = make_sampler(
             temp=temp,
