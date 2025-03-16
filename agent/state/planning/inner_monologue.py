@@ -56,7 +56,7 @@ class InnerMonologue(AgentState):
     @property
     def state_prompt(self) -> str:
         return f"""
-    The inner monologue state should be used for modeling a detailed internal exploration and clarification of thoughts and understanding.
+    The inner monologue state should be used for a detailed internal exploration and clarification of thoughts and understanding.
     It should be used specifically for creating a coherent, flowing narrative to deepen understanding before making decisions.
     Use language to model your stream of consciousness.
 
