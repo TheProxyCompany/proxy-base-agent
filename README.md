@@ -1,73 +1,20 @@
-# Proxy Base Agent (Research Preview)
+<p align="center">
+  <img src="logo.png" alt="Proxy Base Agent" style="object-fit: contain; max-width: 50%; padding-top: 20px;"/>
+</p>
+
+<p align="center">
+  <strong>Turn any language model into an agent.</strong>
+</p>
+
+<p align="center">
+  <a href="https://docs.theproxycompany.com/pba/"><img src="https://img.shields.io/badge/docs-latest-blue.svg" alt="Documentation"></a>
+</p>
 
 The **Proxy Base Agent (PBA)** is a foundational agent framework built upon the [Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine). It provides a structured state machine architecture designed to rapidly prototype and develop LLM-powered agents, emphasizing local execution, stateful interactions, and extensibility.
-
-### Official documentation is available at [docs.theproxycompany.com/pba](https://docs.theproxycompany.com/pba/).
 
 ## Overview
 
 An **agent** is a system that takes actions in an environment. The Proxy Base Agent leverages the PSE to augment language models at runtime, enabling goal-oriented interactions, multi-step reasoning, and external tool usage.
-
-## Architecture
-
-The agent operates through a structured workflow defined by a **state graph**, transitioning between clearly defined **planning** and **action** phases:
-
-```mermaid
-flowchart TD
-    Start([Start]) --> Plan
-
-    subgraph Plan["Planning Phase"]
-        PlanStates["Thinking, Scratchpad, Inner Monologue"]
-        PlanLoop{"More planning needed?"}
-
-        PlanStates --> PlanLoop
-        PlanLoop -- "Yes" --> PlanStates
-        PlanLoop -- "No" --> Action
-    end
-
-    Plan --> Action
-
-    subgraph Action["Action Phase"]
-        ActionChoice{"Choose action type"}
-        ToolAction["Tool Call"]
-        CodeAction["Python Code"]
-
-        ActionChoice -- "Tool" --> ToolAction
-        ActionChoice -- "Code" --> CodeAction
-    end
-
-    Action --> Done([Done])
-    Done --> StepCheck{"More steps?"}
-    StepCheck -- "Yes" --> Action
-    StepCheck -- "No" --> End([End])
-
-    classDef phase fill:#d1ecf1,stroke:#0c5460
-    classDef decision fill:#fff3cd,stroke:#856404,shape:diamond
-    classDef state fill:#e2f0cb,stroke:#4b6a2d
-    classDef terminal fill:#e2e3e5,stroke:#495057,shape:stadium
-
-    class Plan,Action phase
-    class PlanLoop,ActionChoice,StepCheck decision
-    class PlanStates,ToolAction,CodeAction state
-    class Start,Done,End terminal
-```
-
-This state graph can be easily modified and extended, allowing for a wide range of agentic behaviors.
-
-### Planning Phase
-
-The agent engages in iterative reasoning through multiple cognitive states:
-
-- **Thinking**: High-level reasoning and goal setting.
-- **Scratchpad**: Intermediate notes and working memory.
-- **Inner Monologue**: Reflective reasoning and self-assessment.
-
-### Action Phase
-
-After sufficient planning, the agent transitions to executing actions:
-
-- **Tool Calls**: Interaction with external APIs or custom tools.
-- **Python Code Execution**: Direct execution of Python scripts for complex tasks.
 
 ## Installation & Quickstart
 
