@@ -40,17 +40,13 @@ python -m agent
 
 ## Language Models & Inference
 
-The agent supports local inference via Huggingface Transformers, with tested support for MLX & PyTorch. Planned support includes VLLM, SGLang, TensorFlow, and Jax.
+The agent supports local inference via Huggingface Transformers, with tested support for MLX & PyTorch.
 
 Any model supported by Huggingface Transformers can be used, with instruct-tuned models recommended for optimal performance.
+
+We are working on adding support for VLLM, SGLang, TensorFlow, and Jax.
 
 ## Related Projects
 
 - [Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine): Core engine providing grammatical constraints and structured output generation.
 - [MLX Proxy](https://github.com/TheProxyCompany/mlx-proxy): Optimized inference frontend for MLX models.
-
-## Research Preview & Licensing
-
-The Proxy Base Agent is currently shared as a research preview. It is maintained as a research project and is not intended for direct production use.
-
-Commercial licenses are available for those interested in using the agent commercially. Contributions to the project are encouraged, and meaningful contributors are eligible for free commercial licenses.
