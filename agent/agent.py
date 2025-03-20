@@ -355,7 +355,7 @@ class Agent:
         """
         response = await interface.get_input(
             message="Agent Name",
-            default="Cerebra",
+            default="Procksy",
         )
         agent_name = response.content if isinstance(response, Interaction) else response
         assert isinstance(agent_name, str)
