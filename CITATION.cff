@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Wind"
+  given-names: "Jack"
+title: "Proxy Base Agent"
+version: 1.0.0
+date-released: 2025-03-24
+url: "https://github.com/TheProxyCompany/proxy-base-agent"
+repository-code: "https://github.com/TheProxyCompany/proxy-base-agent"
+publisher: "The Proxy Company"

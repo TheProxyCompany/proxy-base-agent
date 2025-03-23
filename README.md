@@ -50,3 +50,18 @@ We are working on adding support for VLLM, SGLang, TensorFlow, and Jax.
 
 - [Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine): Core engine providing grammatical constraints and structured output generation.
 - [MLX Proxy](https://github.com/TheProxyCompany/mlx-proxy): Optimized inference frontend for MLX models.
+
+## Citation
+
+If you use this software, please cite it as below.
+
+```bibtex
+@software{wind_proxy_base_agent_2025,
+  author       = {Wind, Jack},
+  title        = {Proxy Base Agent},
+  version      = {1.0.0},
+  date         = {2025-03-24},
+  url          = {https://github.com/TheProxyCompany/proxy-base-agent},
+  publisher    = {The Proxy Company}
+}
+```
