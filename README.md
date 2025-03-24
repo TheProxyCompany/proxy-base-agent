@@ -56,7 +56,7 @@ We are working on adding support for VLLM, SGLang, TensorFlow, and Jax.
 If you use this software, please cite it as below.
 
 ```bibtex
-@software{wind_proxy_base_agent_2025,
+@software{Wind_Proxy_Base_Agent_2025,
   author       = {Wind, Jack},
   title        = {Proxy Base Agent},
   version      = {1.0.0},
