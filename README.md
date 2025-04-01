@@ -13,9 +13,6 @@
 </p>
 
 <p align="center">
-  <!-- Badges: Build Status, PyPI, License, Docs -->
-  <a href="https://github.com/TheProxyCompany/proxy-base-agent/actions/workflows/python-app.yml"><img src="https://github.com/TheProxyCompany/proxy-base-agent/actions/workflows/python-app.yml/badge.svg" alt="Build Status"></a>
-  <a href="https://pypi.org/project/proxy-base-agent/"><img src="https://badge.fury.io/py/proxy-base-agent.svg" alt="PyPI version"></a>
   <a href="https://github.com/TheProxyCompany/proxy-base-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://docs.theproxycompany.com/pba/"><img src="https://img.shields.io/badge/docs-latest-blue.svg" alt="Documentation"></a>
 </p>
