@@ -2,8 +2,6 @@
   <img src="logo.png" alt="Proxy Base Agent" style="object-fit: contain; max-width: 50%; padding-top: 20px;"/>
 </p>
 
-<h1 align="center">Proxy Base Agent (PBA)</h1>
-
 <h2 align="center">
   A truly stateful agent with 100% reliable tool use.
 </h2>
@@ -16,8 +14,6 @@
   <a href="https://github.com/TheProxyCompany/proxy-base-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://docs.theproxycompany.com/pba/"><img src="https://img.shields.io/badge/docs-latest-blue.svg" alt="Documentation"></a>
 </p>
-
----
 
 ## The Agent Problem: Unreliable Execution.
 
