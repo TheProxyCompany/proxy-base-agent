@@ -120,7 +120,7 @@ PBA provides an unparalleled open-source foundation. Harnessing its full power f
 ## License
 
 The `proxy-base-agent` Python library is licensed under Apache 2.0 ([LICENSE](LICENSE)).
-It depends on `pse` (Apache 2.0) and the proprietary `pse-core` (License details in [PSE README](https://github.com/TheProxyCompany/proxy-structuring-engine#license)).
+It depends on `pse` (Apache 2.0).
 
 ## Citation
 
@@ -128,8 +128,8 @@ It depends on `pse` (Apache 2.0) and the proprietary `pse-core` (License details
 @software{Wind_Proxy_Base_Agent_2025,
   author       = {Wind, Jack},
   title        = {{Proxy Base Agent: Reliable and Adaptive Agents via Hierarchical State Machines}},
-  version      = {1.0.0}, # Adjust version as needed
-  date         = {2025-03-31}, # Adjust date as needed
+  version      = {1.0.0},
+  date         = {2025-04-03},
   url          = {https://github.com/TheProxyCompany/proxy-base-agent},
   publisher    = {The Proxy Company},
   note         = {Built upon the Proxy Structuring Engine}
