@@ -7,9 +7,10 @@ from agent.llm.local import LocalInference
 DEFAULT_AGENT_KWARGS = {
     # Generation parameters
     "max_tokens": 5000,
-    "temp": 0.7,
+    "temp": 0.3,
     "min_p": 0.02,
     "min_tokens_to_keep": 9,
+    "repetition_penalty": 1.05,
     "character_max": 2500,
     "include_pause_button": False,
     # Prompt configuration

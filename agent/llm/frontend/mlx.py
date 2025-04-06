@@ -6,6 +6,7 @@ from typing import Any
 import mlx.core as mx
 from mlx_proxy.cache import BaseCache
 from mlx_proxy.generate_step import generate_step
+from mlx_proxy.logits_processors import repetition_penalty_logits_processor
 from mlx_proxy.samplers import make_sampler
 from mlx_proxy.utils import load_model, set_max_reccomended_device_limit
 from pse.structuring_engine import StructuringEngine
@@ -58,11 +59,20 @@ class MLXInference(Frontend):
                 reusable=kwargs.get("reuse_prompt_cache", False),
             )
 
+        logits_processors = []
+        if kwargs.get("repetition_penalty") is not None:
+            repetition_penalty = float(kwargs.get("repetition_penalty", 0.3))
+            logits_processors.append(
+                repetition_penalty_logits_processor(repetition_penalty)
+            )
+
+        logits_processors.append(engine.process_logits)
+
         for generated_tokens, _ in generate_step(
             prompt=prompt,
             model=self.model,
             prompt_cache=self.cache,
-            logits_processors=[engine.process_logits],
+            logits_processors=logits_processors,
             sampler=self.make_sampler(engine, **kwargs),
             max_tokens=kwargs.get("max_tokens", 1000),
             reuse_prompt_cache=kwargs.get("reuse_prompt_cache", False),
