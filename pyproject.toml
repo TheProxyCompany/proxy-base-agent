@@ -17,7 +17,6 @@ dependencies = [
     "imgcat>=0.6.0",
     "pillow",
     "huggingface-hub>=0.28.1",
-    "mflux @ git+https://github.com/filipstrand/mflux.git",
     "sounddevice",
     "kokoro-onnx",
     "numpy",
