@@ -228,9 +228,8 @@ class Agent:
             **self.inference_kwargs,
         ):
             if live_output := self.inference.engine.get_live_structured_output():
-                self.interface.show_live_output(
-                    self.available_states.get(live_output[0].lower()), live_output[1]
-                )
+                current_state = self.available_states.get(live_output[0].lower())
+                self.interface.show_live_output(current_state, live_output[1])
             else:
                 self.interface.end_live_output()
 
@@ -354,7 +353,7 @@ class Agent:
             str: The chosen agent name or a generated UUID if left blank.
         """
         response = await interface.get_input(
-            message="Agent Name",
+            message="Give your agent a name",
             default="Procksy",
         )
         agent_name = response.content if isinstance(response, Interaction) else response

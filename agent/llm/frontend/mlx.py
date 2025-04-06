@@ -48,6 +48,7 @@ class MLXInference(Frontend):
             simple_sampler (bool): Whether to use simple sampling.
             **kwargs: Keyword arguments for the sampler.
         """
+        breakpoint()
         if seed := kwargs.get("seed", None):
             mx.random.seed(seed)
 
@@ -63,7 +64,7 @@ class MLXInference(Frontend):
             model=self.model,
             prompt_cache=self.cache,
             logits_processors=[engine.process_logits],
-            sampler=self.make_sampler(engine, **kwargs),
+            sampler=lambda x: engine.sample(x, self._make_sampler(**kwargs)),
             max_tokens=kwargs.get("max_tokens", 1000),
             reuse_prompt_cache=kwargs.get("reuse_prompt_cache", False),
             computed_ids=self.processed_token_ids,
@@ -80,21 +81,13 @@ class MLXInference(Frontend):
             if engine.has_reached_accept_state:
                 break
 
-    def make_sampler(self, engine: StructuringEngine, **kwargs) -> Callable[..., Any]:
-        """
-        Return a sampler function.
-        If structured is True, use the structured sampler.
-        Otherwise, use the simple sampler.
-        """
+    def _make_sampler(self, **kwargs) -> Callable[..., Any]:
         temp = float(kwargs.get("temp", 1.0))
         min_p = float(kwargs.get("min_p", 0.02))
         min_tokens_to_keep = int(kwargs.get("min_tokens_to_keep", 1))
-        sampler = make_sampler(
-            temp=temp,
-            min_p=min_p,
-            min_tokens_to_keep=min_tokens_to_keep
+        return make_sampler(
+            temp=temp, min_p=min_p, min_tokens_to_keep=min_tokens_to_keep
         )
-        return lambda x: engine.sample(x, sampler)
 
     def supports_reusing_prompt_cache(self) -> bool:
         return True

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from pse_core.state_machine import StateMachine
 
@@ -11,12 +12,14 @@ class AgentState(ABC):
         delimiters: tuple[str, str],
         color: str,
         emoji: str,
+        inference_kwargs: dict[str, Any] | None = None,
     ):
         self.identifier = identifier
         self.readable_name = readable_name
         self.delimiters = delimiters
         self.color = color
         self.emoji = emoji
+        self.inference_kwargs = inference_kwargs or {}
 
     @property
     @abstractmethod
