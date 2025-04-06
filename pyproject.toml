@@ -23,6 +23,7 @@ dependencies = [
     "mcp",
     "pygithub",
     "pynput",
+    "fastapi>=0.115.12",
 ]
 
 [tool.ruff.lint]
