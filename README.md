@@ -26,11 +26,11 @@ With the Proxy Base Agent, you define your agent's behavior through a defined st
 
 ## Key Capabilities
 
-*   ⚙️ **Guaranteed Stateful Execution:** Define agent workflows as explicit HSMs (e.g., Plan ➔ Act). PSE ensures the LLM follows the defined states and transitions precisely.
-*   ✅ **100% Reliable Tool Use:** Eliminate runtime errors from malformed API calls or hallucinated function arguments. PSE guarantees tool calls match their required schema *during* generation.
-*   ⚡ **Dynamic Runtime Adaptation (MCP):** Connect to external Model Context Protocol (MCP) servers on-the-fly. PBA instantly integrates new tools and capabilities with the same structural guarantees, no restarts needed.
-*   🔌 **Model & Framework Agnostic:** Run reliable agents locally using your preferred LLMs and backends (MLX, PyTorch supported).
-*   🧩 **Modular & Extensible:** Build specialized agents by adding custom Python tools, defining new states, or modifying the core HSM architecture.
+*   **Guaranteed Stateful Execution:** Define agent workflows as explicit HSMs (e.g., Plan ➔ Act). PSE ensures the LLM follows the defined states and transitions precisely.
+*   **100% Reliable Tool Use:** Eliminate runtime errors from malformed API calls or hallucinated function arguments. PSE guarantees tool calls match their required schema *during* generation.
+*   **Dynamic Runtime Adaptation (MCP):** Connect to external Model Context Protocol (MCP) servers on-the-fly. PBA instantly integrates new tools and capabilities with the same structural guarantees, no restarts needed.
+*   **Model & Framework Agnostic:** Run reliable agents locally using your preferred LLMs and backends (MLX, PyTorch supported).
+*   **Modular & Extensible:** Build specialized agents by adding custom tools, defining new states, or modifying the core HSM architecture.
 
 ## How It Works: Reliability Through Structure
 
