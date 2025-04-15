@@ -1,12 +1,15 @@
 [project]
-name = "Proxy-Base-Agent"
+name = "proxy-base-agent"
 version = "1.0.0"
 description = "A stateful, tool-enabled agent powered by the Proxy Structuring Engine."
+authors = [
+    { name = "Jack Wind", email = "jckwind11@gmail.com" },
+    { name = "The Proxy Company", email = "contact@theproxy.company" }
+]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "docstring-parser>=0.16",
-    "mlx-proxy",
     "pse",
     "pydantic>=2.10.5",
     "python-dotenv>=1.0.1",
@@ -32,3 +35,40 @@ extend-select = [
   "RUF",  # Ruff-specific
   "UP",   # pyupgrade
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+mlx = [
+    "mlx-proxy",
+]
+torch = [
+    "torch",
+    "accelerate",
+]
+
+[project.urls]
+homepage = "https://github.com/TheProxyCompany/proxy-base-agent"
+documentation = "https://github.com/TheProxyCompany/proxy-base-agent#readme"
+source = "https://github.com/TheProxyCompany/proxy-base-agent"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "README.md",
+    "pyproject.toml",
+    "agent"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent"]
+include = ["agent/**"]
+optimize = true
+ignore-vcs = true
+python-tag = "py311"
+repair-wheel = true
+
+[tool.hatch.envs.default]
+python = "3.11"
+env-vars = { PYTHONOPTIMIZE = "2" }
