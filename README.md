@@ -3,47 +3,42 @@
 </p>
 
 <h2 align="center">
-  A truly stateful agent with 100% reliable tool use.
+  A stateful agent with 100% reliable tool use.
 </h2>
 
 <p align="center" style="font-size: 1.2em; width: 80%; max-width: 700px; margin: 0 auto; padding-bottom: 20px;">
-  Build custom agents on any LLM with guaranteed state consistency and controllable execution, powered by the <a href="https://github.com/TheProxyCompany/proxy-structuring-engine">Proxy Structuring Engine (PSE)</a>.
+  Build custom agents on any LLM with guaranteed state consistency and 100% reliable tool use, powered by the <a href="https://github.com/TheProxyCompany/proxy-structuring-engine">Proxy Structuring Engine (PSE)</a>.
 </p>
 
 <p align="center">
-  <a href="https://github.com/TheProxyCompany/proxy-base-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
+  <a href="https://pypi.org/project/proxy-base-agent/"><img src="https://img.shields.io/pypi/v/proxy-base-agent.svg" alt="PyPI Version"></a>
   <a href="https://docs.theproxycompany.com/pba/"><img src="https://img.shields.io/badge/docs-latest-blue.svg" alt="Documentation"></a>
+  <a href="https://github.com/TheProxyCompany/proxy-base-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
 </p>
 
-## The Agent Problem: Unreliable Execution.
+## The Problem: Agents That Don't Work
 
-Standard LLM agents are fundamentally flawed for real-world tasks. They operate on fragile prompt chains, leading to unpredictable state management, hallucinated parameters, and failed tool calls. Debugging is a nightmare; reliable automation is often impossible.
+Most LLM agents rely on fragile prompt engineering. This leads to unpredictable state management, hallucinated tool arguments, and frequent execution failures – making reliable automation nearly impossible.
 
-**The Proxy Base Agent (PBA) is the engineered solution.** It leverages the **[Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine)** – our high-performance Hierarchical State Machine (HSM) engine – to transform LLMs into **truly stateful, reliable execution engines.**
+**The Proxy Base Agent (PBA) is the engineered solution.** PBA uses the [Proxy Structuring Engine (PSE)](https://github.com/TheProxyCompany/proxy-structuring-engine) – our high-performance Hierarchical State Machine (HSM) engine – to enforce reliable, stateful execution for any LLM.
 
-Forget hoping for the best. With PBA, you **program** agent behavior through a defined state graph, and PSE **guarantees** the LLM adheres to it, step-by-step.
+With the Proxy Base Agent, you define your agent's behavior through a defined state graph, and PSE **guarantees** the LLM adheres to it, step-by-step.
 
-## PBA: Engineered Reliability & Dynamic Control
+## Key Capabilities
 
-PBA delivers capabilities beyond the reach of conventional agent frameworks:
+*   ⚙️ **Guaranteed Stateful Execution:** Define agent workflows as explicit HSMs (e.g., Plan ➔ Act). PSE ensures the LLM follows the defined states and transitions precisely.
+*   ✅ **100% Reliable Tool Use:** Eliminate runtime errors from malformed API calls or hallucinated function arguments. PSE guarantees tool calls match their required schema *during* generation.
+*   ⚡ **Dynamic Runtime Adaptation (MCP):** Connect to external Model Context Protocol (MCP) servers on-the-fly. PBA instantly integrates new tools and capabilities with the same structural guarantees, no restarts needed.
+*   🔌 **Model & Framework Agnostic:** Run reliable agents locally using your preferred LLMs and backends (MLX, PyTorch supported).
+*   🧩 **Modular & Extensible:** Build specialized agents by adding custom Python tools, defining new states, or modifying the core HSM architecture.
 
-*   🧠 **True Stateful Execution:** Define and enforce complex workflows using an explicit HSM (Plan ➔ Act). PSE guarantees state consistency and prevents derailment. *(Achieves the headline promise)*
-*   ✅ **100% Reliable Tool Use:** Eliminate runtime errors from malformed API calls or hallucinated arguments. PSE validates tool inputs against their schemas *during generation*. *(Achieves the headline promise)*
-*   ⚡ **Dynamic Runtime Adaptation (MCP):** Integrate new tools and capabilities on-the-fly via the Model Context Protocol. PBA dynamically updates its internal HSM, allowing immediate, reliable use of new functions without restarts. *(Killer Feature)*
-*   ⚙️ **Predictable Control Flow:** Move beyond prompt ambiguity. Explicitly define agent reasoning patterns and action sequences for deterministic, controllable behavior.
-*   🔌 **Universal LLM Compatibility:** Run sophisticated agents locally on the models you choose (open-source or custom), using your preferred backend (MLX, PyTorch supported, more coming).
-*   🧩 **Modular & Extensible:** Build bespoke agents by adding custom tools, defining new states, or modifying the core HSM architecture to fit your precise needs.
+## How It Works: Reliability Through Structure
 
-## How It Works: HSM-Governed Execution
+PBA's core is an HSM enforced by PSE at runtime:
 
-PBA's reliability stems from PSE's runtime governance. The agent's core logic is an HSM defining its operational cycle:
-
-1.  **HSM Definition:** The agent's states (Thinking, Tool Call, etc.) and transitions are defined as a `StateMachine`. Each state itself uses a nested PSE `StateMachine` to govern its internal structure (e.g., fenced text for planning, JSON schema for tool calls).
-2.  **PSE Enforcement:** During generation, PSE's `StructuringEngine` ensures:
-    *   The LLM follows valid transitions within the agent's HSM.
-    *   The content generated *within* each state conforms to that state's specific structure (e.g., valid JSON for `ToolCallState`).
-    *   Tool call arguments precisely match the required schema.
-3.  **Dynamic Updates (MCP):** When new tools are added via `add_mcp_server`, PBA rebuilds the `ToolCallState` HSM and reconfigures PSE **at runtime**. This allows the agent to instantly leverage new capabilities with the same structural guarantees.
+1.  **HSM Definition:** Agent logic (states like Thinking, Tool Call) is defined as a `StateMachine`. Each state uses a nested PSE `StateMachine` to enforce its specific output structure (e.g., fenced text, JSON schema).
+2.  **PSE Runtime Enforcement:** The `StructuringEngine` ensures the LLM generates only valid state transitions and structurally correct output *within* each state. Tool call arguments are guaranteed to match the required schema.
+3.  **Dynamic Updates (MCP):** Connecting to an MCP server rebuilds the relevant parts of the HSM and reconfigures PSE instantly, making new tools reliably available.
 
 **PBA doesn't just *ask* the LLM to be stateful and reliable; it *engineers* it through PSE's runtime HSM governance.**
 
@@ -56,46 +51,46 @@ pip install proxy-base-agent
 
 ## Quickstart
 
-Launch the interactive setup wizard:
+Launch the interactive setup wizard to configure your LLM and run the agent:
 
 ```bash
 python -m agent
 ```
 
-Configure your LLM and backend, then start interacting with a stateful, reliable agent running locally.
+## Documentation
 
-*(See the [Quickstart Docs](https://docs.theproxycompany.com/pba/getting-started/quickstart/) for a detailed walkthrough)*
+We've created detailed technical documentation for the Proxy Base Agent:
 
-## Unlock Full Potential: Commercial Services & Support
+*   [Overview](https://docs.theproxycompany.com/pba/)
+*   [Quickstart](https://docs.theproxycompany.com/pba/getting-started/quickstart/)
+*   [Core Concepts](https://docs.theproxycompany.com/pba/concepts/)
+*   [Extending the Agent](https://docs.theproxycompany.com/pba/extending/)
+*   [API Reference](https://docs.theproxycompany.com/pba/api/)
 
-PBA provides an unparalleled open-source foundation. Harnessing its full power for complex, mission-critical, or highly customized agentic systems requires deep expertise in HSM design, dynamic agent architecture, and production optimization.
+## The Proxy Company Services
 
-**The Proxy Company offers expert services to ensure your success:**
+Leverage our foundational expertise to build complex, mission-critical agentic systems with PBA. We offer:
 
-*   **Bespoke Agent Engineering:** Custom-built agents precisely tailored to your complex workflows and operational requirements.
-*   **Advanced Integration Services:** Seamlessly and reliably connect PBA to proprietary APIs, enterprise systems, and specialized tools via custom `Tool` or `MCPServer` development.
-*   **Production Deployment & Scale:** Architecture consulting, performance tuning, and robust support contracts for mission-critical deployments.
-*   **Strategic HSM & Agent Design:** Leverage our foundational expertise to architect optimal solutions for your most challenging AI automation goals.
+*   **Custom Agent Development:** Tailored agents for your specific workflows.
+*   **Advanced Integration:** Connect PBA reliably to proprietary systems and APIs.
+*   **Production Support:** Architecture, performance tuning, and support contracts.
 
-**Build AI systems you can confidently delegate to.**
-
-➡️ **[Explore Services & Schedule Consultation](https://theproxycompany.com/business)**
+➡️ **[Explore Business Services & Schedule Consultation](https://theproxycompany.com/business)**
 
 ## License
 
-The `proxy-base-agent` Python library is licensed under Apache 2.0 ([LICENSE](LICENSE)).
-It depends on `pse` (Apache 2.0).
+Apache 2.0 ([LICENSE](LICENSE)). Depends on `pse` (Apache 2.0).
 
 ## Citation
 
 ```bibtex
 @software{Wind_Proxy_Base_Agent_2025,
   author       = {Wind, Jack},
-  title        = {{Proxy Base Agent: Reliable and Adaptive Agents via Hierarchical State Machines}},
+  title        = {{Proxy Base Agent: Reliable AI Execution via Hierarchical State Machines}},
   version      = {1.0.0},
-  date         = {2025-04-03},
+  date         = {2025-04-15},
   url          = {https://github.com/TheProxyCompany/proxy-base-agent},
   publisher    = {The Proxy Company},
-  note         = {Built upon the Proxy Structuring Engine}
+  note         = {Leverages the Proxy Structuring Engine (PSE) for runtime guarantees}
 }
 ```
