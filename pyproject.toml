@@ -1,6 +1,6 @@
 [project]
 name = "proxy-base-agent"
-version = "1.0.0"
+version = "1.0.1"
 description = "A stateful, tool-enabled agent powered by the Proxy Structuring Engine."
 authors = [
     { name = "Jack Wind", email = "jckwind11@gmail.com" },
