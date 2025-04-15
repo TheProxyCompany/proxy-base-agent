@@ -6,8 +6,10 @@
   A stateful agent with 100% reliable tool use.
 </h2>
 
-<p align="center" style="font-size: 1.2em; width: 80%; max-width: 700px; margin: 0 auto; padding-bottom: 20px;">
-  Build custom agents on any LLM with guaranteed state consistency and 100% reliable tool use, powered by the <a href="https://github.com/TheProxyCompany/proxy-structuring-engine">Proxy Structuring Engine (PSE)</a>.
+<p align="center" style="font-size: 1.2em; width: 80%; margin: 0 auto; padding-bottom: 20px;">
+  Build custom agents on any LLM with guaranteed state consistency and 100% reliable tool use.
+  <br>
+  Powered by the <a href="https://github.com/TheProxyCompany/proxy-structuring-engine">Proxy Structuring Engine (PSE)</a>.
 </p>
 
 <p align="center">
