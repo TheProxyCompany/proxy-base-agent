@@ -37,41 +37,49 @@ PBA delivers capabilities beyond the reach of conventional agent frameworks:
 ## How It Works: HSM-Governed Execution
 
 PBA's reliability stems from PSE's runtime governance. The agent's core logic is an HSM defining its operational cycle:
-
 ```mermaid
 flowchart TD
-    Start([Start]) --> PlanLoopCheck{Evaluate Task}
-    PlanLoopCheck -- Requires Planning --> Plan
-    PlanLoopCheck -- Direct Action OK --> Action
+    Start([Start]) --> Plan
+    Start -. force_planning = false .-> Action
 
-    subgraph Plan["Planning Phase (Loop ≤ N times)"]
-        direction LR
-        PlanningChoice{"Choose planning type"} --> Thinking["Thinking<br>(High-level Goals)"]
-        PlanningChoice --> Scratchpad["Scratchpad<br>(Working Memory)"]
-        PlanningChoice --> InnerMonologue["Inner Monologue<br>(Self-Reflection)"]
+    subgraph Plan["Planning Phase"]
+        PlanningChoice{"Choose planning type"}
+        Thinking["Thinking"]
+        Scratchpad["Scratchpad"]
+        InnerMonologue["Inner Monologue"]
+
+        PlanningChoice --> Thinking
+        PlanningChoice --> Scratchpad
+        PlanningChoice --> InnerMonologue
     end
-
-    Plan --> PlanLoopDecision{"More planning needed?"}
-    PlanLoopDecision -- "Yes" --> Plan
-    PlanLoopDecision -- "No" --> Action
 
     subgraph Action["Action Phase"]
-        direction LR
-        ActionChoice{"Choose action type"} --> ToolAction["Tool Call<br>(Guaranteed Schema via PSE)"]
-        ActionChoice --> CodeAction["Python Code<br>(Optional Execution)"]
+        ActionChoice{"Choose action type"}
+        ToolAction["Tool Call"]
+        CodeAction["Python Code"]
+
+        ActionChoice -- "Tool" --> ToolAction
+        ActionChoice -- "Code" --> CodeAction
     end
 
-    Action --> Finish([Finish/Await User])
+    Plan --> PlanLoop{"More planning needed?"}
+    PlanLoop -- "Yes" --> Plan
+    PlanLoop -- "No" --> Action
 
-    classDef phase fill:#DAD0AF,stroke:#0c5460,color:#024645
-    classDef decision fill:#024645,stroke:#DAD0AF,color:#DAD0AF,shape:diamond
-    classDef state fill:#024645,stroke:#DAD0AF,color:#DAD0AF
-    classDef terminal fill:#024645,stroke:#DAD0AF,color:#DAD0AF,shape:stadium
+    Action --> Finish([Finish])
+
+    classDef phase fill:#DAD0AF,stroke:#0c5460,border-color:#024645
+    classDef decision fill:#024645,stroke:#DAD0AF,color:#DAD0AF,border-color:#DAD0AF,shape:diamond
+    classDef state fill:#024645,stroke:#DAD0AF,color:#DAD0AF,border-color:#DAD0AF
+    classDef terminal fill:#024645,stroke:#DAD0AF,color:#DAD0AF,border-color:#DAD0AF,shape:stadium
 
     class Plan,Action phase
-    class PlanLoopCheck,PlanLoopDecision,ActionChoice decision
-    class PlanningChoice,Thinking,Scratchpad,InnerMonologue,ToolAction,CodeAction state
+    class PlanLoop,ActionChoice,StepCheck decision
+    class PlanningChoice,Thinking,Scratchpad,InnerMonologue state
+    class ToolAction,CodeAction state
     class Start,Finish terminal
+
+    linkStyle default stroke:#024645
 ```
 
 1.  **HSM Definition:** The agent's states (Thinking, Tool Call, etc.) and transitions are defined as a `StateMachine`. Each state itself uses a nested PSE `StateMachine` to govern its internal structure (e.g., fenced text for planning, JSON schema for tool calls).
