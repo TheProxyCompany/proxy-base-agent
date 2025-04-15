@@ -37,50 +37,6 @@ PBA delivers capabilities beyond the reach of conventional agent frameworks:
 ## How It Works: HSM-Governed Execution
 
 PBA's reliability stems from PSE's runtime governance. The agent's core logic is an HSM defining its operational cycle:
-```mermaid
-flowchart TD
-    Start([Start]) --> Plan
-    Start -. force_planning = false .-> Action
-
-    subgraph Plan["Planning Phase"]
-        PlanningChoice{"Choose planning type"}
-        Thinking["Thinking"]
-        Scratchpad["Scratchpad"]
-        InnerMonologue["Inner Monologue"]
-
-        PlanningChoice --> Thinking
-        PlanningChoice --> Scratchpad
-        PlanningChoice --> InnerMonologue
-    end
-
-    subgraph Action["Action Phase"]
-        ActionChoice{"Choose action type"}
-        ToolAction["Tool Call"]
-        CodeAction["Python Code"]
-
-        ActionChoice -- "Tool" --> ToolAction
-        ActionChoice -- "Code" --> CodeAction
-    end
-
-    Plan --> PlanLoop{"More planning needed?"}
-    PlanLoop -- "Yes" --> Plan
-    PlanLoop -- "No" --> Action
-
-    Action --> Finish([Finish])
-
-    classDef phase fill:#DAD0AF,stroke:#0c5460,border-color:#024645
-    classDef decision fill:#024645,stroke:#DAD0AF,color:#DAD0AF,border-color:#DAD0AF,shape:diamond
-    classDef state fill:#024645,stroke:#DAD0AF,color:#DAD0AF,border-color:#DAD0AF
-    classDef terminal fill:#024645,stroke:#DAD0AF,color:#DAD0AF,border-color:#DAD0AF,shape:stadium
-
-    class Plan,Action phase
-    class PlanLoop,ActionChoice,StepCheck decision
-    class PlanningChoice,Thinking,Scratchpad,InnerMonologue state
-    class ToolAction,CodeAction state
-    class Start,Finish terminal
-
-    linkStyle default stroke:#024645
-```
 
 1.  **HSM Definition:** The agent's states (Thinking, Tool Call, etc.) and transitions are defined as a `StateMachine`. Each state itself uses a nested PSE `StateMachine` to govern its internal structure (e.g., fenced text for planning, JSON schema for tool calls).
 2.  **PSE Enforcement:** During generation, PSE's `StructuringEngine` ensures:
